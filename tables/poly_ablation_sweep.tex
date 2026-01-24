@@ -1,0 +1,36 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Multi-scale ablation over feature budgets for polynomial-kernel approximations. We compare attention outputs against \emph{exact kernel-normalized} spherical YAT with tied QKV/out projections. Lower Rel.~$\ell_2$ is better; latency is forward-pass time.}
+\label{tab:poly-sweep}
+\begin{tabular}{llcccccc}
+\toprule
+Scale & Method & $T$ & $R$ & $M$ & $P$ & Rel.~$\ell_2\downarrow$ & Latency (ms)$\downarrow$\\
+\midrule
+Small & Exact (Spherical) & 128 & 2 & 8 & 8 & 0.0000 & 3.12\\
+ & Laplace-only &  &  &  &  & 0.5870 & 2.78\\
+ & Anchor &  &  &  &  & 0.6626 & 3.82\\
+ & Hadamard (shared ω) &  &  &  &  & 0.8237 & 3.34\\
+ & Nyström &  &  &  &  & 22.9072 & 3.41\\
+ & TensorSketch &  &  &  &  & 474075.1562 & 5.17\\
+ & Random Maclaurin &  &  &  &  & 2195912.7500 & 5.59\\
+\addlinespace
+Medium & Exact (Spherical) & 256 & 2 & 16 & 16 & 0.0000 & 0.79\\
+ & Laplace-only &  &  &  &  & 0.5417 & 16.10\\
+ & Anchor &  &  &  &  & 0.5667 & 18.54\\
+ & Hadamard (shared ω) &  &  &  &  & 0.6609 & 17.44\\
+ & Nyström &  &  &  &  & 61.6529 & 18.46\\
+ & TensorSketch &  &  &  &  & 214115.9844 & 19.01\\
+ & Random Maclaurin &  &  &  &  & 1715766.8750 & 18.80\\
+\addlinespace
+Large & Exact (Spherical) & 512 & 2 & 32 & 32 & 0.0000 & 5.02\\
+ & Laplace-only &  &  &  &  & 0.4850 & 1905.80\\
+ & Anchor &  &  &  &  & 0.4939 & 489.42\\
+ & Hadamard (shared ω) &  &  &  &  & 0.6793 & 1932.07\\
+ & Nyström &  &  &  &  & 28.1970 & 569.64\\
+ & TensorSketch &  &  &  &  & 461739.0312 & 547.76\\
+ & Random Maclaurin &  &  &  &  & 1772757.5000 & 551.43\\
+\addlinespace
+\bottomrule
+\end{tabular}
+\end{table}

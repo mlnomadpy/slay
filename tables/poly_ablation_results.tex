@@ -1,0 +1,19 @@
+\begin{table*}[t]
+\centering
+\small
+\caption{Ablation of polynomial-kernel approximations for the spherical YAT kernel. We compare attention outputs against \emph{exact kernel-normalized} spherical YAT with tied QKV/out projections. Lower Rel.~$\ell_2$ / MSE is better; higher cosine similarity is better.}
+\label{tab:poly-ablation}
+\begin{tabular}{lcccc}
+\toprule
+Method & Rel.~$\ell_2\downarrow$ & MSE$\downarrow$ & Cos$\uparrow$ & Latency (ms)$\downarrow$\\
+\midrule
+Exact (Spherical) & 0.0000 & 0.00e+00 & 1.0000 & 2.47\\
+Laplace-only & 0.5824 & 6.97e-03 & 0.8130 & 1.50\\
+Anchor & 0.6529 & 8.77e-03 & 0.7626 & 3.13\\
+Hadamard (shared ω) & 0.8194 & 1.38e-02 & 0.6963 & 2.26\\
+Nyström & 7.7650 & 1.24e+00 & 0.0296 & 6.43\\
+TensorSketch & 599190.3750 & 7.38e+09 & -0.0032 & 3.91\\
+Random Maclaurin & 2149894.7500 & 9.50e+10 & -0.0199 & 4.22\\
+\bottomrule
+\end{tabular}
+\end{table*}
