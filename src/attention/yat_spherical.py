@@ -8,19 +8,22 @@ import torch.nn.functional as F
 
 
 class YatSphericalCausalAttention(nn.Module):
-    """Exact Spherical Yat attention with causal masking.
-    
-    Uses kernel: K(q,k) = x² / (C - 2x)
-    where x = <q̂, k̂> (dot product of normalized vectors)
-    and C = 2 + ε
-    
+    """Exact spherical Yat attention with causal masking.
+
+    Uses kernel:
+        K(q,k) = x^2 / (C - 2x),  where x = <q̂, k̂> and C = 2 + ε.
+
+    This module implements *kernel-normalized* attention (linear-attention style):
+        Y = (K V) / (K 1)
+    under a causal mask, i.e. it does not apply a softmax.
+
     FP32 upcast added for numerical stability in mixed-precision training.
-    
+
     Args:
         embed_dim: Embedding dimension
         n_heads: Number of attention heads
         epsilon: Small constant for numerical stability
-        score_scale: Scale factor for attention scores (default: sqrt(2))
+        score_scale: Optional multiplicative factor applied to K (cancels under K-normalization)
     """
     
     def __init__(self, embed_dim, n_heads, epsilon=1e-2, score_scale=None):
@@ -61,25 +64,22 @@ class YatSphericalCausalAttention(nn.Module):
         x_dot = torch.matmul(q_norm, k_norm.transpose(-2, -1))
         
         # Kernel: x² / (C - 2x)
-        denominator = self.C - 2 * x_dot
-        # denominator = torch.clamp(denominator, min=self.epsilon * 0.5)
-        scores = (x_dot ** 2) / denominator
-        
-        # Apply score scaling (uses tensor for correct dtype/device)
-        scores = scores * self.score_scale.to(scores.dtype)
-        
-        # Causal mask
-        causal_mask = torch.triu(torch.ones(T, T, device=x.device, dtype=torch.bool), diagonal=1)
-        scores = scores.masked_fill(causal_mask.unsqueeze(0).unsqueeze(0), float('-inf'))
-        
-        # Normalize rows (row-stochastic)
-        # row_sum = scores.sum(dim=-1, keepdim=True)
-        # scores = scores / (row_sum + 1e-6)
+        denom = torch.clamp(self.C - 2 * x_dot, min=1e-6)
+        K = (x_dot ** 2) / denom
 
-        # Softmax for stability
-        scores = F.softmax(scores, dim=-1)
-        
-        out = torch.matmul(scores, v)
+        # Optional scaling (cancels under kernel normalization)
+        K = K * self.score_scale.to(K.dtype)
+
+        # Causal mask: zero out future contributions
+        causal_mask = torch.triu(
+            torch.ones(T, T, device=x.device, dtype=torch.bool), diagonal=1
+        )
+        K = K.masked_fill(causal_mask.unsqueeze(0).unsqueeze(0), 0.0)
+
+        # Kernel-normalized attention: (K V) / (K 1)
+        numerator = torch.matmul(K, v)  # (B, H, T, D)
+        denominator = K.sum(dim=-1, keepdim=True)  # (B, H, T, 1)
+        out = numerator / (denominator + 1e-6)
         
         # CAST BACK TO ORIGINAL DTYPE
         out = out.to(input_dtype)
