@@ -1,0 +1,208 @@
+{
+  "config": {
+    "embed_dim": 64,
+    "n_heads": 4,
+    "n_layers": 2,
+    "batch_size": 16,
+    "num_steps": 100,
+    "lr": 0.001,
+    "eval_every": 20,
+    "device": "cuda",
+    "seed": 42,
+    "yat_num_features": 32,
+    "yat_num_quadrature_nodes": 2,
+    "yat_poly_dim": 32,
+    "yat_prf_dim": 16,
+    "yat_epsilon": 1e-06
+  },
+  "results": {
+    "copy": {
+      "standard": {
+        "final_loss": 0.16487766802310944,
+        "final_acc": 1.0,
+        "train_time": 1.8711192607879639
+      },
+      "performer": {
+        "final_loss": 0.21371756494045258,
+        "final_acc": 1.0,
+        "train_time": 1.6215126514434814
+      },
+      "linear": {
+        "final_loss": 0.3585076630115509,
+        "final_acc": 0.99951171875,
+        "train_time": 1.4894530773162842
+      },
+      "yat-spherical": {
+        "final_loss": 0.11509763449430466,
+        "final_acc": 1.0,
+        "train_time": 1.8509340286254883
+      },
+      "yat-performer-anchor": {
+        "final_loss": 0.17232614755630493,
+        "final_acc": 0.99951171875,
+        "train_time": 6.737494945526123
+      },
+      "yat-performer-laplace": {
+        "final_loss": 0.1899671107530594,
+        "final_acc": 1.0,
+        "train_time": 3.058893918991089
+      },
+      "yat-performer": {
+        "final_loss": 0.1804555505514145,
+        "final_acc": 1.0,
+        "train_time": 3.2284324169158936
+      }
+    },
+    "sort": {
+      "standard": {
+        "final_loss": 2.508744955062866,
+        "final_acc": 0.1572265625,
+        "train_time": 1.183105230331421
+      },
+      "performer": {
+        "final_loss": 2.4688756465911865,
+        "final_acc": 0.1845703125,
+        "train_time": 1.6425132751464844
+      },
+      "linear": {
+        "final_loss": 2.529261589050293,
+        "final_acc": 0.1640625,
+        "train_time": 1.6259701251983643
+      },
+      "yat-spherical": {
+        "final_loss": 2.5245349407196045,
+        "final_acc": 0.1748046875,
+        "train_time": 1.9301025867462158
+      },
+      "yat-performer-anchor": {
+        "final_loss": 2.489065647125244,
+        "final_acc": 0.1875,
+        "train_time": 4.008153438568115
+      },
+      "yat-performer-laplace": {
+        "final_loss": 2.4881155490875244,
+        "final_acc": 0.1826171875,
+        "train_time": 3.1656711101531982
+      },
+      "yat-performer": {
+        "final_loss": 2.5056424140930176,
+        "final_acc": 0.177734375,
+        "train_time": 3.3320581912994385
+      }
+    },
+    "associative_recall": {
+      "standard": {
+        "final_loss": 4.244370937347412,
+        "final_acc": 0.0,
+        "train_time": 1.777449131011963
+      },
+      "performer": {
+        "final_loss": 4.192655563354492,
+        "final_acc": 0.03125,
+        "train_time": 2.066361665725708
+      },
+      "linear": {
+        "final_loss": 4.255281448364258,
+        "final_acc": 0.0,
+        "train_time": 2.031702756881714
+      },
+      "yat-spherical": {
+        "final_loss": 4.2560858726501465,
+        "final_acc": 0.0,
+        "train_time": 2.477118492126465
+      },
+      "yat-performer-anchor": {
+        "final_loss": 4.249172687530518,
+        "final_acc": 0.015625,
+        "train_time": 5.7214860916137695
+      },
+      "yat-performer-laplace": {
+        "final_loss": 4.1980366706848145,
+        "final_acc": 0.03125,
+        "train_time": 3.652909278869629
+      },
+      "yat-performer": {
+        "final_loss": 4.18964147567749,
+        "final_acc": 0.03125,
+        "train_time": 3.713895320892334
+      }
+    },
+    "induction": {
+      "standard": {
+        "final_loss": 4.249772548675537,
+        "final_acc": 0.015625,
+        "train_time": 1.7948501110076904
+      },
+      "performer": {
+        "final_loss": 4.2775468826293945,
+        "final_acc": 0.015625,
+        "train_time": 2.105782985687256
+      },
+      "linear": {
+        "final_loss": 4.240545272827148,
+        "final_acc": 0.015625,
+        "train_time": 2.0768582820892334
+      },
+      "yat-spherical": {
+        "final_loss": 4.2405805587768555,
+        "final_acc": 0.015625,
+        "train_time": 2.5347108840942383
+      },
+      "yat-performer-anchor": {
+        "final_loss": 4.3456926345825195,
+        "final_acc": 0.0,
+        "train_time": 12.920992851257324
+      },
+      "yat-performer-laplace": {
+        "final_loss": 4.27201509475708,
+        "final_acc": 0.015625,
+        "train_time": 2.8931169509887695
+      },
+      "yat-performer": {
+        "final_loss": 4.273330211639404,
+        "final_acc": 0.015625,
+        "train_time": 3.005176544189453
+      }
+    },
+    "needle": {
+      "standard": {
+        "final_loss": 0.015483729541301727,
+        "final_acc": 1.0,
+        "train_time": 1.2960879802703857
+      },
+      "performer": {
+        "final_loss": 0.015450624749064445,
+        "final_acc": 1.0,
+        "train_time": 1.8879590034484863
+      },
+      "linear": {
+        "final_loss": 0.014227233827114105,
+        "final_acc": 1.0,
+        "train_time": 1.644972562789917
+      },
+      "yat-spherical": {
+        "final_loss": 0.015359442681074142,
+        "final_acc": 1.0,
+        "train_time": 1.8939225673675537
+      },
+      "yat-performer-anchor": {
+        "final_loss": NaN,
+        "final_acc": 0.0,
+        "train_time": NaN,
+        "error": "CUDA error: out of memory\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n"
+      },
+      "yat-performer-laplace": {
+        "final_loss": NaN,
+        "final_acc": 0.0,
+        "train_time": NaN,
+        "error": "CUDA error: out of memory\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n"
+      },
+      "yat-performer": {
+        "final_loss": NaN,
+        "final_acc": 0.0,
+        "train_time": NaN,
+        "error": "CUDA error: out of memory\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n"
+      }
+    }
+  }
+}

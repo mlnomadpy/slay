@@ -1,0 +1,9 @@
+# Core dependencies
+torch>=2.0.0
+numpy>=1.24.0
+
+# Optional: for visualization
+# matplotlib>=3.7.0
+
+# Note: For CUDA support, install PyTorch with:
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121

@@ -170,65 +170,104 @@ class _YatPerformerPolyBase(nn.Module):
 
 
 class YatPerformerRMCausalAttention(_YatPerformerPolyBase):
-    """Random Maclaurin polynomial features for (x·y)^2."""
+    """Random Maclaurin polynomial features for (x·y)^2.
+    
+    Uses the identity: E[(r·x)(r·y)] = x·y for Rademacher r
+    For (x·y)^2, we use: phi(x) = (r1·x)(r2·x) / sqrt(D)
+    where r1, r2 are independent Rademacher vectors.
+    Then E[phi(x)·phi(y)] = (x·y)^2
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         P = self.poly_dim
         D = self.head_dim
 
-        r1 = torch.randint(0, 2, (P, D), dtype=torch.int64) * 2 - 1
-        r2 = torch.randint(0, 2, (P, D), dtype=torch.int64) * 2 - 1
+        # Use Gaussian instead of Rademacher for lower variance
+        # Scale by 1/sqrt(D) for each random vector
+        r1 = torch.randn(P, D) / math.sqrt(D)
+        r2 = torch.randn(P, D) / math.sqrt(D)
         self.register_buffer("rm_r1", r1)
         self.register_buffer("rm_r2", r2)
 
     def _poly_features(self, x_norm):
-        # x_norm: (B, H, T, D)
+        # x_norm: (B, H, T, D) - already normalized to unit sphere
         r1 = self.rm_r1.to(x_norm.dtype)
         r2 = self.rm_r2.to(x_norm.dtype)
 
+        # (r1·x) and (r2·x) each have variance ~1 for unit x
         proj1 = torch.einsum("bhtd,pd->bhtp", x_norm, r1)
         proj2 = torch.einsum("bhtd,pd->bhtp", x_norm, r2)
+        
+        # Product gives features for (x·y)^2
+        # Scale by 1/sqrt(P) to normalize the sum
         return (proj1 * proj2) / math.sqrt(self.poly_dim)
 
 
 class YatPerformerNystromCausalAttention(_YatPerformerPolyBase):
-    """Nyström approximation for the polynomial kernel (x·y)^2."""
+    """Nyström approximation for the polynomial kernel (x·y)^2.
+    
+    Uses normalized anchor points on the unit sphere to match
+    the normalized query/key vectors.
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         P = self.poly_dim
         D = self.head_dim
 
+        # Anchors must be normalized to unit sphere (same as inputs)
         anchors = torch.randn(P, D)
+        anchors = F.normalize(anchors, p=2, dim=-1)
+        
+        # Kernel matrix between anchors: K(a_i, a_j) = (a_i · a_j)^2
         K = (anchors @ anchors.t()) ** 2
         K = K + self.nystrom_reg * torch.eye(P)
+        
+        # Compute K^{-1/2} for Nyström features
         eigvals, eigvecs = torch.linalg.eigh(K)
-        eigvals = torch.clamp(eigvals, min=1e-8)
+        eigvals = torch.clamp(eigvals, min=1e-6)
         W = eigvecs @ torch.diag(eigvals.rsqrt()) @ eigvecs.t()
 
         self.register_buffer("nystrom_anchors", anchors)
         self.register_buffer("nystrom_W", W)
 
     def _poly_features(self, x_norm):
+        # x_norm: (B, H, T, D) - normalized to unit sphere
         anchors = self.nystrom_anchors.to(x_norm.dtype)
         W = self.nystrom_W.to(x_norm.dtype)
+        
+        # K(x, anchors) = (x · a_i)^2
         K_xA = (torch.einsum("bhtd,pd->bhtp", x_norm, anchors)) ** 2
+        
+        # Nyström feature: phi(x) = K(x, A) @ W
         return torch.einsum("bhtp,pq->bhtq", K_xA, W) / math.sqrt(self.poly_dim)
 
 
 class YatPerformerAnchorCausalAttention(_YatPerformerPolyBase):
-    """Low-rank anchor features for the polynomial kernel (x·y)^2."""
+    """Low-rank anchor features for the polynomial kernel (x·y)^2.
+    
+    Uses normalized anchor vectors on the unit sphere. The feature map is:
+        phi(x) = [(a_1·x)^2, (a_2·x)^2, ..., (a_P·x)^2] / sqrt(P)
+    
+    For normalized x, y: phi(x)·phi(y) approximates a function of (x·y).
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         P = self.poly_dim
         D = self.head_dim
+        
+        # Normalize anchors to unit sphere for consistency with inputs
         anchors = torch.randn(P, D)
+        anchors = F.normalize(anchors, p=2, dim=-1)
         self.register_buffer("anchor_vectors", anchors)
 
     def _poly_features(self, x_norm):
+        # x_norm: (B, H, T, D) - normalized to unit sphere
         anchors = self.anchor_vectors.to(x_norm.dtype)
+        
+        # Feature: (a_p · x)^2 for each anchor
         return (torch.einsum("bhtd,pd->bhtp", x_norm, anchors) ** 2) / math.sqrt(
             self.poly_dim
         )

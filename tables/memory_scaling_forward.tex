@@ -1,0 +1,20 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Peak memory (forward-only) vs sequence length.}
+\label{tab:memory-scaling_forward}
+\begin{tabular}{lrrrrr}
+\toprule
+Method & 256 & 512 & 1K & 2K & 4K\\
+\midrule
+standard & 12 & 18 & 44 & 144 & 543\\
+performer & 18 & 28 & 46 & 83 & 157\\
+linear & 12 & 15 & 22 & 35 & 62\\
+cosformer & 14 & 20 & 31 & 54 & 99\\
+yat-spherical & 13 & 25 & 75 & 271 & 1.0GB\\
+yat-performer-anchor & 285 & 353 & 354 & 355 & 359\\
+yat-performer-laplace & 23 & 36 & 46 & 49 & 56\\
+yat-performer & 23 & 36 & 46 & 49 & 56\\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -68,20 +68,25 @@ class YatPerformerTensorCausalAttention(nn.Module):
         )
 
         # TensorSketch hash/sign for polynomial kernel (degree 2)
-        h = torch.randint(0, poly_sketch_dim, (self.head_dim,), dtype=torch.int64)
-        s = torch.randint(0, 2, (self.head_dim,), dtype=torch.int64) * 2 - 1
-        self.register_buffer("ts_hash", h)
-        self.register_buffer("ts_sign", s)
+        # Need TWO independent hash/sign pairs for degree-2 TensorSketch
+        h1 = torch.randint(0, poly_sketch_dim, (self.head_dim,), dtype=torch.int64)
+        s1 = torch.randint(0, 2, (self.head_dim,), dtype=torch.int64) * 2 - 1
+        h2 = torch.randint(0, poly_sketch_dim, (self.head_dim,), dtype=torch.int64)
+        s2 = torch.randint(0, 2, (self.head_dim,), dtype=torch.int64) * 2 - 1
+        self.register_buffer("ts_hash1", h1)
+        self.register_buffer("ts_sign1", s1)
+        self.register_buffer("ts_hash2", h2)
+        self.register_buffer("ts_sign2", s2)
 
-    def _count_sketch(self, x):
+    def _count_sketch(self, x, h, s):
         """CountSketch of x over last dimension.
 
         x: (..., D)
+        h: hash indices (D,)
+        s: sign flips (D,)
         returns: (..., P)
         """
         P = self.poly_sketch_dim
-        h = self.ts_hash
-        s = self.ts_sign
 
         # Broadcast hash/sign to x shape
         view_shape = (1,) * (x.dim() - 1) + (x.shape[-1],)
@@ -95,12 +100,17 @@ class YatPerformerTensorCausalAttention(nn.Module):
     def _poly_tensor_sketch(self, x):
         """TensorSketch for the degree-2 polynomial kernel.
 
-        Approximates (x·y)^2 using convolution of CountSketch(x).
+        Approximates (x·y)^2 using convolution of two independent CountSketches.
+        For degree-2: phi(x) = iFFT(FFT(CS1(x)) * FFT(CS2(x)))
+        Then phi(x)·phi(y) ≈ (x·y)^2
         """
-        cs = self._count_sketch(x)
-        # FFT-based convolution (real)
-        fft_cs = torch.fft.rfft(cs, dim=-1)
-        ts = torch.fft.irfft(fft_cs * fft_cs, n=self.poly_sketch_dim, dim=-1)
+        cs1 = self._count_sketch(x, self.ts_hash1, self.ts_sign1)
+        cs2 = self._count_sketch(x, self.ts_hash2, self.ts_sign2)
+        
+        # FFT-based convolution of two independent sketches
+        fft_cs1 = torch.fft.rfft(cs1, dim=-1)
+        fft_cs2 = torch.fft.rfft(cs2, dim=-1)
+        ts = torch.fft.irfft(fft_cs1 * fft_cs2, n=self.poly_sketch_dim, dim=-1)
         return ts / math.sqrt(self.poly_sketch_dim)
 
     def _prf_features(self, x):

@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-01-23T20:19:34.418810",
+  "device": "cuda",
+  "mode": "quick",
+  "results": {
+    "scaling_forward": true,
+    "scaling_backward": true,
+    "kernel_quality": false,
+    "tasks": true,
+    "ablation": false
+  }
+}

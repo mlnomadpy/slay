@@ -1,0 +1,243 @@
+{
+  "config": {
+    "embed_dim": 64,
+    "n_heads": 4,
+    "batch_size": 1,
+    "warmup_iters": 3,
+    "bench_iters": 10,
+    "seq_lengths": [
+      256,
+      512,
+      1024,
+      2048,
+      4096
+    ],
+    "device": "cuda",
+    "dtype": "float32",
+    "seed": 42,
+    "yat_num_features": 32,
+    "yat_num_quadrature_nodes": 2,
+    "yat_poly_dim": 32,
+    "yat_prf_dim": 16,
+    "yat_poly_sketch_dim": 32,
+    "yat_epsilon": 1e-06
+  },
+  "results": {
+    "standard": {
+      "256": {
+        "latency_ms": 5.699690000619739,
+        "memory_mb": 20.87890625,
+        "status": "ok"
+      },
+      "512": {
+        "latency_ms": 4.699890001211315,
+        "memory_mb": 33.50390625,
+        "status": "ok"
+      },
+      "1024": {
+        "latency_ms": 4.42868999671191,
+        "memory_mb": 83.12890625,
+        "status": "ok"
+      },
+      "2048": {
+        "latency_ms": 15.534350008238107,
+        "memory_mb": 279.87890625,
+        "status": "ok"
+      },
+      "4096": {
+        "latency_ms": 53.19349999772385,
+        "memory_mb": 1064.12890625,
+        "status": "ok"
+      }
+    },
+    "performer": {
+      "256": {
+        "latency_ms": 6.275739998091012,
+        "memory_mb": 33.76953125,
+        "status": "ok"
+      },
+      "512": {
+        "latency_ms": 5.829089996404946,
+        "memory_mb": 51.14453125,
+        "status": "ok"
+      },
+      "1024": {
+        "latency_ms": 4.008740000426769,
+        "memory_mb": 85.89453125,
+        "status": "ok"
+      },
+      "2048": {
+        "latency_ms": 6.235790008213371,
+        "memory_mb": 155.39453125,
+        "status": "ok"
+      },
+      "4096": {
+        "latency_ms": 12.551749998237938,
+        "memory_mb": 295.14453125,
+        "status": "ok"
+      }
+    },
+    "linear": {
+      "256": {
+        "latency_ms": 6.417849997524172,
+        "memory_mb": 20.94140625,
+        "status": "ok"
+      },
+      "512": {
+        "latency_ms": 8.597400004509836,
+        "memory_mb": 25.50390625,
+        "status": "ok"
+      },
+      "1024": {
+        "latency_ms": 8.834460005164146,
+        "memory_mb": 34.62890625,
+        "status": "ok"
+      },
+      "2048": {
+        "latency_ms": 7.054980006068945,
+        "memory_mb": 52.87890625,
+        "status": "ok"
+      },
+      "4096": {
+        "latency_ms": 7.295149995479733,
+        "memory_mb": 90.12890625,
+        "status": "ok"
+      }
+    },
+    "cosformer": {
+      "256": {
+        "latency_ms": 9.590700000990182,
+        "memory_mb": 22.763671875,
+        "status": "ok"
+      },
+      "512": {
+        "latency_ms": 6.742609990760684,
+        "memory_mb": 28.3828125,
+        "status": "ok"
+      },
+      "1024": {
+        "latency_ms": 8.385040005668998,
+        "memory_mb": 40.38671875,
+        "status": "ok"
+      },
+      "2048": {
+        "latency_ms": 6.390580011066049,
+        "memory_mb": 64.39453125,
+        "status": "ok"
+      },
+      "4096": {
+        "latency_ms": 11.550229997374117,
+        "memory_mb": 113.16015625,
+        "status": "ok"
+      }
+    },
+    "yat-spherical": {
+      "256": {
+        "latency_ms": 6.945339997764677,
+        "memory_mb": 24.95751953125,
+        "status": "ok"
+      },
+      "512": {
+        "latency_ms": 8.658180001657456,
+        "memory_mb": 49.53564453125,
+        "status": "ok"
+      },
+      "1024": {
+        "latency_ms": 7.271559990476817,
+        "memory_mb": 146.69189453125,
+        "status": "ok"
+      },
+      "2048": {
+        "latency_ms": 30.69897999521345,
+        "memory_mb": 533.00439453125,
+        "status": "ok"
+      },
+      "4096": {
+        "latency_ms": 116.6282600024715,
+        "memory_mb": 2074.37939453125,
+        "status": "ok"
+      }
+    },
+    "yat-performer-anchor": {
+      "256": {
+        "latency_ms": 16.644479997921735,
+        "memory_mb": 303.24169921875,
+        "status": "ok"
+      },
+      "512": {
+        "latency_ms": 36.158309993334115,
+        "memory_mb": 451.9072265625,
+        "status": "ok"
+      },
+      "1024": {
+        "latency_ms": 75.82367000868544,
+        "memory_mb": 615.36328125,
+        "status": "ok"
+      },
+      "2048": {
+        "latency_ms": 156.02154999505728,
+        "memory_mb": 942.275390625,
+        "status": "ok"
+      },
+      "4096": {
+        "latency_ms": 315.8443500055,
+        "memory_mb": 1596.849609375,
+        "status": "ok"
+      }
+    },
+    "yat-performer-laplace": {
+      "256": {
+        "latency_ms": 13.898299995344132,
+        "memory_mb": 34.5693359375,
+        "status": "ok"
+      },
+      "512": {
+        "latency_ms": 15.560080006252974,
+        "memory_mb": 52.7099609375,
+        "status": "ok"
+      },
+      "1024": {
+        "latency_ms": 15.89893000200391,
+        "memory_mb": 65.8984375,
+        "status": "ok"
+      },
+      "2048": {
+        "latency_ms": 23.5271800076589,
+        "memory_mb": 92.2421875,
+        "status": "ok"
+      },
+      "4096": {
+        "latency_ms": 47.113089996855706,
+        "memory_mb": 144.9296875,
+        "status": "ok"
+      }
+    },
+    "yat-performer": {
+      "256": {
+        "latency_ms": 12.607090000528842,
+        "memory_mb": 36.0693359375,
+        "status": "ok"
+      },
+      "512": {
+        "latency_ms": 12.076510000042617,
+        "memory_mb": 55.7099609375,
+        "status": "ok"
+      },
+      "1024": {
+        "latency_ms": 23.331579996738583,
+        "memory_mb": 71.8984375,
+        "status": "ok"
+      },
+      "2048": {
+        "latency_ms": 27.585700002964586,
+        "memory_mb": 104.2421875,
+        "status": "ok"
+      },
+      "4096": {
+        "latency_ms": 52.347680006641895,
+        "memory_mb": 168.9296875,
+        "status": "ok"
+      }
+    }
+  }
+}
