@@ -62,10 +62,12 @@ slay/
 ├── tests/                   # Benchmarks and tests
 │   ├── benchmark_scaling.py       # Latency/memory scaling
 │   ├── benchmark_kernel_quality.py # Approximation quality
-│   ├── benchmark_tasks.py         # Synthetic tasks
+│   ├── benchmark_tasks.py         # 22 synthetic tasks (attention-only)
 │   ├── ablation_poly_approx.py    # Polynomial ablation
 │   ├── run_all_benchmarks.py      # Master benchmark runner
 │   └── generate_paper_tables.py   # LaTeX table generator
+├── docs/                    # Documentation
+│   └── BENCHMARK_TASKS.md   # Full task suite description
 ├── tables/                  # Generated LaTeX tables
 ├── artifacts/               # Benchmark results (JSON)
 ├── main.py                  # Training script
@@ -147,36 +149,48 @@ python tests/benchmark_kernel_quality.py --device cuda \
 
 **Output:** `tables/kernel_quality.tex`, `artifacts/kernel_quality.json`
 
-#### 3. Synthetic Task Benchmarks
+#### 3. Synthetic Task Benchmarks (22 Tasks)
 
-Tests attention quality on controlled learning tasks.
+Comprehensive suite testing attention quality on controlled learning tasks using **attention-only architectures** (no FFN, no LayerNorm) to isolate attention performance.
 
 ```bash
-# All tasks
+# All 22 tasks (3 seeds each)
 python tests/benchmark_tasks.py --device cuda
 
-# Quick mode
+# Quick mode (50 epochs, 1 seed)
 python tests/benchmark_tasks.py --device cuda --quick
 
 # Specific tasks
-python tests/benchmark_tasks.py --device cuda \
-    --tasks copy sort associative_recall
+python tests/benchmark_tasks.py --device cuda --tasks copy sort retrieval
 
-# Specific attentions
-python tests/benchmark_tasks.py --device cuda \
-    --attentions standard yat-performer-anchor
+# By category
+python tests/benchmark_tasks.py --device cuda --category memory
+
+# Attention-critical tasks only
+python tests/benchmark_tasks.py --device cuda --attention-only
 ```
 
-**Tasks:**
-| Task | Description |
-|------|-------------|
-| `copy` | Reproduce input sequence |
-| `sort` | Sort input sequence |
-| `associative_recall` | Key-value retrieval |
-| `induction` | Pattern completion |
-| `needle` | Needle in haystack |
+**Model Architecture:**
+```
+Input → Embedding + PosEmbed → [Attention + Residual] × L → Linear Head → Output
+```
 
-**Output:** `tables/task_performance.tex`, `artifacts/task_results.json`
+**Task Categories (22 tasks):**
+
+| Category | Tasks | Tests |
+|----------|-------|-------|
+| **Basic** | copy, sort, reverse | Information routing |
+| **Memory** | retrieval, kv_recall, first_token, selective_copy | Sparse retrieval, associative memory |
+| **Long-Range** | long_copy, distant_match, multihop | Long-range dependencies |
+| **Reasoning** | stack, induction, pattern | State tracking, pattern matching |
+| **Arithmetic** | counting, parity, addition, modular | Aggregation |
+| **Pattern** | bigram, majority | Statistical patterns |
+| **Robustness** | noisy_copy, compression | Noise filtering |
+| **Aggregation** | histogram | Multi-class counting |
+
+See [docs/BENCHMARK_TASKS.md](docs/BENCHMARK_TASKS.md) for full task descriptions.
+
+**Output:** `tables/task_*.tex`, `artifacts/task_results.json`
 
 #### 4. Polynomial Approximation Ablation
 
