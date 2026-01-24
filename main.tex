@@ -58,7 +58,7 @@
 \twocolumn[
 \icmltitle{SLAY:\\
 Spherical Linearized Attention with Yat-Kernel}
-\icmltitlerunning{Spherical Yat-Attention}
+\icmltitlerunning{SLAY}
 
 \begin{icmlauthorlist}
 \icmlauthor{Jose Miguel Luna}{equal}
@@ -93,6 +93,8 @@ Transformer models owe much of their success to attention, which enables dynamic
 
 To overcome this bottleneck, \emph{linear attention} mechanisms reinterpret attention as kernel evaluation and exploit feature maps to reorder computation. Early examples include kernelized Transformers \citep{katharopoulos2020transformers} and random-feature approximations of the softmax kernel \citep{choromanski2021}. These works show that positive random features can yield stable and scalable attention for specific kernels.
 
+Our approach linearizes the spherical \E-product kernel directly rather than applying a softmax to it, and uses positivity-preserving approximations to ensure stable kernel normalization.
+
 Despite these advances, softmax attention remains tied to a specific similarity: the exponential of an inner product. This choice conflates alignment and magnitude, and its unbounded growth requires careful normalization and stabilization. These limitations motivate alternative attention kernels that are geometrically grounded, self-regularizing, and compatible with efficient computation, as explored in activation-free architectures \citep{nmn2026}.
 
 Neural Matter Networks (NMNs) introduced the \emph{\E-Product} (also referred to as the Yat-product) \citep{nmn2026}, a kernel operator inspired by inverse-square interactions in physics:
@@ -109,7 +111,7 @@ In the context of attention, the \E-Product offers a geometry-aware alternative 
 This paper addresses this limitation for \E-Attention. We show that by constraining queries and keys to lie on the unit sphere and reformulating the resulting kernel using Bernstein’s theorem, the \E-Product admits a nonnegative mixture representation that can be approximated by strictly positive random features. This yields a linear-time attention mechanism that preserves the core geometric and self-regulating properties of the \E-Product while enabling scalable long-context Transformers.
 
 \paragraph{Contributions.}
-We introduce \textbf{Spherical YAT-Attention}, a geometry-aware attention mechanism, with the following characteristics:
+We introduce SLAY (\textbf{Spherical YAT-Attention}), a geometry-aware attention mechanism, with the following characteristics:
 \begin{itemize}[leftmargin=1.4em]
 \item Enforces unit-norm constraints on queries and keys, decoupling alignment and distance.
 \item Linearizes the spherical \E-product via an integral representation based on Bernstein’s theorem.
@@ -125,6 +127,8 @@ We introduce \textbf{Spherical YAT-Attention}, a geometry-aware attention mechan
 
 Our goal is to compute \E-attention with the spherical \E-product kernel from Eq.~\eqref{eq:spherical} without forming the $L\times L$ matrix of pairwise interactions.
 We first normalize queries/keys to the unit sphere so the kernel depends only on $x=\hat q^\top \hat k\in[-1,1]$. We then linearize the non-factorizable term $1/(C-2x)$ via a Laplace integral (Bernstein's theorem), discretize the resulting nonnegative mixture using Gauss--Laguerre quadrature, and approximate each product kernel with strictly positive random features. Finally, we apply the standard kernel-attention reordering using the resulting feature map $\widetilde{\Psi}(\cdot)$.
+
+Throughout this work, we approximate the spherical \E-product (YAT) kernel itself; normalization is performed via kernel sums as in linear attention, not via a softmax nonlinearity.
 
 \subsection{Spherical Constraint}
 
@@ -178,6 +182,8 @@ we obtain
 This expresses the spherical \E-product as a positively weighted mixture of product kernels:
 namely, a degree-2 polynomial factor $(\hat q^\top \hat k)^2$ multiplied by an exponential dot-product kernel $e^{2s\,\hat q^\top \hat k}$.
 
+Importantly, the factor $x^2$ cannot be absorbed into a \emph{nonnegative} Laplace weight over plain exponentials without introducing signed correction terms (see Appendix~\ref{app:features}).
+
 This representation is analogous to the Laplace-transform-based decompositions used to derive unbiased positive random feature estimators for softmax and Gaussian kernels \citep{choromanski2021}.
 
 \subsection{Kernel Approximation and Positive Features}
@@ -201,12 +207,21 @@ For the exact polynomial kernel $(\hat q^\top \hat k)^2$, the explicit feature m
 \[
 \langle \phi_{\text{poly}}(\hat q), \phi_{\text{poly}}(\hat k) \rangle = (\hat q^\top \hat k)^2.
 \]
-In practice, we reduce dimensionality via low-dimensional approximations. We consider TensorSketch \citep{pham2013} as well as three common approximations to the degree-2 polynomial kernel $k_{\text{poly}}(x,y)=(x^\top y)^2$, described formally in Appendix~\ref{app:prelim-poly}: (i) Random Maclaurin (RM) features \citep{karkarnick2012}, (ii) Nystr"om features using anchor points \citep{williams2001nystrom}, and (iii) anchor (low-rank) features using squared inner products to fixed anchors (a Nystr"om-style low-rank map).
+In practice, we reduce dimensionality via low-dimensional approximations. We consider TensorSketch \citep{pham2013} as well as three common approximations to the degree-2 polynomial kernel $k_{\text{poly}}(x,y)=(x^\top y)^2$, described formally in Appendix~\ref{app:prelim-poly}: (i) Random Maclaurin (RM) features \citep{karkarnick2012}, (ii) Nystr"om features using anchor points \citep{williams2001nystrom}, and (iii) anchor features using squared inner products to fixed anchors.
+
+\paragraph{Anchor features.}
+Let anchors $\{a_i\}_{i=1}^P\subset\R^d$ be fixed reference vectors. Anchor features define
+\[
+\phi_{\mathrm{anc}}(x) = \frac{1}{\sqrt{P}}\bigl[(x^\top a_i)^2\bigr]_{i=1}^P,
+\]
+yielding a simple low-rank approximation whose induced inner products are nonnegative.
+
+Unlike Nystr"om approximations, anchor features do not require inversion/whitening of the anchor Gram matrix and therefore preserve non-negativity of approximate kernel evaluations.
 
 \paragraph{Default choice.}
 Unless stated otherwise, we use \emph{anchor features} as the default polynomial approximation because they (i) preserve non-negativity of the polynomial component (supporting the denominator-positivity guarantees), (ii) are empirically stable at small feature budgets, and (iii) are computationally simple ($O(dP)$ per token). The multi-scale sweep in Table~\ref{tab:poly-sweep} (Appendix~\ref{app:poly-ablation}) supports this choice.
 
-Table~\ref{tab:poly-approximations} summarizes the main theoretical trade-offs: feature dimension and computational cost, as well as qualitative properties such as unbiasedness, stability, and whether the approximate inner products are guaranteed nonnegative.
+Table~\ref{tab:poly-approximations} summarizes the trade-offs between polynomial approximations, highlighting positivity preservation as a key distinction.
 
 \begin{table*}[t]
 \centering
@@ -221,15 +236,17 @@ Exact $\mathrm{vec}(uu^\top)$ & $d^2$ & $O(d^2)$ & Yes & Yes \\
 TensorSketch \citep{pham2013} & $D_p$ & $\approx O(d + D_p\log D_p)$ & Approx. & No (not guaranteed) \\
 Random Maclaurin \citep{karkarnick2012} & $D_p$ & $O(d\,D_p)$ & Yes & No (not guaranteed) \\
 Nystr\"om \citep{williams2001nystrom} & $P$ & $O(d\,P)$ & Approx. & No (not guaranteed) \\
-Anchor (low-rank) & $P$ & $O(d\,P)$ & No & Yes \\
+Anchor features (low-rank) \citep{scholkopf2002learning} & $P$ & $O(d\,P)$ & No & Yes \\
 \bottomrule
 \end{tabular*}
 \end{table*}
 
-For the theoretical non-negativity and denominator-positivity guarantees stated later, we require a polynomial component whose induced score estimates are nonnegative (e.g., the exact map, or anchor features). Generic randomized/low-rank approximations can yield negative approximate inner products and are therefore treated as accuracy/efficiency baselines.
+For the theoretical non-negativity and denominator-positivity guarantees stated later, we require a polynomial component whose induced score estimates are nonnegative (e.g., the exact map, or anchor features). Signed polynomial approximations (TensorSketch, Random Maclaurin) and Nystr"om features can yield negative approximate inner products and are therefore treated as accuracy/efficiency baselines rather than positivity-guaranteeing estimators.
 
 \paragraph{Why the polynomial factor is needed for fidelity.}
 The $x^2$ factor in Eq.~\eqref{eq:integral} is part of the target kernel; removing it yields a different kernel (see Appendix~\ref{app:features}).
+
+Retaining the polynomial factor is essential both for kernel fidelity and for positivity guarantees of the resulting attention scores.
 
 \paragraph{Positive Random Features.}
 For the exponential term $e^{2s\,\hat q^\top \hat k}$, we use Positive Random Features applied to the \emph{original normalized vectors}:
@@ -292,6 +309,7 @@ Given $Q,K,V\in\R^{L\times d}$, we compute normalized inputs, apply $\Psi$, and 
 \hat Y = \frac{\widetilde{\Psi}(Q)\big(\widetilde{\Psi}(K)^\top V\big)}
 {\widetilde{\Psi}(Q)\big(\widetilde{\Psi}(K)^\top \mathbf{1}\big)}.
 \]
+Note that this normalization is not a softmax; it corresponds to kernel normalization and preserves linear-time computation.
 Here the division is applied row-wise (broadcast across the value dimension); in practice we add a small stabilizer $\delta>0$ to the denominator for numerical stability \citep{higham2002}. Concretely, if $\Psi(Q),\Psi(K)\in\R^{L\times m}$ (feature dimension $m$) and $V\in\R^{L\times d_v}$, then $\Psi(K)^\top V\in\R^{m\times d_v}$, $\Psi(K)^\top\mathbf{1}\in\R^{m\times 1}$, and the denominator is an $L\times 1$ vector broadcast over $d_v$ (see Appendix~\ref{app:impl}).
 
 \begin{algorithm}[t]
@@ -942,7 +960,7 @@ An open-source implementation of Spherical \E-Attention, including training scri
 \label{app:impl}
 
 \paragraph{Practical knobs and defaults.}
-In our implementation, $R$ controls the quadrature accuracy of the Laplace integral and $D$ controls the Monte Carlo variance of PRF. The polynomial approximation uses either a feature dimension $D_p$ (e.g., Random Maclaurin or TensorSketch) or an anchor count $P$ (anchor/Nystr"om-style maps); by default we use anchor features because they preserve non-negativity of the polynomial component and are stable at small budgets.
+In our implementation, $R$ controls the quadrature accuracy of the Laplace integral and $D$ controls the Monte Carlo variance of PRF. The polynomial approximation uses either a feature dimension $D_p$ (e.g., Random Maclaurin or TensorSketch) or an anchor count $P$ (anchor features or Nystr"om); by default we use anchor features because they preserve non-negativity of the polynomial component and are stable at small budgets.
 The tensor-product fusion uses a sketch dimension $D_t$, trading accuracy for compute/memory. We use small stabilizers $\epsilon$ (kernel) and $\delta$ (attention denominator) for numerical robustness.
 
 \paragraph{Remark (explicit tensor product).}
