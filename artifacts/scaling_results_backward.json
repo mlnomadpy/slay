@@ -1,241 +1,332 @@
 {
   "config": {
-    "embed_dim": 64,
-    "n_heads": 4,
+    "embed_dim": 256,
+    "num_heads": 8,
     "batch_size": 1,
-    "warmup_iters": 3,
-    "bench_iters": 10,
+    "warmup_iters": 2,
+    "bench_iters": 5,
     "seq_lengths": [
       256,
       512,
       1024,
-      2048,
-      4096
+      2048
     ],
-    "device": "cuda",
-    "dtype": "float32",
     "seed": 42,
-    "yat_num_features": 32,
-    "yat_num_quadrature_nodes": 2,
-    "yat_poly_dim": 32,
-    "yat_prf_dim": 16,
-    "yat_poly_sketch_dim": 32,
-    "yat_epsilon": 1e-06
+    "slay_num_features": 32,
+    "slay_num_quad": 2,
+    "slay_poly_dim": 16,
+    "slay_prf_dim": 8,
+    "slay_poly_sketch_dim": 16,
+    "performer_kernel_size": 64,
+    "rff_num_features": 64
   },
+  "backward": true,
   "results": {
     "standard": {
       "256": {
-        "latency_ms": 5.699690000619739,
-        "memory_mb": 20.87890625,
+        "latency_ms": 6.361399999877904,
+        "memory_mb": 6.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 4.699890001211315,
-        "memory_mb": 33.50390625,
+        "latency_ms": 18.747080000321148,
+        "memory_mb": 20.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 4.42868999671191,
-        "memory_mb": 83.12890625,
+        "latency_ms": 42.17600000047241,
+        "memory_mb": 72.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 15.534350008238107,
-        "memory_mb": 279.87890625,
+        "latency_ms": 157.74377999987337,
+        "memory_mb": 272.0,
+        "status": "ok"
+      }
+    },
+    "rotary": {
+      "256": {
+        "latency_ms": NaN,
+        "memory_mb": NaN,
+        "status": "error"
+      },
+      "512": {
+        "latency_ms": NaN,
+        "memory_mb": NaN,
+        "status": "error"
+      },
+      "1024": {
+        "latency_ms": NaN,
+        "memory_mb": NaN,
+        "status": "error"
+      },
+      "2048": {
+        "latency_ms": NaN,
+        "memory_mb": NaN,
+        "status": "error"
+      }
+    },
+    "linear": {
+      "256": {
+        "latency_ms": 3.3612999999604654,
+        "memory_mb": 3.0,
         "status": "ok"
       },
-      "4096": {
-        "latency_ms": 53.19349999772385,
-        "memory_mb": 1064.12890625,
+      "512": {
+        "latency_ms": 6.058599999960279,
+        "memory_mb": 6.0,
+        "status": "ok"
+      },
+      "1024": {
+        "latency_ms": 10.561540000344394,
+        "memory_mb": 12.0,
+        "status": "ok"
+      },
+      "2048": {
+        "latency_ms": 20.853459999489132,
+        "memory_mb": 24.0,
         "status": "ok"
       }
     },
     "performer": {
       "256": {
-        "latency_ms": 6.275739998091012,
-        "memory_mb": 33.76953125,
+        "latency_ms": 6.261580000136746,
+        "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 5.829089996404946,
-        "memory_mb": 51.14453125,
+        "latency_ms": 9.646080000675283,
+        "memory_mb": 6.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 4.008740000426769,
-        "memory_mb": 85.89453125,
+        "latency_ms": 17.723359999945387,
+        "memory_mb": 12.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 6.235790008213371,
-        "memory_mb": 155.39453125,
-        "status": "ok"
-      },
-      "4096": {
-        "latency_ms": 12.551749998237938,
-        "memory_mb": 295.14453125,
-        "status": "ok"
-      }
-    },
-    "linear": {
-      "256": {
-        "latency_ms": 6.417849997524172,
-        "memory_mb": 20.94140625,
-        "status": "ok"
-      },
-      "512": {
-        "latency_ms": 8.597400004509836,
-        "memory_mb": 25.50390625,
-        "status": "ok"
-      },
-      "1024": {
-        "latency_ms": 8.834460005164146,
-        "memory_mb": 34.62890625,
-        "status": "ok"
-      },
-      "2048": {
-        "latency_ms": 7.054980006068945,
-        "memory_mb": 52.87890625,
-        "status": "ok"
-      },
-      "4096": {
-        "latency_ms": 7.295149995479733,
-        "memory_mb": 90.12890625,
+        "latency_ms": 38.38249999971595,
+        "memory_mb": 24.0,
         "status": "ok"
       }
     },
     "cosformer": {
       "256": {
-        "latency_ms": 9.590700000990182,
-        "memory_mb": 22.763671875,
+        "latency_ms": 5.390760000591399,
+        "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 6.742609990760684,
-        "memory_mb": 28.3828125,
+        "latency_ms": 7.8411200003756685,
+        "memory_mb": 6.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 8.385040005668998,
-        "memory_mb": 40.38671875,
+        "latency_ms": 14.311599999928148,
+        "memory_mb": 12.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 6.390580011066049,
-        "memory_mb": 64.39453125,
+        "latency_ms": 24.337799999921117,
+        "memory_mb": 24.0,
+        "status": "ok"
+      }
+    },
+    "rff": {
+      "256": {
+        "latency_ms": 8.286219999718014,
+        "memory_mb": 3.0,
         "status": "ok"
       },
-      "4096": {
-        "latency_ms": 11.550229997374117,
-        "memory_mb": 113.16015625,
+      "512": {
+        "latency_ms": 14.619239999592537,
+        "memory_mb": 6.0,
+        "status": "ok"
+      },
+      "1024": {
+        "latency_ms": 23.44786000030581,
+        "memory_mb": 12.0,
+        "status": "ok"
+      },
+      "2048": {
+        "latency_ms": 45.11233999946853,
+        "memory_mb": 24.0,
+        "status": "ok"
+      }
+    },
+    "yat": {
+      "256": {
+        "latency_ms": 6.56061999980011,
+        "memory_mb": 6.0,
+        "status": "ok"
+      },
+      "512": {
+        "latency_ms": 19.049939999968046,
+        "memory_mb": 20.0,
+        "status": "ok"
+      },
+      "1024": {
+        "latency_ms": 49.28762000054121,
+        "memory_mb": 72.0,
+        "status": "ok"
+      },
+      "2048": {
+        "latency_ms": 210.99716000026092,
+        "memory_mb": 272.0,
         "status": "ok"
       }
     },
     "yat-spherical": {
       "256": {
-        "latency_ms": 6.945339997764677,
-        "memory_mb": 24.95751953125,
+        "latency_ms": 6.590860000142129,
+        "memory_mb": 6.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 8.658180001657456,
-        "memory_mb": 49.53564453125,
+        "latency_ms": 19.459079999796813,
+        "memory_mb": 20.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 7.271559990476817,
-        "memory_mb": 146.69189453125,
+        "latency_ms": 45.47673999986728,
+        "memory_mb": 72.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 30.69897999521345,
-        "memory_mb": 533.00439453125,
-        "status": "ok"
-      },
-      "4096": {
-        "latency_ms": 116.6282600024715,
-        "memory_mb": 2074.37939453125,
+        "latency_ms": 178.7190199996985,
+        "memory_mb": 272.0,
         "status": "ok"
       }
     },
-    "yat-performer-anchor": {
+    "slay": {
       "256": {
-        "latency_ms": 16.644479997921735,
-        "memory_mb": 303.24169921875,
+        "latency_ms": 6.932819999929052,
+        "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 36.158309993334115,
-        "memory_mb": 451.9072265625,
+        "latency_ms": 13.589840000349795,
+        "memory_mb": 6.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 75.82367000868544,
-        "memory_mb": 615.36328125,
+        "latency_ms": 23.756839999987278,
+        "memory_mb": 12.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 156.02154999505728,
-        "memory_mb": 942.275390625,
-        "status": "ok"
-      },
-      "4096": {
-        "latency_ms": 315.8443500055,
-        "memory_mb": 1596.849609375,
+        "latency_ms": 45.090959999652114,
+        "memory_mb": 24.0,
         "status": "ok"
       }
     },
-    "yat-performer-laplace": {
+    "slay-tensor": {
       "256": {
-        "latency_ms": 13.898299995344132,
-        "memory_mb": 34.5693359375,
+        "latency_ms": NaN,
+        "memory_mb": NaN,
+        "status": "error"
+      },
+      "512": {
+        "latency_ms": NaN,
+        "memory_mb": NaN,
+        "status": "error"
+      },
+      "1024": {
+        "latency_ms": NaN,
+        "memory_mb": NaN,
+        "status": "error"
+      },
+      "2048": {
+        "latency_ms": NaN,
+        "memory_mb": NaN,
+        "status": "error"
+      }
+    },
+    "slay-laplace": {
+      "256": {
+        "latency_ms": 9.035099999891827,
+        "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 15.560080006252974,
-        "memory_mb": 52.7099609375,
+        "latency_ms": 16.437559999758378,
+        "memory_mb": 6.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 15.89893000200391,
-        "memory_mb": 65.8984375,
+        "latency_ms": 23.640859999431996,
+        "memory_mb": 12.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 23.5271800076589,
-        "memory_mb": 92.2421875,
-        "status": "ok"
-      },
-      "4096": {
-        "latency_ms": 47.113089996855706,
-        "memory_mb": 144.9296875,
+        "latency_ms": 52.11141999971005,
+        "memory_mb": 24.0,
         "status": "ok"
       }
     },
-    "yat-performer": {
+    "slay-rm": {
       "256": {
-        "latency_ms": 12.607090000528842,
-        "memory_mb": 36.0693359375,
+        "latency_ms": 12.764359999709995,
+        "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 12.076510000042617,
-        "memory_mb": 55.7099609375,
+        "latency_ms": 20.355620000191266,
+        "memory_mb": 6.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 23.331579996738583,
-        "memory_mb": 71.8984375,
+        "latency_ms": 45.66629999972065,
+        "memory_mb": 12.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 27.585700002964586,
-        "memory_mb": 104.2421875,
+        "latency_ms": 85.11075999995228,
+        "memory_mb": 24.0,
+        "status": "ok"
+      }
+    },
+    "slay-nystrom": {
+      "256": {
+        "latency_ms": 11.545579999801703,
+        "memory_mb": 3.0,
         "status": "ok"
       },
-      "4096": {
-        "latency_ms": 52.347680006641895,
-        "memory_mb": 168.9296875,
+      "512": {
+        "latency_ms": 23.84968000042136,
+        "memory_mb": 6.0,
+        "status": "ok"
+      },
+      "1024": {
+        "latency_ms": 41.874339999776566,
+        "memory_mb": 12.0,
+        "status": "ok"
+      },
+      "2048": {
+        "latency_ms": 63.36471999966306,
+        "memory_mb": 24.0,
+        "status": "ok"
+      }
+    },
+    "slay-anchor": {
+      "256": {
+        "latency_ms": 11.29856000043219,
+        "memory_mb": 3.0,
+        "status": "ok"
+      },
+      "512": {
+        "latency_ms": 18.407720000686822,
+        "memory_mb": 6.0,
+        "status": "ok"
+      },
+      "1024": {
+        "latency_ms": 37.693799999397015,
+        "memory_mb": 12.0,
+        "status": "ok"
+      },
+      "2048": {
+        "latency_ms": 67.94994000010774,
+        "memory_mb": 24.0,
         "status": "ok"
       }
     }

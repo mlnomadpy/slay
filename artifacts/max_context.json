@@ -1,0 +1,50 @@
+{
+  "config": {
+    "embed_dim": 256,
+    "num_heads": 8,
+    "batch_size": 1,
+    "memory_budget_gb": 8.0,
+    "min_seq_len": 256,
+    "max_seq_len": 131072,
+    "seed": 42,
+    "slay_num_features": 32,
+    "slay_num_quad": 2
+  },
+  "results": {
+    "standard": {
+      "max_context": 13056,
+      "estimated_memory_gb": 7.7135009765625,
+      "status": "ok"
+    },
+    "linear": {
+      "max_context": 131072,
+      "estimated_memory_gb": 1.3125,
+      "status": "ok"
+    },
+    "performer": {
+      "max_context": 131072,
+      "estimated_memory_gb": 1.3125,
+      "status": "ok"
+    },
+    "cosformer": {
+      "max_context": 131072,
+      "estimated_memory_gb": 1.3125,
+      "status": "ok"
+    },
+    "yat-spherical": {
+      "max_context": 13056,
+      "estimated_memory_gb": 7.7135009765625,
+      "status": "ok"
+    },
+    "slay": {
+      "max_context": 131072,
+      "estimated_memory_gb": 1.3125,
+      "status": "ok"
+    },
+    "slay-laplace": {
+      "max_context": 131072,
+      "estimated_memory_gb": 1.3125,
+      "status": "ok"
+    }
+  }
+}

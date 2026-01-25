@@ -1,20 +1,26 @@
 \begin{table}[t]
 \centering
 \small
-\caption{Peak memory (forward+backward) vs sequence length.}
+\caption{Estimated peak memory (MB) at various sequence lengths.}
 \label{tab:memory-scaling_backward}
-\begin{tabular}{lrrrrr}
+\begin{tabular}{lrrrr}
 \toprule
-Method & 256 & 512 & 1K & 2K & 4K\\
+Method & 256 & 512 & 1K & 2K \\
 \midrule
-standard & 21 & 34 & 83 & 280 & 1.0GB\\
-performer & 34 & 51 & 86 & 155 & 295\\
-linear & 21 & 26 & 35 & 53 & 90\\
-cosformer & 23 & 28 & 40 & 64 & 113\\
-yat-spherical & 25 & 50 & 147 & 533 & 2.0GB\\
-yat-performer-anchor & 303 & 452 & 615 & 942 & 1.6GB\\
-yat-performer-laplace & 35 & 53 & 66 & 92 & 145\\
-yat-performer & 36 & 56 & 72 & 104 & 169\\
+standard & 6.0 & 20.0 & 72.0 & 272.0 \\
+rotary & -- & -- & -- & -- \\
+linear & 3.0 & 6.0 & 12.0 & 24.0 \\
+performer & 3.0 & 6.0 & 12.0 & 24.0 \\
+cosformer & 3.0 & 6.0 & 12.0 & 24.0 \\
+rff & 3.0 & 6.0 & 12.0 & 24.0 \\
+yat & 6.0 & 20.0 & 72.0 & 272.0 \\
+yat-spherical & 6.0 & 20.0 & 72.0 & 272.0 \\
+slay & 3.0 & 6.0 & 12.0 & 24.0 \\
+slay-tensor & -- & -- & -- & -- \\
+slay-laplace & 3.0 & 6.0 & 12.0 & 24.0 \\
+slay-rm & 3.0 & 6.0 & 12.0 & 24.0 \\
+slay-nystrom & 3.0 & 6.0 & 12.0 & 24.0 \\
+slay-anchor & 3.0 & 6.0 & 12.0 & 24.0 \\
 \bottomrule
 \end{tabular}
 \end{table}

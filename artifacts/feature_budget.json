@@ -1,0 +1,326 @@
+{
+  "config": {
+    "embed_dim": 64,
+    "num_heads": 4,
+    "batch_size": 4,
+    "seq_len": 256,
+    "seed": 42,
+    "warmup_iters": 3,
+    "bench_iters": 10,
+    "quad_nodes": [
+      1,
+      2,
+      4
+    ],
+    "prf_features": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "poly_dims": [
+      8,
+      16,
+      32
+    ]
+  },
+  "results": [
+    {
+      "variant": "slay",
+      "num_quad": 1,
+      "num_features": 8,
+      "poly_dim": null,
+      "rel_l2": 3.3054163455963135,
+      "latency_ms": 2.134940000178176,
+      "feature_dim": 8
+    },
+    {
+      "variant": "slay",
+      "num_quad": 1,
+      "num_features": 16,
+      "poly_dim": null,
+      "rel_l2": 3.139747142791748,
+      "latency_ms": 1.9812799997453112,
+      "feature_dim": 16
+    },
+    {
+      "variant": "slay",
+      "num_quad": 1,
+      "num_features": 32,
+      "poly_dim": null,
+      "rel_l2": 2.69698166847229,
+      "latency_ms": 3.6431799999263603,
+      "feature_dim": 32
+    },
+    {
+      "variant": "slay",
+      "num_quad": 1,
+      "num_features": 64,
+      "poly_dim": null,
+      "rel_l2": 2.6775319576263428,
+      "latency_ms": 3.6280600001191488,
+      "feature_dim": 64
+    },
+    {
+      "variant": "slay",
+      "num_quad": 2,
+      "num_features": 8,
+      "poly_dim": null,
+      "rel_l2": 3.5799014568328857,
+      "latency_ms": 1.9776099998125574,
+      "feature_dim": 16
+    },
+    {
+      "variant": "slay",
+      "num_quad": 2,
+      "num_features": 16,
+      "poly_dim": null,
+      "rel_l2": 3.5299947261810303,
+      "latency_ms": 3.711470000052941,
+      "feature_dim": 32
+    },
+    {
+      "variant": "slay",
+      "num_quad": 2,
+      "num_features": 32,
+      "poly_dim": null,
+      "rel_l2": 3.5398623943328857,
+      "latency_ms": 3.0217800001992146,
+      "feature_dim": 64
+    },
+    {
+      "variant": "slay",
+      "num_quad": 2,
+      "num_features": 64,
+      "poly_dim": null,
+      "rel_l2": 3.930997848510742,
+      "latency_ms": 5.365929999970831,
+      "feature_dim": 128
+    },
+    {
+      "variant": "slay",
+      "num_quad": 4,
+      "num_features": 8,
+      "poly_dim": null,
+      "rel_l2": 3.670916795730591,
+      "latency_ms": 2.506089999951655,
+      "feature_dim": 32
+    },
+    {
+      "variant": "slay",
+      "num_quad": 4,
+      "num_features": 16,
+      "poly_dim": null,
+      "rel_l2": 3.4894094467163086,
+      "latency_ms": 3.1302100000175415,
+      "feature_dim": 64
+    },
+    {
+      "variant": "slay",
+      "num_quad": 4,
+      "num_features": 32,
+      "poly_dim": null,
+      "rel_l2": 3.546698570251465,
+      "latency_ms": 4.299150000224472,
+      "feature_dim": 128
+    },
+    {
+      "variant": "slay",
+      "num_quad": 4,
+      "num_features": 64,
+      "poly_dim": null,
+      "rel_l2": 3.5206117630004883,
+      "latency_ms": 8.60011000004306,
+      "feature_dim": 256
+    },
+    {
+      "variant": "slay-laplace",
+      "num_quad": 1,
+      "num_features": 8,
+      "poly_dim": null,
+      "rel_l2": 1.1284126043319702,
+      "latency_ms": 1.54145000014978,
+      "feature_dim": 8
+    },
+    {
+      "variant": "slay-laplace",
+      "num_quad": 1,
+      "num_features": 16,
+      "poly_dim": null,
+      "rel_l2": 0.9400368928909302,
+      "latency_ms": 1.7524800001410767,
+      "feature_dim": 16
+    },
+    {
+      "variant": "slay-laplace",
+      "num_quad": 1,
+      "num_features": 32,
+      "poly_dim": null,
+      "rel_l2": 0.7270227074623108,
+      "latency_ms": 2.088069999808795,
+      "feature_dim": 32
+    },
+    {
+      "variant": "slay-laplace",
+      "num_quad": 1,
+      "num_features": 64,
+      "poly_dim": null,
+      "rel_l2": 0.6131184697151184,
+      "latency_ms": 4.159129999970901,
+      "feature_dim": 64
+    },
+    {
+      "variant": "slay-laplace",
+      "num_quad": 2,
+      "num_features": 8,
+      "poly_dim": null,
+      "rel_l2": 1.0849486589431763,
+      "latency_ms": 2.200249999805237,
+      "feature_dim": 16
+    },
+    {
+      "variant": "slay-laplace",
+      "num_quad": 2,
+      "num_features": 16,
+      "poly_dim": null,
+      "rel_l2": 0.9773277044296265,
+      "latency_ms": 2.222489999985555,
+      "feature_dim": 32
+    },
+    {
+      "variant": "slay-laplace",
+      "num_quad": 2,
+      "num_features": 32,
+      "poly_dim": null,
+      "rel_l2": 0.9498890042304993,
+      "latency_ms": 3.1171899998298613,
+      "feature_dim": 64
+    },
+    {
+      "variant": "slay-laplace",
+      "num_quad": 2,
+      "num_features": 64,
+      "poly_dim": null,
+      "rel_l2": 1.1951789855957031,
+      "latency_ms": 5.377819999921485,
+      "feature_dim": 128
+    },
+    {
+      "variant": "slay-laplace",
+      "num_quad": 4,
+      "num_features": 8,
+      "poly_dim": null,
+      "rel_l2": 1.0234638452529907,
+      "latency_ms": 2.5139000001217937,
+      "feature_dim": 32
+    },
+    {
+      "variant": "slay-laplace",
+      "num_quad": 4,
+      "num_features": 16,
+      "poly_dim": null,
+      "rel_l2": 0.9261910915374756,
+      "latency_ms": 3.432790000078967,
+      "feature_dim": 64
+    },
+    {
+      "variant": "slay-laplace",
+      "num_quad": 4,
+      "num_features": 32,
+      "poly_dim": null,
+      "rel_l2": 0.8536198139190674,
+      "latency_ms": 5.154210000182502,
+      "feature_dim": 128
+    },
+    {
+      "variant": "slay-laplace",
+      "num_quad": 4,
+      "num_features": 64,
+      "poly_dim": null,
+      "rel_l2": 0.8056394457817078,
+      "latency_ms": 7.433369999853312,
+      "feature_dim": 256
+    },
+    {
+      "variant": "slay-anchor",
+      "num_quad": 1,
+      "num_features": 8,
+      "poly_dim": 8,
+      "rel_l2": 1.4130057096481323,
+      "latency_ms": 2.5631099997553974,
+      "feature_dim": 64
+    },
+    {
+      "variant": "slay-anchor",
+      "num_quad": 1,
+      "num_features": 8,
+      "poly_dim": 16,
+      "rel_l2": 1.2959847450256348,
+      "latency_ms": 3.9664299998548818,
+      "feature_dim": 128
+    },
+    {
+      "variant": "slay-anchor",
+      "num_quad": 1,
+      "num_features": 8,
+      "poly_dim": 32,
+      "rel_l2": 1.2279027700424194,
+      "latency_ms": 6.124970000018948,
+      "feature_dim": 256
+    },
+    {
+      "variant": "slay-anchor",
+      "num_quad": 2,
+      "num_features": 8,
+      "poly_dim": 8,
+      "rel_l2": 1.4642248153686523,
+      "latency_ms": 4.274819999773172,
+      "feature_dim": 128
+    },
+    {
+      "variant": "slay-anchor",
+      "num_quad": 2,
+      "num_features": 8,
+      "poly_dim": 16,
+      "rel_l2": 1.2772202491760254,
+      "latency_ms": 5.967279999822495,
+      "feature_dim": 256
+    },
+    {
+      "variant": "slay-anchor",
+      "num_quad": 2,
+      "num_features": 8,
+      "poly_dim": 32,
+      "rel_l2": 1.2092918157577515,
+      "latency_ms": 11.302300000170362,
+      "feature_dim": 512
+    },
+    {
+      "variant": "slay-anchor",
+      "num_quad": 4,
+      "num_features": 8,
+      "poly_dim": 8,
+      "rel_l2": 1.4079591035842896,
+      "latency_ms": 5.122119999941788,
+      "feature_dim": 256
+    },
+    {
+      "variant": "slay-anchor",
+      "num_quad": 4,
+      "num_features": 8,
+      "poly_dim": 16,
+      "rel_l2": 1.2006962299346924,
+      "latency_ms": 10.010250000050291,
+      "feature_dim": 512
+    },
+    {
+      "variant": "slay-anchor",
+      "num_quad": 4,
+      "num_features": 8,
+      "poly_dim": 32,
+      "rel_l2": 1.17786705493927,
+      "latency_ms": 20.437440000023344,
+      "feature_dim": 1024
+    }
+  ]
+}
