@@ -92,10 +92,14 @@ ATTENTION_REGISTRY = {
     "yat": YatAttention,
     "yat-spherical": YatSphericalAttention,
     "slay": SLAYAttention,
+    "slay-tensor": SLAYTensorAttention,
     "slay-laplace": SLAYLaplaceAttention,
+    "slay-rm": SLAYRMAttention,
+    "slay-nystrom": SLAYNystromAttention,
+    "slay-anchor": SLAYAnchorAttention,
 }
 
-DEFAULT_ATTENTIONS = ["standard", "linear", "performer", "slay", "slay-laplace"]
+DEFAULT_ATTENTIONS = ["standard", "linear", "performer", "slay", "slay-tensor", "slay-laplace", "slay-rm", "slay-nystrom", "slay-anchor"]
 
 
 def get_attention_kwargs(name: str, cfg: TaskConfig) -> Dict[str, Any]:
@@ -106,10 +110,22 @@ def get_attention_kwargs(name: str, cfg: TaskConfig) -> Dict[str, Any]:
         return {"num_features": cfg.rff_num_features}
     if name in {"yat", "yat-spherical"}:
         return {"epsilon": 1e-6}
-    if name in {"slay", "slay-laplace"}:
+    if name in {"slay", "slay-laplace", "slay-rm", "slay-nystrom"}:
         return {
             "num_features": cfg.slay_num_features,
             "num_quadrature_nodes": cfg.slay_num_quad,
+        }
+    if name == "slay-tensor":
+        return {
+            "num_features": cfg.slay_num_features,
+            "num_quadrature_nodes": cfg.slay_num_quad,
+            "poly_dim": cfg.slay_poly_dim,
+        }
+    if name == "slay-anchor":
+        return {
+            "num_prf_features": cfg.slay_prf_dim,
+            "num_quadrature_nodes": cfg.slay_num_quad,
+            "poly_dim": cfg.slay_poly_dim,
         }
     return {}
 

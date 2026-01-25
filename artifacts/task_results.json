@@ -24,7 +24,7 @@
       "attention": "standard",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "copy",
@@ -32,7 +32,7 @@
       "attention": "linear",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "copy",
@@ -40,7 +40,7 @@
       "attention": "performer",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "copy",
@@ -48,7 +48,15 @@
       "attention": "slay",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "copy",
+      "category": "basic",
+      "attention": "slay-tensor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
     },
     {
       "task": "copy",
@@ -56,7 +64,31 @@
       "attention": "slay-laplace",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "copy",
+      "category": "basic",
+      "attention": "slay-rm",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "copy",
+      "category": "basic",
+      "attention": "slay-nystrom",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "copy",
+      "category": "basic",
+      "attention": "slay-anchor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "reverse",
@@ -64,7 +96,7 @@
       "attention": "standard",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "reverse",
@@ -72,7 +104,7 @@
       "attention": "linear",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "reverse",
@@ -80,7 +112,7 @@
       "attention": "performer",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "reverse",
@@ -88,7 +120,15 @@
       "attention": "slay",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "reverse",
+      "category": "basic",
+      "attention": "slay-tensor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
     },
     {
       "task": "reverse",
@@ -96,7 +136,31 @@
       "attention": "slay-laplace",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "reverse",
+      "category": "basic",
+      "attention": "slay-rm",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "reverse",
+      "category": "basic",
+      "attention": "slay-nystrom",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "reverse",
+      "category": "basic",
+      "attention": "slay-anchor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "sort",
@@ -104,7 +168,7 @@
       "attention": "standard",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "sort",
@@ -112,7 +176,7 @@
       "attention": "linear",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "sort",
@@ -120,7 +184,7 @@
       "attention": "performer",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "sort",
@@ -128,7 +192,15 @@
       "attention": "slay",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "sort",
+      "category": "basic",
+      "attention": "slay-tensor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
     },
     {
       "task": "sort",
@@ -136,7 +208,31 @@
       "attention": "slay-laplace",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "sort",
+      "category": "basic",
+      "attention": "slay-rm",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "sort",
+      "category": "basic",
+      "attention": "slay-nystrom",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "sort",
+      "category": "basic",
+      "attention": "slay-anchor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "retrieval",
@@ -144,7 +240,7 @@
       "attention": "standard",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "retrieval",
@@ -152,7 +248,7 @@
       "attention": "linear",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "retrieval",
@@ -160,7 +256,7 @@
       "attention": "performer",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "retrieval",
@@ -168,7 +264,15 @@
       "attention": "slay",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "retrieval",
+      "category": "memory",
+      "attention": "slay-tensor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
     },
     {
       "task": "retrieval",
@@ -176,7 +280,31 @@
       "attention": "slay-laplace",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "retrieval",
+      "category": "memory",
+      "attention": "slay-rm",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "retrieval",
+      "category": "memory",
+      "attention": "slay-nystrom",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "retrieval",
+      "category": "memory",
+      "attention": "slay-anchor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "selective_copy",
@@ -184,7 +312,7 @@
       "attention": "standard",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "selective_copy",
@@ -192,7 +320,7 @@
       "attention": "linear",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "selective_copy",
@@ -200,7 +328,7 @@
       "attention": "performer",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "selective_copy",
@@ -208,7 +336,15 @@
       "attention": "slay",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "selective_copy",
+      "category": "memory",
+      "attention": "slay-tensor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
     },
     {
       "task": "selective_copy",
@@ -216,7 +352,31 @@
       "attention": "slay-laplace",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "selective_copy",
+      "category": "memory",
+      "attention": "slay-rm",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "selective_copy",
+      "category": "memory",
+      "attention": "slay-nystrom",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "selective_copy",
+      "category": "memory",
+      "attention": "slay-anchor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "first_token",
@@ -224,7 +384,7 @@
       "attention": "standard",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "first_token",
@@ -232,7 +392,7 @@
       "attention": "linear",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "first_token",
@@ -240,7 +400,7 @@
       "attention": "performer",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "first_token",
@@ -248,7 +408,15 @@
       "attention": "slay",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "first_token",
+      "category": "memory",
+      "attention": "slay-tensor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
     },
     {
       "task": "first_token",
@@ -256,7 +424,31 @@
       "attention": "slay-laplace",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "first_token",
+      "category": "memory",
+      "attention": "slay-rm",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "first_token",
+      "category": "memory",
+      "attention": "slay-nystrom",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "first_token",
+      "category": "memory",
+      "attention": "slay-anchor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "counting",
@@ -264,7 +456,7 @@
       "attention": "standard",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "counting",
@@ -272,7 +464,7 @@
       "attention": "linear",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "counting",
@@ -280,7 +472,7 @@
       "attention": "performer",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "counting",
@@ -288,7 +480,15 @@
       "attention": "slay",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "counting",
+      "category": "arithmetic",
+      "attention": "slay-tensor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
     },
     {
       "task": "counting",
@@ -296,7 +496,31 @@
       "attention": "slay-laplace",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "counting",
+      "category": "arithmetic",
+      "attention": "slay-rm",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "counting",
+      "category": "arithmetic",
+      "attention": "slay-nystrom",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "counting",
+      "category": "arithmetic",
+      "attention": "slay-anchor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "parity",
@@ -304,7 +528,7 @@
       "attention": "standard",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "parity",
@@ -312,7 +536,7 @@
       "attention": "linear",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "parity",
@@ -320,7 +544,7 @@
       "attention": "performer",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "parity",
@@ -328,7 +552,15 @@
       "attention": "slay",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "parity",
+      "category": "arithmetic",
+      "attention": "slay-tensor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
     },
     {
       "task": "parity",
@@ -336,7 +568,31 @@
       "attention": "slay-laplace",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "parity",
+      "category": "arithmetic",
+      "attention": "slay-rm",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "parity",
+      "category": "arithmetic",
+      "attention": "slay-nystrom",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "parity",
+      "category": "arithmetic",
+      "attention": "slay-anchor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "long_copy",
@@ -344,7 +600,7 @@
       "attention": "standard",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "long_copy",
@@ -352,7 +608,7 @@
       "attention": "linear",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "long_copy",
@@ -360,7 +616,7 @@
       "attention": "performer",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "long_copy",
@@ -368,7 +624,15 @@
       "attention": "slay",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "long_copy",
+      "category": "long_range",
+      "attention": "slay-tensor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
     },
     {
       "task": "long_copy",
@@ -376,7 +640,31 @@
       "attention": "slay-laplace",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "long_copy",
+      "category": "long_range",
+      "attention": "slay-rm",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "long_copy",
+      "category": "long_range",
+      "attention": "slay-nystrom",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "long_copy",
+      "category": "long_range",
+      "attention": "slay-anchor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "distant_match",
@@ -384,7 +672,7 @@
       "attention": "standard",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "distant_match",
@@ -392,7 +680,7 @@
       "attention": "linear",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "distant_match",
@@ -400,7 +688,7 @@
       "attention": "performer",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     },
     {
       "task": "distant_match",
@@ -408,7 +696,15 @@
       "attention": "slay",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "distant_match",
+      "category": "long_range",
+      "attention": "slay-tensor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
     },
     {
       "task": "distant_match",
@@ -416,7 +712,31 @@
       "attention": "slay-laplace",
       "final_loss": NaN,
       "final_accuracy": NaN,
-      "error": "Found unexpected Arrays on value of type <class 'list'> in static attribute 'blocks' of Pytree type '<class '__main__.TaskModel'>'. This is an error starting from Flax version 0.12.0.\nConsider one of the following options:\n\n1. If the attribute is meant to be static, either remove the Array value or wrap it in a static container.\n2. Wrap the value with nnx.data on assignment:\n\n  _.blocks = nnx.data(...)\n\n3. Annotate the class attribute with nnx.Data:\n\n  class TaskModel(Module):\n    blocks: nnx.Data[list]\n\n4. If the container is a list or dict, try using nnx.List(...) or nnx.Dict(...) instead.\n5. Disable pytree for this class:\n\n  class TaskModel(Module, pytree=False):\n\n"
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+    },
+    {
+      "task": "distant_match",
+      "category": "long_range",
+      "attention": "slay-rm",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "distant_match",
+      "category": "long_range",
+      "attention": "slay-nystrom",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+    },
+    {
+      "task": "distant_match",
+      "category": "long_range",
+      "attention": "slay-anchor",
+      "final_loss": NaN,
+      "final_accuracy": NaN,
+      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
     }
   ]
 }
