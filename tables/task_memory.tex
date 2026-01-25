@@ -1,0 +1,19 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Synthetic task performance (memory). Accuracy (mean $\pm$ std over 3 seeds).}
+\label{tab:task-memory}
+\begin{tabular}{lcccc}
+\toprule
+Method & Retrieval & Kv Recall & First Token & Selective Copy\\
+\midrule
+standard & 1.00$\pm$0.00 & 0.02$\pm$0.02 & 1.00$\pm$0.00 & 0.88$\pm$0.00\\
+performer & 1.00$\pm$0.00 & 0.03$\pm$0.00 & 1.00$\pm$0.00 & 0.88$\pm$0.00\\
+linear & 1.00$\pm$0.00 & 0.02$\pm$0.02 & 0.97$\pm$0.02 & 0.88$\pm$0.00\\
+yat-spherical & 1.00$\pm$0.00 & 0.02$\pm$0.03 & 1.00$\pm$0.00 & 0.88$\pm$0.00\\
+yat-performer-anchor & 1.00$\pm$0.00 & 0.02$\pm$0.01 & 1.00$\pm$0.00 & 0.88$\pm$0.00\\
+yat-performer-laplace & 1.00$\pm$0.00 & 0.03$\pm$0.01 & 1.00$\pm$0.00 & 0.88$\pm$0.00\\
+yat-performer & 1.00$\pm$0.00 & 0.03$\pm$0.01 & 1.00$\pm$0.00 & 0.88$\pm$0.00\\
+\bottomrule
+\end{tabular}
+\end{table}

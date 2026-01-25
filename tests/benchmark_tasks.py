@@ -38,6 +38,33 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.attention import get_attention_class
 
+def get_best_device(requested: str | None = None) -> torch.device:
+    """
+    Select the best available device.
+    Priority:
+      1. User-requested device (if valid)
+      2. CUDA (NVIDIA)
+      3. MPS (Apple Silicon)
+      4. CPU
+    """
+    if requested:
+        if requested == "cuda" and torch.cuda.is_available():
+            return torch.device("cuda")
+        if requested == "mps" and torch.backends.mps.is_available():
+            return torch.device("mps")
+        if requested == "cpu":
+            return torch.device("cpu")
+        print(f"⚠️ Requested device '{requested}' not available, auto-selecting.")
+
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+
+    return torch.device("cpu")
+
+def is_mps(device) -> bool:
+    return isinstance(device, torch.device) and device.type == "mps"
 
 @dataclass
 class TaskConfig:
@@ -53,7 +80,7 @@ class TaskConfig:
     eval_every: int = 20
     num_seeds: int = 3  # For statistical significance
     
-    device: str = "cuda"
+    device: torch.device = torch.device("cpu")
     seed: int = 42
     
     # Yat-specific parameters
@@ -234,9 +261,17 @@ def generate_selective_copy_data(batch_size: int, seq_len: int, vocab_size: int,
     return x, y, "sequence"
 
 
-def generate_long_copy_data(batch_size: int, seq_len: int, vocab_size: int, device: str):
-    """Long copy: copy with seq_len=256."""
-    actual_len = min(256, seq_len * 4)
+def generate_long_copy_data(batch_size: int, seq_len: int, vocab_size: int, device):
+    """
+    Long copy task.
+    On MPS, cap sequence length to avoid MPSNDArray INT_MAX crash.
+    """
+    if is_mps(device):
+        # Safe upper bound for Apple GPU
+        actual_len = min(128, seq_len * 2)
+    else:
+        actual_len = min(256, seq_len * 4)
+
     x = torch.randint(0, vocab_size, (batch_size, actual_len), device=device)
     return x, x, "sequence"
 
@@ -790,7 +825,12 @@ def format_markdown_table(results: Dict[str, Dict[str, Dict[str, Any]]]) -> str:
 
 def main():
     parser = argparse.ArgumentParser(description="Comprehensive synthetic task benchmarks")
-    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+    "--device",
+    default=None,
+    choices=["cpu", "cuda", "mps"],
+    help="Device to use: cpu, cuda, or mps (Apple GPU)"
+    )
     parser.add_argument("--quick", action="store_true", help="Quick run (fewer epochs, 1 seed)")
     parser.add_argument("--embed-dim", type=int, default=64)
     parser.add_argument("--n-heads", type=int, default=4)
@@ -806,8 +846,10 @@ def main():
     args = parser.parse_args()
     
     # Configure
+    device = get_best_device(args.device)
+
     cfg = TaskConfig(
-        device=args.device,
+        device=device,
         embed_dim=args.embed_dim,
         n_heads=args.n_heads,
         n_layers=args.n_layers,
@@ -823,6 +865,12 @@ def main():
         cfg.eval_every = 10
         cfg.batch_size = 16
     
+    # MPS safety adjustments
+    if cfg.device.type == "mps":
+        if cfg.batch_size > 16:
+            print(f"⚠️  Reducing batch size for MPS: {cfg.batch_size} → 16")
+            cfg.batch_size = 16
+
     # Select tasks
     if args.tasks:
         task_names = args.tasks
@@ -840,6 +888,8 @@ def main():
     print("SLAY Comprehensive Task Benchmarks")
     print("=" * 70)
     print(f"Device: {cfg.device}")
+    print(f"  CUDA available: {torch.cuda.is_available()}")
+    print(f"  MPS available:  {torch.backends.mps.is_available()}")
     print(f"Model: embed={cfg.embed_dim}, heads={cfg.n_heads}, layers={cfg.n_layers}")
     print(f"Training: epochs={cfg.num_epochs}, seeds={cfg.num_seeds}")
     print(f"Tasks ({len(task_names)}): {', '.join(task_names)}")
