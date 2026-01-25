@@ -51,6 +51,7 @@ from main import (
     RMSNorm,
     precompute_freqs_cis,
     apply_rotary_emb,
+    mesh,
 )
 
 
@@ -336,12 +337,12 @@ class TaskModel(nnx.Module):
         
         self.token_emb = nnx.Embed(vocab_size, embed_dim, rngs=rngs)
         
-        self.blocks = [
+        self.blocks = nnx.List([
             TaskTransformerBlock(
                 embed_dim, num_heads, ff_dim, attention_type, attention_kwargs, rngs=rngs
             )
             for _ in range(n_layers)
-        ]
+        ])
         
         self.norm_final = RMSNorm(embed_dim, rngs=rngs)
         self.head = nnx.Linear(embed_dim, vocab_size, rngs=rngs)
@@ -430,34 +431,35 @@ def train_on_task(
 ) -> Dict[str, Any]:
     """Train a model on a single task."""
     
-    rngs = nnx.Rngs(seed)
-    key = jax.random.PRNGKey(seed)
+    with mesh:
+        rngs = nnx.Rngs(seed)
+        key = jax.random.PRNGKey(seed)
     
-    model = create_model(task.vocab_size, cfg, task.seq_len, attention_type, rngs)
-    optimizer = nnx.Optimizer(model, optax.adam(cfg.lr))
+        model = create_model(task.vocab_size, cfg, task.seq_len, attention_type, rngs)
+        optimizer = nnx.Optimizer(model, optax.adam(cfg.lr))
     
-    train_losses = []
-    eval_accs = []
+        train_losses = []
+        eval_accs = []
     
-    for epoch in range(cfg.num_epochs):
-        key, subkey = jax.random.split(key)
+        for epoch in range(cfg.num_epochs):
+            key, subkey = jax.random.split(key)
         
-        # Generate batch
-        inputs, targets = task.generate_fn(cfg.batch_size, task.seq_len, task.vocab_size, subkey)
+            # Generate batch
+            inputs, targets = task.generate_fn(cfg.batch_size, task.seq_len, task.vocab_size, subkey)
         
-        # Train step
-        loss = train_step(model, optimizer, inputs, targets)
-        train_losses.append(float(loss))
+            # Train step
+            loss = train_step(model, optimizer, inputs, targets)
+            train_losses.append(float(loss))
         
-        # Evaluate
-        if (epoch + 1) % cfg.eval_every == 0 or epoch == cfg.num_epochs - 1:
-            key, eval_key = jax.random.split(key)
-            eval_inputs, eval_targets = task.generate_fn(cfg.batch_size * 4, task.seq_len, task.vocab_size, eval_key)
-            acc = compute_accuracy(model, eval_inputs, eval_targets)
-            eval_accs.append(acc)
+            # Evaluate
+            if (epoch + 1) % cfg.eval_every == 0 or epoch == cfg.num_epochs - 1:
+                key, eval_key = jax.random.split(key)
+                eval_inputs, eval_targets = task.generate_fn(cfg.batch_size * 4, task.seq_len, task.vocab_size, eval_key)
+                acc = compute_accuracy(model, eval_inputs, eval_targets)
+                eval_accs.append(acc)
     
-    final_acc = eval_accs[-1] if eval_accs else 0.0
-    final_loss = train_losses[-1] if train_losses else float("inf")
+        final_acc = eval_accs[-1] if eval_accs else 0.0
+        final_loss = train_losses[-1] if train_losses else float("inf")
     
     return {
         "task": task.name,

@@ -1,0 +1,18 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Kernel approximation quality at $L=256$. Lower Rel.~$\ell_2$ is better.}
+\label{tab:kernel-quality}
+\begin{tabular}{lccc}
+\toprule
+Method & Rel.~$\ell_2\downarrow$ & Cos Sim$\uparrow$ & Latency (ms) \\
+\midrule
+SLAY-Laplace & 0.9499 & 0.7295 & 110.71 \\
+SLAY-Anchor & 1.2960 & 0.6191 & 125.52 \\
+SLAY-Nystrom & 1.5214 & 0.5657 & 118.09 \\
+SLAY & 3.5399 & 0.3037 & 119.04 \\
+SLAY-RM & 588.7668 & -0.0526 & 124.28 \\
+SLAY-Tensor & 15405.8145 & -0.0541 & 140.11 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -40,6 +40,7 @@ from main import (
     SLAYLaplaceAttention,
     SLAYAnchorAttention,
     precompute_freqs_cis,
+    mesh,
 )
 
 
@@ -84,48 +85,49 @@ def benchmark_config(
 ) -> Dict[str, float]:
     """Benchmark a single configuration."""
     
-    rngs = nnx.Rngs(cfg.seed)
+    with mesh:
+        rngs = nnx.Rngs(cfg.seed)
     
-    if variant == "slay":
-        attn = SLAYAttention(cfg.embed_dim, cfg.num_heads, rngs=rngs, **kwargs)
-    elif variant == "slay-laplace":
-        attn = SLAYLaplaceAttention(cfg.embed_dim, cfg.num_heads, rngs=rngs, **kwargs)
-    elif variant == "slay-anchor":
-        attn = SLAYAnchorAttention(cfg.embed_dim, cfg.num_heads, rngs=rngs, **kwargs)
-    else:
-        raise ValueError(f"Unknown variant: {variant}")
+        if variant == "slay":
+            attn = SLAYAttention(cfg.embed_dim, cfg.num_heads, rngs=rngs, **kwargs)
+        elif variant == "slay-laplace":
+            attn = SLAYLaplaceAttention(cfg.embed_dim, cfg.num_heads, rngs=rngs, **kwargs)
+        elif variant == "slay-anchor":
+            attn = SLAYAnchorAttention(cfg.embed_dim, cfg.num_heads, rngs=rngs, **kwargs)
+        else:
+            raise ValueError(f"Unknown variant: {variant}")
     
-    @jax.jit
-    def forward(attn, inp, fc, fs):
-        return attn(inp, fc, fs)
+        @jax.jit
+        def forward(attn, inp, fc, fs):
+            return attn(inp, fc, fs)
     
-    # Warmup
-    for _ in range(cfg.warmup_iters):
-        out = forward(attn, x, freqs_cos, freqs_sin)
-        jax.block_until_ready(out)
+        # Warmup
+        for _ in range(cfg.warmup_iters):
+            out = forward(attn, x, freqs_cos, freqs_sin)
+            jax.block_until_ready(out)
     
-    # Benchmark
-    start = time.perf_counter()
-    for _ in range(cfg.bench_iters):
-        out = forward(attn, x, freqs_cos, freqs_sin)
-        jax.block_until_ready(out)
-    latency_ms = (time.perf_counter() - start) / cfg.bench_iters * 1000
+        # Benchmark
+        start = time.perf_counter()
+        for _ in range(cfg.bench_iters):
+            out = forward(attn, x, freqs_cos, freqs_sin)
+            jax.block_until_ready(out)
+        latency_ms = (time.perf_counter() - start) / cfg.bench_iters * 1000
     
-    # Compute error
-    metrics = compute_metrics(out, y_exact)
-    metrics["latency_ms"] = latency_ms
+        # Compute error
+        metrics = compute_metrics(out, y_exact)
+        metrics["latency_ms"] = latency_ms
     
-    # Estimate feature dimension (for Pareto analysis)
-    num_quad = kwargs.get("num_quadrature_nodes", 1)
-    num_feat = kwargs.get("num_features", kwargs.get("num_prf_features", 32))
-    poly_dim = kwargs.get("poly_dim", 1)
+        # Estimate feature dimension (for Pareto analysis)
+        num_quad = kwargs.get("num_quadrature_nodes", 1)
+        num_feat = kwargs.get("num_features", kwargs.get("num_prf_features", 32))
+        poly_dim = kwargs.get("poly_dim", 1)
     
-    if variant == "slay-laplace":
-        feature_dim = num_quad * num_feat
-    else:
-        feature_dim = num_quad * num_feat * poly_dim
+        if variant == "slay-laplace":
+            feature_dim = num_quad * num_feat
+        else:
+            feature_dim = num_quad * num_feat * poly_dim
     
-    metrics["feature_dim"] = feature_dim
+        metrics["feature_dim"] = feature_dim
     
     return metrics
 
@@ -143,15 +145,16 @@ def run_feature_budget_sweep(cfg: FeatureBudgetConfig) -> List[Dict[str, Any]]:
     x = jax.random.normal(key, (cfg.batch_size, cfg.seq_len, cfg.embed_dim))
     
     # Get exact output
-    exact_rngs = nnx.Rngs(cfg.seed)
-    exact_attn = YatSphericalAttention(cfg.embed_dim, cfg.num_heads, rngs=exact_rngs, epsilon=1e-6)
+    with mesh:
+        exact_rngs = nnx.Rngs(cfg.seed)
+        exact_attn = YatSphericalAttention(cfg.embed_dim, cfg.num_heads, rngs=exact_rngs, epsilon=1e-6)
     
-    @jax.jit
-    def exact_forward(attn, inp, fc, fs):
-        return attn(inp, fc, fs)
+        @jax.jit
+        def exact_forward(attn, inp, fc, fs):
+            return attn(inp, fc, fs)
     
-    y_exact = exact_forward(exact_attn, x, freqs_cos, freqs_sin)
-    jax.block_until_ready(y_exact)
+        y_exact = exact_forward(exact_attn, x, freqs_cos, freqs_sin)
+        jax.block_until_ready(y_exact)
     
     # Sweep SLAY (Hadamard fusion)
     print("\n[SLAY - Hadamard Fusion]")

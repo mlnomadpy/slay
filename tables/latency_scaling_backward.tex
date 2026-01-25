@@ -1,20 +1,26 @@
 \begin{table}[t]
 \centering
 \small
-\caption{Attention latency (forward+backward) vs sequence length (ms).}
+\caption{Attention latency (ms (fwd+bwd)) at various sequence lengths.}
 \label{tab:latency-scaling_backward}
-\begin{tabular}{lrrrrr}
+\begin{tabular}{lrrrr}
 \toprule
-Method & 256 & 512 & 1K & 2K & 4K\\
+Method & 256 & 512 & 1K & 2K \\
 \midrule
-standard & 5.7 & 4.7 & 4.4 & 15.5 & 53.2\\
-performer & 6.3 & 5.8 & 4.0 & 6.2 & 12.6\\
-linear & 6.4 & 8.6 & 8.8 & 7.1 & 7.3\\
-cosformer & 9.6 & 6.7 & 8.4 & 6.4 & 11.6\\
-yat-spherical & 6.9 & 8.7 & 7.3 & 30.7 & 116.6\\
-yat-performer-anchor & 16.6 & 36.2 & 75.8 & 156.0 & 315.8\\
-yat-performer-laplace & 13.9 & 15.6 & 15.9 & 23.5 & 47.1\\
-yat-performer & 12.6 & 12.1 & 23.3 & 27.6 & 52.3\\
+standard & 5.92 & 18.77 & 48.02 & 183.22 \\
+rotary & -- & -- & -- & -- \\
+linear & 3.32 & 6.16 & 9.59 & 18.29 \\
+performer & 6.12 & 10.40 & 15.67 & 26.75 \\
+cosformer & 4.32 & 7.24 & 14.89 & 27.76 \\
+rff & 8.59 & 12.83 & 24.09 & 42.72 \\
+yat & 6.48 & 19.82 & 59.22 & 231.10 \\
+yat-spherical & 6.22 & 17.29 & 47.83 & 195.76 \\
+slay & 6.73 & 11.11 & 19.55 & 33.06 \\
+slay-tensor & -- & -- & -- & -- \\
+slay-laplace & 6.47 & 12.80 & 17.23 & 31.70 \\
+slay-rm & 8.96 & 13.38 & 28.39 & 53.32 \\
+slay-nystrom & 7.68 & 13.35 & 27.51 & 49.42 \\
+slay-anchor & 8.85 & 14.41 & 33.76 & 86.63 \\
 \bottomrule
 \end{tabular}
 \end{table}

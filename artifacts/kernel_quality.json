@@ -1,0 +1,312 @@
+{
+  "config": {
+    "embed_dim": 64,
+    "num_heads": 4,
+    "batch_size": 4,
+    "seq_lengths": [
+      64,
+      128,
+      256,
+      512
+    ],
+    "seed": 42,
+    "num_features_options": [
+      16,
+      32,
+      64
+    ],
+    "num_quad_options": [
+      1,
+      2,
+      4
+    ],
+    "poly_dim_options": [
+      8,
+      16,
+      32
+    ]
+  },
+  "sweep": false,
+  "results": [
+    {
+      "method": "SLAY",
+      "variant": "slay",
+      "seq_len": 64,
+      "num_features": 32,
+      "num_quadrature_nodes": 2,
+      "rel_l2": 2.6070523262023926,
+      "cos_sim": 0.3259454369544983,
+      "mse": 0.0994635820388794,
+      "latency_ms": 207.31890000024578
+    },
+    {
+      "method": "SLAY",
+      "variant": "slay",
+      "seq_len": 128,
+      "num_features": 32,
+      "num_quadrature_nodes": 2,
+      "rel_l2": 2.9405012130737305,
+      "cos_sim": 0.32318201661109924,
+      "mse": 0.07377911359071732,
+      "latency_ms": 113.11449999993783
+    },
+    {
+      "method": "SLAY",
+      "variant": "slay",
+      "seq_len": 256,
+      "num_features": 32,
+      "num_quadrature_nodes": 2,
+      "rel_l2": 3.5398623943328857,
+      "cos_sim": 0.3037293553352356,
+      "mse": 0.061499565839767456,
+      "latency_ms": 119.04359999971348
+    },
+    {
+      "method": "SLAY",
+      "variant": "slay",
+      "seq_len": 512,
+      "num_features": 32,
+      "num_quadrature_nodes": 2,
+      "rel_l2": 4.130812168121338,
+      "cos_sim": 0.25669658184051514,
+      "mse": 0.04422864317893982,
+      "latency_ms": 126.39309999940451
+    },
+    {
+      "method": "SLAY-Laplace",
+      "variant": "slay-laplace",
+      "seq_len": 64,
+      "num_features": 32,
+      "num_quadrature_nodes": 2,
+      "rel_l2": 0.6607844233512878,
+      "cos_sim": 0.8264438509941101,
+      "mse": 0.0063897548243403435,
+      "latency_ms": 104.59659999833093
+    },
+    {
+      "method": "SLAY-Laplace",
+      "variant": "slay-laplace",
+      "seq_len": 128,
+      "num_features": 32,
+      "num_quadrature_nodes": 2,
+      "rel_l2": 0.7731599807739258,
+      "cos_sim": 0.7850152254104614,
+      "mse": 0.005100695416331291,
+      "latency_ms": 113.43999999735388
+    },
+    {
+      "method": "SLAY-Laplace",
+      "variant": "slay-laplace",
+      "seq_len": 256,
+      "num_features": 32,
+      "num_quadrature_nodes": 2,
+      "rel_l2": 0.9498890042304993,
+      "cos_sim": 0.7295227646827698,
+      "mse": 0.004428380634635687,
+      "latency_ms": 110.70960000142804
+    },
+    {
+      "method": "SLAY-Laplace",
+      "variant": "slay-laplace",
+      "seq_len": 512,
+      "num_features": 32,
+      "num_quadrature_nodes": 2,
+      "rel_l2": 1.097944974899292,
+      "cos_sim": 0.6706553101539612,
+      "mse": 0.0031245960853993893,
+      "latency_ms": 105.46659999818075
+    },
+    {
+      "method": "SLAY-Tensor",
+      "variant": "slay-tensor",
+      "seq_len": 64,
+      "num_prf_features": 8,
+      "num_quadrature_nodes": 1,
+      "poly_sketch_dim": 16,
+      "rel_l2": 3616.876220703125,
+      "cos_sim": -0.0720713883638382,
+      "mse": 191439.65625,
+      "latency_ms": 157.6095999989775
+    },
+    {
+      "method": "SLAY-Tensor",
+      "variant": "slay-tensor",
+      "seq_len": 128,
+      "num_prf_features": 8,
+      "num_quadrature_nodes": 1,
+      "poly_sketch_dim": 16,
+      "rel_l2": 8440.3740234375,
+      "cos_sim": -0.08108573406934738,
+      "mse": 607874.6875,
+      "latency_ms": 138.68519999959972
+    },
+    {
+      "method": "SLAY-Tensor",
+      "variant": "slay-tensor",
+      "seq_len": 256,
+      "num_prf_features": 8,
+      "num_quadrature_nodes": 1,
+      "poly_sketch_dim": 16,
+      "rel_l2": 15405.814453125,
+      "cos_sim": -0.05413255840539932,
+      "mse": 1164846.25,
+      "latency_ms": 140.11480000044685
+    },
+    {
+      "method": "SLAY-Tensor",
+      "variant": "slay-tensor",
+      "seq_len": 512,
+      "num_prf_features": 8,
+      "num_quadrature_nodes": 1,
+      "poly_sketch_dim": 16,
+      "rel_l2": 31008.0,
+      "cos_sim": -0.05510932579636574,
+      "mse": 2492184.5,
+      "latency_ms": 142.24770000146236
+    },
+    {
+      "method": "SLAY-RM",
+      "variant": "slay-rm",
+      "seq_len": 64,
+      "num_prf_features": 8,
+      "num_quadrature_nodes": 1,
+      "poly_dim": 16,
+      "rel_l2": 141.60916137695312,
+      "cos_sim": -0.03651958703994751,
+      "mse": 293.458984375,
+      "latency_ms": 128.03939999866998
+    },
+    {
+      "method": "SLAY-RM",
+      "variant": "slay-rm",
+      "seq_len": 128,
+      "num_prf_features": 8,
+      "num_quadrature_nodes": 1,
+      "poly_dim": 16,
+      "rel_l2": 307.2262878417969,
+      "cos_sim": -0.05132289603352547,
+      "mse": 805.3921508789062,
+      "latency_ms": 112.3818999985815
+    },
+    {
+      "method": "SLAY-RM",
+      "variant": "slay-rm",
+      "seq_len": 256,
+      "num_prf_features": 8,
+      "num_quadrature_nodes": 1,
+      "poly_dim": 16,
+      "rel_l2": 588.7667846679688,
+      "cos_sim": -0.05263790488243103,
+      "mse": 1701.319091796875,
+      "latency_ms": 124.27540000135195
+    },
+    {
+      "method": "SLAY-RM",
+      "variant": "slay-rm",
+      "seq_len": 512,
+      "num_prf_features": 8,
+      "num_quadrature_nodes": 1,
+      "poly_dim": 16,
+      "rel_l2": 1288.66455078125,
+      "cos_sim": -0.03184467926621437,
+      "mse": 4304.3984375,
+      "latency_ms": 161.54420000020764
+    },
+    {
+      "method": "SLAY-Nystrom",
+      "variant": "slay-nystrom",
+      "seq_len": 64,
+      "num_prf_features": 8,
+      "num_quadrature_nodes": 1,
+      "poly_dim": 16,
+      "rel_l2": 1.2953522205352783,
+      "cos_sim": 0.6169901490211487,
+      "mse": 0.0245550274848938,
+      "latency_ms": 139.59040000190726
+    },
+    {
+      "method": "SLAY-Nystrom",
+      "variant": "slay-nystrom",
+      "seq_len": 128,
+      "num_prf_features": 8,
+      "num_quadrature_nodes": 1,
+      "poly_dim": 16,
+      "rel_l2": 1.343931794166565,
+      "cos_sim": 0.6431999206542969,
+      "mse": 0.015411507338285446,
+      "latency_ms": 127.53150000207825
+    },
+    {
+      "method": "SLAY-Nystrom",
+      "variant": "slay-nystrom",
+      "seq_len": 256,
+      "num_prf_features": 8,
+      "num_quadrature_nodes": 1,
+      "poly_dim": 16,
+      "rel_l2": 1.5214149951934814,
+      "cos_sim": 0.5656753778457642,
+      "mse": 0.011360426433384418,
+      "latency_ms": 118.09039999934612
+    },
+    {
+      "method": "SLAY-Nystrom",
+      "variant": "slay-nystrom",
+      "seq_len": 512,
+      "num_prf_features": 8,
+      "num_quadrature_nodes": 1,
+      "poly_dim": 16,
+      "rel_l2": 1.8425954580307007,
+      "cos_sim": 0.4658668339252472,
+      "mse": 0.0088002048432827,
+      "latency_ms": 127.35240000256454
+    },
+    {
+      "method": "SLAY-Anchor",
+      "variant": "slay-anchor",
+      "seq_len": 64,
+      "num_prf_features": 8,
+      "num_quadrature_nodes": 1,
+      "poly_dim": 16,
+      "rel_l2": 1.0245293378829956,
+      "cos_sim": 0.6992950439453125,
+      "mse": 0.015360787510871887,
+      "latency_ms": 142.3030000005383
+    },
+    {
+      "method": "SLAY-Anchor",
+      "variant": "slay-anchor",
+      "seq_len": 128,
+      "num_prf_features": 8,
+      "num_quadrature_nodes": 1,
+      "poly_dim": 16,
+      "rel_l2": 1.1080063581466675,
+      "cos_sim": 0.7050132155418396,
+      "mse": 0.010475508868694305,
+      "latency_ms": 121.04890000045998
+    },
+    {
+      "method": "SLAY-Anchor",
+      "variant": "slay-anchor",
+      "seq_len": 256,
+      "num_prf_features": 8,
+      "num_quadrature_nodes": 1,
+      "poly_dim": 16,
+      "rel_l2": 1.2959847450256348,
+      "cos_sim": 0.6191493272781372,
+      "mse": 0.008243260905146599,
+      "latency_ms": 125.52149999828544
+    },
+    {
+      "method": "SLAY-Anchor",
+      "variant": "slay-anchor",
+      "seq_len": 512,
+      "num_prf_features": 8,
+      "num_quadrature_nodes": 1,
+      "poly_dim": 16,
+      "rel_l2": 1.6222128868103027,
+      "cos_sim": 0.503797709941864,
+      "mse": 0.006821005139499903,
+      "latency_ms": 125.51079999684589
+    }
+  ]
+}

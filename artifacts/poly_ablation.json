@@ -1,0 +1,226 @@
+{
+  "config": {
+    "embed_dim": 64,
+    "num_heads": 4,
+    "batch_size": 8,
+    "seed": 42,
+    "warmup_iters": 3,
+    "bench_iters": 10,
+    "scales": [
+      "Small",
+      "Medium",
+      "Large"
+    ],
+    "scale_configs": {
+      "Small": {
+        "seq_len": 64,
+        "num_features": 16,
+        "poly_dim": 8,
+        "num_quad": 1
+      },
+      "Medium": {
+        "seq_len": 128,
+        "num_features": 32,
+        "poly_dim": 16,
+        "num_quad": 2
+      },
+      "Large": {
+        "seq_len": 256,
+        "num_features": 64,
+        "poly_dim": 32,
+        "num_quad": 2
+      }
+    }
+  },
+  "results": [
+    {
+      "method": "Exact (Yat-Spherical)",
+      "scale": "Small",
+      "seq_len": 64,
+      "ms": 1.652990000002319,
+      "rel_l2": 0.0,
+      "cos_sim": 1.0,
+      "mse": 0.0
+    },
+    {
+      "method": "SLAY (Hadamard)",
+      "scale": "Small",
+      "seq_len": 64,
+      "ms": 1.268290000007255,
+      "rel_l2": 2.2984256744384766,
+      "cos_sim": 0.4262131452560425,
+      "mse": 0.08602851629257202
+    },
+    {
+      "method": "SLAY-Laplace",
+      "scale": "Small",
+      "seq_len": 64,
+      "ms": 1.2698499998805346,
+      "rel_l2": 0.6771657466888428,
+      "cos_sim": 0.8352786898612976,
+      "mse": 0.0074674347415566444
+    },
+    {
+      "method": "SLAY-Anchor",
+      "scale": "Small",
+      "seq_len": 64,
+      "ms": 1.6796799998701317,
+      "rel_l2": 1.1108204126358032,
+      "cos_sim": 0.6934000253677368,
+      "mse": 0.02009412832558155
+    },
+    {
+      "method": "SLAY-RM",
+      "scale": "Small",
+      "seq_len": 64,
+      "ms": 2.2098800000094343,
+      "rel_l2": 310.31561279296875,
+      "cos_sim": -0.055996160954236984,
+      "mse": 1568.1539306640625
+    },
+    {
+      "method": "SLAY-Nystrom",
+      "scale": "Small",
+      "seq_len": 64,
+      "ms": 1.3813500001560897,
+      "rel_l2": 1.2921782732009888,
+      "cos_sim": 0.6370551586151123,
+      "mse": 0.027191074565052986
+    },
+    {
+      "method": "SLAY-Tensor",
+      "scale": "Small",
+      "seq_len": 64,
+      "ms": 1.6736199999286328,
+      "rel_l2": 13509.9794921875,
+      "cos_sim": -0.09622925519943237,
+      "mse": 2972288.0
+    },
+    {
+      "method": "Exact (Yat-Spherical)",
+      "scale": "Medium",
+      "seq_len": 128,
+      "ms": 2.6586600000882754,
+      "rel_l2": 0.0,
+      "cos_sim": 1.0,
+      "mse": 0.0
+    },
+    {
+      "method": "SLAY (Hadamard)",
+      "scale": "Medium",
+      "seq_len": 128,
+      "ms": 2.751210000133142,
+      "rel_l2": 3.07496976852417,
+      "cos_sim": 0.3311093747615814,
+      "mse": 0.08175402879714966
+    },
+    {
+      "method": "SLAY-Laplace",
+      "scale": "Medium",
+      "seq_len": 128,
+      "ms": 2.5199400002748007,
+      "rel_l2": 0.8399180769920349,
+      "cos_sim": 0.770995020866394,
+      "mse": 0.006099598482251167
+    },
+    {
+      "method": "SLAY-Anchor",
+      "scale": "Medium",
+      "seq_len": 128,
+      "ms": 5.990970000129892,
+      "rel_l2": 1.1538541316986084,
+      "cos_sim": 0.6418197751045227,
+      "mse": 0.011511430144309998
+    },
+    {
+      "method": "SLAY-RM",
+      "scale": "Medium",
+      "seq_len": 128,
+      "ms": 6.2186600000131875,
+      "rel_l2": 657.9573364257812,
+      "cos_sim": -0.008813820779323578,
+      "mse": 3743.0263671875
+    },
+    {
+      "method": "SLAY-Nystrom",
+      "scale": "Medium",
+      "seq_len": 128,
+      "ms": 6.123149999984889,
+      "rel_l2": 1.4043022394180298,
+      "cos_sim": 0.5734885931015015,
+      "mse": 0.017050951719284058
+    },
+    {
+      "method": "SLAY-Tensor",
+      "scale": "Medium",
+      "seq_len": 128,
+      "ms": 6.939369999963674,
+      "rel_l2": 13671.3125,
+      "cos_sim": -0.04040531441569328,
+      "mse": 1616024.0
+    },
+    {
+      "method": "Exact (Yat-Spherical)",
+      "scale": "Large",
+      "seq_len": 256,
+      "ms": 5.3215200001432095,
+      "rel_l2": 0.0,
+      "cos_sim": 1.0,
+      "mse": 0.0
+    },
+    {
+      "method": "SLAY (Hadamard)",
+      "scale": "Large",
+      "seq_len": 256,
+      "ms": 7.661359999838169,
+      "rel_l2": 3.764559030532837,
+      "cos_sim": 0.2607380151748657,
+      "mse": 0.07047242671251297
+    },
+    {
+      "method": "SLAY-Laplace",
+      "scale": "Large",
+      "seq_len": 256,
+      "ms": 7.4557699997967575,
+      "rel_l2": 1.0875937938690186,
+      "cos_sim": 0.6733909845352173,
+      "mse": 0.005881992634385824
+    },
+    {
+      "method": "SLAY-Anchor",
+      "scale": "Large",
+      "seq_len": 256,
+      "ms": 16.236940000089817,
+      "rel_l2": 1.157118558883667,
+      "cos_sim": 0.635635256767273,
+      "mse": 0.00665804510936141
+    },
+    {
+      "method": "SLAY-RM",
+      "scale": "Large",
+      "seq_len": 256,
+      "ms": 16.792739999800688,
+      "rel_l2": 1303.20166015625,
+      "cos_sim": -0.007040889468044043,
+      "mse": 8445.283203125
+    },
+    {
+      "method": "SLAY-Nystrom",
+      "scale": "Large",
+      "seq_len": 256,
+      "ms": 17.29527000024973,
+      "rel_l2": 1.5032649040222168,
+      "cos_sim": 0.5475667119026184,
+      "mse": 0.01123730093240738
+    },
+    {
+      "method": "SLAY-Tensor",
+      "scale": "Large",
+      "seq_len": 256,
+      "ms": 19.269820000045,
+      "rel_l2": 4698.91357421875,
+      "cos_sim": -0.02169644832611084,
+      "mse": 109795.84375
+    }
+  ]
+}

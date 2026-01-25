@@ -1,0 +1,19 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Polynomial approximation ablation (Large scale). Lower Rel.~$\ell_2$ is better.}
+\label{tab:poly-ablation}
+\begin{tabular}{lccc}
+\toprule
+Method & Rel.~$\ell_2\downarrow$ & Cos Sim$\uparrow$ & Latency (ms) \\
+\midrule
+Exact (Yat-Spherical) & 0 (exact) & 1.0000 & 5.32 \\
+SLAY-Laplace & 1.0876 & 0.6734 & 7.46 \\
+SLAY-Anchor & 1.1571 & 0.6356 & 16.24 \\
+SLAY-Nystrom & 1.5033 & 0.5476 & 17.30 \\
+SLAY (Hadamard) & 3.7646 & 0.2607 & 7.66 \\
+SLAY-RM & 1303.2017 & -0.0070 & 16.79 \\
+SLAY-Tensor & 4698.9136 & -0.0217 & 19.27 \\
+\bottomrule
+\end{tabular}
+\end{table}

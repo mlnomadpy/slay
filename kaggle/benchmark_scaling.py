@@ -46,6 +46,7 @@ from main import (
     SLAYNystromAttention,
     SLAYAnchorAttention,
     precompute_freqs_cis,
+    mesh,
 )
 
 
@@ -277,35 +278,36 @@ def run_scaling_benchmark(
             print(f"  L={seq_len}...", end=" ", flush=True)
             
             try:
-                rngs = nnx.Rngs(cfg.seed)
-                attn = create_attention_module(name, cfg, rngs)
+                with mesh:
+                    rngs = nnx.Rngs(cfg.seed)
+                    attn = create_attention_module(name, cfg, rngs)
                 
-                key = jax.random.PRNGKey(cfg.seed)
-                x = jax.random.normal(key, (cfg.batch_size, seq_len, cfg.embed_dim))
+                    key = jax.random.PRNGKey(cfg.seed)
+                    x = jax.random.normal(key, (cfg.batch_size, seq_len, cfg.embed_dim))
                 
-                freqs_cos, freqs_sin = precompute_freqs_cis(head_dim, seq_len)
+                    freqs_cos, freqs_sin = precompute_freqs_cis(head_dim, seq_len)
                 
-                # Benchmark latency
-                if backward:
-                    latency_ms = benchmark_latency_backward(
-                        attn, x, freqs_cos, freqs_sin, cfg.warmup_iters, cfg.bench_iters
-                    )
-                else:
-                    latency_ms = benchmark_latency_forward(
-                        attn, x, freqs_cos, freqs_sin, cfg.warmup_iters, cfg.bench_iters
-                    )
+                    # Benchmark latency
+                    if backward:
+                        latency_ms = benchmark_latency_backward(
+                            attn, x, freqs_cos, freqs_sin, cfg.warmup_iters, cfg.bench_iters
+                        )
+                    else:
+                        latency_ms = benchmark_latency_forward(
+                            attn, x, freqs_cos, freqs_sin, cfg.warmup_iters, cfg.bench_iters
+                        )
                 
-                # Estimate memory
-                memory_mb = estimate_memory_mb(name, cfg, seq_len, backward)
+                    # Estimate memory
+                    memory_mb = estimate_memory_mb(name, cfg, seq_len, backward)
                 
-                results[name][seq_len] = {
-                    "latency_ms": latency_ms,
-                    "memory_mb": memory_mb,
-                    "status": "ok",
-                }
+                    results[name][seq_len] = {
+                        "latency_ms": latency_ms,
+                        "memory_mb": memory_mb,
+                        "status": "ok",
+                    }
                 
-                mem_str = f", ~{memory_mb:.1f}MB" if memory_mb else ""
-                print(f"OK {latency_ms:.2f}ms{mem_str}")
+                    mem_str = f", ~{memory_mb:.1f}MB" if memory_mb else ""
+                    print(f"OK {latency_ms:.2f}ms{mem_str}")
                 
             except Exception as e:
                 results[name][seq_len] = {

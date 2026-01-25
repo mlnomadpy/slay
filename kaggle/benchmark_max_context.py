@@ -38,6 +38,7 @@ from main import (
     SLAYAttention,
     SLAYLaplaceAttention,
     precompute_freqs_cis,
+    mesh,
 )
 
 
@@ -128,24 +129,25 @@ def can_run_at_seq_len(
     
     # Try to actually run it
     try:
-        rngs = nnx.Rngs(cfg.seed)
-        attn_cls, kwargs = ATTENTION_REGISTRY[attention_type]
-        attn = attn_cls(cfg.embed_dim, cfg.num_heads, rngs=rngs, **kwargs)
+        with mesh:
+            rngs = nnx.Rngs(cfg.seed)
+            attn_cls, kwargs = ATTENTION_REGISTRY[attention_type]
+            attn = attn_cls(cfg.embed_dim, cfg.num_heads, rngs=rngs, **kwargs)
         
-        key = jax.random.PRNGKey(cfg.seed)
-        x = jax.random.normal(key, (cfg.batch_size, seq_len, cfg.embed_dim))
+            key = jax.random.PRNGKey(cfg.seed)
+            x = jax.random.normal(key, (cfg.batch_size, seq_len, cfg.embed_dim))
         
-        head_dim = cfg.embed_dim // cfg.num_heads
-        freqs_cos, freqs_sin = precompute_freqs_cis(head_dim, seq_len)
+            head_dim = cfg.embed_dim // cfg.num_heads
+            freqs_cos, freqs_sin = precompute_freqs_cis(head_dim, seq_len)
         
-        @jax.jit
-        def forward(attn, inp, fc, fs):
-            return attn(inp, fc, fs)
+            @jax.jit
+            def forward(attn, inp, fc, fs):
+                return attn(inp, fc, fs)
         
-        out = forward(attn, x, freqs_cos, freqs_sin)
-        jax.block_until_ready(out)
+            out = forward(attn, x, freqs_cos, freqs_sin)
+            jax.block_until_ready(out)
         
-        return True
+            return True
         
     except Exception as e:
         return False

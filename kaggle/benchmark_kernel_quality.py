@@ -39,6 +39,7 @@ from main import (
     SLAYNystromAttention,
     SLAYAnchorAttention,
     precompute_freqs_cis,
+    mesh,
 )
 
 
@@ -108,44 +109,45 @@ def benchmark_single_config(
 ) -> Dict[str, Any]:
     """Benchmark a single linearized variant against exact attention."""
     
-    rngs = nnx.Rngs(cfg.seed)
-    key = jax.random.PRNGKey(cfg.seed)
+    with mesh:
+        rngs = nnx.Rngs(cfg.seed)
+        key = jax.random.PRNGKey(cfg.seed)
     
-    head_dim = cfg.embed_dim // cfg.num_heads
-    freqs_cos, freqs_sin = precompute_freqs_cis(head_dim, seq_len)
+        head_dim = cfg.embed_dim // cfg.num_heads
+        freqs_cos, freqs_sin = precompute_freqs_cis(head_dim, seq_len)
     
-    # Create input
-    x = jax.random.normal(key, (cfg.batch_size, seq_len, cfg.embed_dim))
+        # Create input
+        x = jax.random.normal(key, (cfg.batch_size, seq_len, cfg.embed_dim))
     
-    # Create exact attention
-    exact_attn = YatSphericalAttention(cfg.embed_dim, cfg.num_heads, rngs=rngs, epsilon=1e-6)
+        # Create exact attention
+        exact_attn = YatSphericalAttention(cfg.embed_dim, cfg.num_heads, rngs=rngs, epsilon=1e-6)
     
-    # Create linearized variant
-    rngs_approx = nnx.Rngs(cfg.seed)
-    variant_cls = LINEARIZED_VARIANTS[variant_name]
-    approx_attn = variant_cls(cfg.embed_dim, cfg.num_heads, rngs=rngs_approx, **variant_kwargs)
+        # Create linearized variant
+        rngs_approx = nnx.Rngs(cfg.seed)
+        variant_cls = LINEARIZED_VARIANTS[variant_name]
+        approx_attn = variant_cls(cfg.embed_dim, cfg.num_heads, rngs=rngs_approx, **variant_kwargs)
     
     # Forward pass (JIT compiled)
-    @jax.jit
-    def exact_forward(attn, inp, fc, fs):
-        return attn(inp, fc, fs)
+        @jax.jit
+        def exact_forward(attn, inp, fc, fs):
+            return attn(inp, fc, fs)
     
-    @jax.jit
-    def approx_forward(attn, inp, fc, fs):
-        return attn(inp, fc, fs)
+        @jax.jit
+        def approx_forward(attn, inp, fc, fs):
+            return attn(inp, fc, fs)
     
-    # Compute outputs
-    y_exact = exact_forward(exact_attn, x, freqs_cos, freqs_sin)
-    jax.block_until_ready(y_exact)
+        # Compute outputs
+        y_exact = exact_forward(exact_attn, x, freqs_cos, freqs_sin)
+        jax.block_until_ready(y_exact)
     
-    start = time.perf_counter()
-    y_approx = approx_forward(approx_attn, x, freqs_cos, freqs_sin)
-    jax.block_until_ready(y_approx)
-    latency_ms = (time.perf_counter() - start) * 1000
+        start = time.perf_counter()
+        y_approx = approx_forward(approx_attn, x, freqs_cos, freqs_sin)
+        jax.block_until_ready(y_approx)
+        latency_ms = (time.perf_counter() - start) * 1000
     
-    # Compute metrics
-    metrics = compute_metrics(y_approx, y_exact)
-    metrics["latency_ms"] = latency_ms
+        # Compute metrics
+        metrics = compute_metrics(y_approx, y_exact)
+        metrics["latency_ms"] = latency_ms
     
     return metrics
 

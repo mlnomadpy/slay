@@ -38,6 +38,7 @@ from main import (
     SLAYNystromAttention,
     SLAYAnchorAttention,
     precompute_freqs_cis,
+    mesh,
 )
 
 
