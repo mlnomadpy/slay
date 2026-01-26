@@ -92,77 +92,115 @@ class _YatPerformerPolyBase(nn.Module):
         input_dtype = q.dtype
         q, k, v = q.float(), k.float(), v.float()
 
-        # Chunked causal linear attention
-        chunk_size = self.chunk_size
-        num_chunks = (T + chunk_size - 1) // chunk_size
-
         R = self.num_quadrature_nodes
         P = self.poly_dim
         M = self.num_prf_features
+        
+        # --- Vectorized vs Chunked Causal Linear Attention ---
+        # For sequence lengths where the full state fits in memory (e.g. T=8192 on A100), 
+        # vectorized execution is much faster than chunking.
+        if T <= 8192:
+            # Helper to get combined features for full sequence
+            def get_full_features(x_in):
+                x_norm = F.normalize(x_in, p=2, dim=-1)
+                poly = self._poly_features(x_norm) # (B, H, T, P)
+                prf = self._prf_features(x_norm)   # (R, B, H, T, M)
+                # Outer product: (R, B, H, T, P, M)
+                return torch.einsum("bhtp,rbhtm->rbhtpm", poly, prf)
 
-        kv_state = torch.zeros(
-            R,
-            B,
-            self.n_heads,
-            P,
-            M,
-            self.head_dim,
-            device=x.device,
-            dtype=q.dtype,
-        )
-        k_state = torch.zeros(
-            R,
-            B,
-            self.n_heads,
-            P,
-            M,
-            device=x.device,
-            dtype=q.dtype,
-        )
+            q_outer = get_full_features(q)
+            k_outer = get_full_features(k) # (R, B, H, T, P, M)
+            
+            # KV projection: (R, B, H, T, P, M, D)
+            # Memory check: For T=1024, H=12, P=64, M=8, D=64 -> ~1.5GB. Fine.
+            kv = torch.einsum("rbhtpm,bhtd->rbhtpmd", k_outer, v)
+            
+            # Causal cumsum along T (dim 3)
+            kv_cumsum = torch.cumsum(kv, dim=3)
+            k_cumsum = torch.cumsum(k_outer, dim=3)
+            
+            # Attention
+            context = torch.einsum("rbhtpm,rbhtpmd->bhtd", q_outer, kv_cumsum)
+            norm = torch.einsum("rbhtpm,rbhtpm->bht", q_outer, k_cumsum)
+            
+            # Sum over R (dim 0) is handled by einsum above if we included 'r' in summation
+            # Wait, previous einsum "rbhtpm,rbhtpmd->bhtd" implies sum over r, p, m. Correct.
+            # But wait, original code summed explicitly?
+            # Original: context_chunk = context_chunk.sum(dim=0) (since 'r' was output)
+            # My einsum "rbhtpm,rbhtpmd->bhtd" sums over 'r'. Correct.
+            
+            norm = torch.clamp(norm, dim=0, min=1e-6)
+            out = context / norm.unsqueeze(-1)
 
-        out_chunks = []
-
-        for i in range(num_chunks):
-            st = i * chunk_size
-            ed = min(st + chunk_size, T)
-
-            q_chunk = q[:, :, st:ed]
-            k_chunk = k[:, :, st:ed]
-            v_chunk = v[:, :, st:ed]
-
-            q_poly, q_prf = self._compute_chunk_features(q_chunk)
-            k_poly, k_prf = self._compute_chunk_features(k_chunk)
-
-            # Apply quadrature weights (sqrt) to PRF features
-            sq_weights = torch.sqrt(self.quad_weights.clamp(min=0)).view(R, 1, 1, 1, 1)
-            q_prf = q_prf * sq_weights
-            k_prf = k_prf * sq_weights
-
-            # Tensor product: (R, B, H, T, P, M)
-            q_outer = torch.einsum("bhtp,rbhtm->rbhtpm", q_poly, q_prf)
-            k_outer = torch.einsum("bhtp,rbhtm->rbhtpm", k_poly, k_prf)
-
-            kv_chunk_prod = torch.einsum("rbhtpm,bhtd->rbhtpmd", k_outer, v_chunk)
-            kv_local_cumsum = torch.cumsum(kv_chunk_prod, dim=3)
-            k_local_cumsum = torch.cumsum(k_outer, dim=3)
-
-            kv_current = kv_local_cumsum + kv_state.unsqueeze(3)
-            k_current = k_local_cumsum + k_state.unsqueeze(3)
-
-            context_chunk = torch.einsum("rbhtpm,rbhtpmd->rbhtd", q_outer, kv_current)
-            denom_chunk = torch.einsum("rbhtpm,rbhtpm->rbht", q_outer, k_current)
-
-            context_chunk = context_chunk.sum(dim=0)
-            denom_chunk = denom_chunk.sum(dim=0)
-
-            denom_chunk = torch.clamp(denom_chunk, min=1e-6)
-            out_chunk = context_chunk / denom_chunk.unsqueeze(-1)
-            out_chunks.append(out_chunk)
-
-            kv_state = kv_current[:, :, :, -1]
-            k_state = k_current[:, :, :, -1]
-
-        out = torch.cat(out_chunks, dim=2)
+        else:
+            # Chunked chunked causal linear attention
+            chunk_size = self.chunk_size
+            num_chunks = (T + chunk_size - 1) // chunk_size
+    
+            kv_state = torch.zeros(
+                R,
+                B,
+                self.n_heads,
+                P,
+                M,
+                self.head_dim,
+                device=x.device,
+                dtype=q.dtype,
+            )
+            k_state = torch.zeros(
+                R,
+                B,
+                self.n_heads,
+                P,
+                M,
+                device=x.device,
+                dtype=q.dtype,
+            )
+    
+            out_chunks = []
+    
+            for i in range(num_chunks):
+                st = i * chunk_size
+                ed = min(st + chunk_size, T)
+    
+                q_chunk = q[:, :, st:ed]
+                k_chunk = k[:, :, st:ed]
+                v_chunk = v[:, :, st:ed]
+    
+                q_poly, q_prf = self._compute_chunk_features(q_chunk)
+                k_poly, k_prf = self._compute_chunk_features(k_chunk)
+    
+                # Apply quadrature weights (sqrt) to PRF features
+                sq_weights = torch.sqrt(self.quad_weights.clamp(min=0)).view(R, 1, 1, 1, 1)
+                q_prf = q_prf * sq_weights
+                k_prf = k_prf * sq_weights
+    
+                # Tensor product: (R, B, H, T, P, M)
+                q_outer = torch.einsum("bhtp,rbhtm->rbhtpm", q_poly, q_prf)
+                k_outer = torch.einsum("bhtp,rbhtm->rbhtpm", k_poly, k_prf)
+    
+                kv_chunk_prod = torch.einsum("rbhtpm,bhtd->rbhtpmd", k_outer, v_chunk)
+                kv_local_cumsum = torch.cumsum(kv_chunk_prod, dim=3)
+                k_local_cumsum = torch.cumsum(k_outer, dim=3)
+    
+                kv_current = kv_local_cumsum + kv_state.unsqueeze(3)
+                k_current = k_local_cumsum + k_state.unsqueeze(3)
+    
+                context_chunk = torch.einsum("rbhtpm,rbhtpmd->rbhtd", q_outer, kv_current)
+                denom_chunk = torch.einsum("rbhtpm,rbhtpm->rbht", q_outer, k_current)
+    
+                context_chunk = context_chunk.sum(dim=0)
+                denom_chunk = denom_chunk.sum(dim=0)
+    
+                denom_chunk = torch.clamp(denom_chunk, min=1e-6)
+                out_chunk = context_chunk / denom_chunk.unsqueeze(-1)
+                out_chunks.append(out_chunk)
+    
+                kv_state = kv_current[:, :, :, -1]
+                k_state = k_current[:, :, :, -1]
+    
+            out = torch.cat(out_chunks, dim=2)
+            
         out = out.to(input_dtype)
 
         out = out.transpose(1, 2).contiguous().view(B, T, C)
