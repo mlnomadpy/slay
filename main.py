@@ -277,8 +277,8 @@ def main():
     t0 = time.time()
     
     for batch_idx, batch in enumerate(loader):
-        x = batch[0].to(model_engine.device)
-        y = batch[1].to(model_engine.device)
+        x = batch[0].to(model_engine.device, dtype=torch.long)
+        y = batch[1].to(model_engine.device, dtype=torch.long)
         
         loss = model_engine(x, y)
         model_engine.backward(loss)
