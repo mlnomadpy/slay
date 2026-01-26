@@ -509,12 +509,13 @@ class YatSphericalAttention(nnx.Module):
 
 
 class SLAYAttention(nnx.Module):
-    """SLAY: Spherical Linearized Attention with Yat-Kernel (bidirectional)."""
-    def __init__(self, embed_dim: int, num_heads: int, num_features: int = 32, num_quadrature_nodes: int = 2, epsilon: float = 1e-6, use_rope: bool = False, attn_dropout: float = 0.0, *, rngs: nnx.Rngs):
+    """SLAY: Spherical Linearized Attention with Yat-Kernel (Anchor-based)."""
+    def __init__(self, embed_dim: int, num_heads: int, num_features: int = 32, poly_dim: int = 16, num_quadrature_nodes: int = 2, epsilon: float = 1e-6, use_rope: bool = False, attn_dropout: float = 0.0, *, rngs: nnx.Rngs):
         self.num_heads = num_heads
         self.embed_dim = embed_dim
         self.head_dim = embed_dim // num_heads
-        self.num_features = num_features
+        self.num_features = num_features # PRF features (M)
+        self.poly_dim = poly_dim # Anchor features (P)
         self.num_quadrature_nodes = num_quadrature_nodes
         self.epsilon = epsilon
         self.C = 2.0 + epsilon
@@ -534,33 +535,49 @@ class SLAYAttention(nnx.Module):
         self.quad_weights = nnx.Cache(jnp.array(weights, dtype=jnp.float32) / self.C)
         
         param_key = rngs.params()
-        self.omega = nnx.Cache(jax.random.normal(param_key, (num_quadrature_nodes, self.num_heads, self.head_dim, num_features)))
+        k1, k2 = jax.random.split(param_key)
+        self.omega = nnx.Cache(jax.random.normal(k1, (num_quadrature_nodes, self.num_heads, self.head_dim, num_features)))
+        
+        anchors = jax.random.normal(k2, (poly_dim, self.head_dim))
+        anchors = anchors / jnp.linalg.norm(anchors, axis=-1, keepdims=True)
+        self.anchor_vectors = nnx.Cache(anchors)
+        
         if attn_dropout > 0:
             self.dropout = nnx.Dropout(rate=attn_dropout, rngs=rngs)
 
     def _compute_features_fast(self, x):
         x_norm = safe_normalize(x, axis=-1)
         
+        # 1. Anchor Features
+        anchors = self.anchor_vectors[...] # [P, D]
+        # x: [B, H, L, D]
+        poly_proj = jnp.einsum('bhld,pd->bhlp', x_norm, anchors)
+        poly_feat = (poly_proj ** 2) / jnp.sqrt(self.poly_dim)
+        
+        # 2. PRF Features
         omega = self.omega[...]
         quad_nodes = self.quad_nodes[...]
         quad_weights = self.quad_weights[...]
         
-        proj = jnp.einsum('bhld,rhdm->rbhlm', x_norm, omega)
-        poly_feat = (proj ** 2) / jnp.sqrt(self.num_features)
+        # proj: x [B,H,L,D], omega [R,H,D,M] -> [R, B, H, L, M]
+        prf_proj = jnp.einsum('bhld,rhdm->rbhlm', x_norm, omega)
         
         s_vals = quad_nodes.reshape(-1, 1, 1, 1, 1)
         sqrt_2s = jnp.sqrt(2.0 * jnp.clip(s_vals, a_min=0))
         
-        exp_arg = jnp.clip(proj * sqrt_2s - s_vals, a_min=-10.0, a_max=10.0)
+        exp_arg = jnp.clip(prf_proj * sqrt_2s - s_vals, a_min=-10.0, a_max=10.0)
         prf_feat = jnp.exp(exp_arg) / jnp.sqrt(self.num_features)
         
-        fused = poly_feat * prf_feat
-        
         sq_weights = jnp.sqrt(jnp.clip(quad_weights.reshape(-1, 1, 1, 1, 1), a_min=0))
-        fused = fused * sq_weights
+        prf_feat = prf_feat * sq_weights
         
-        fused = fused.transpose(1, 2, 3, 0, 4)
-        B, H, L, _, _ = fused.shape
+        # 3. Fusion: Tensor Product
+        # poly: b h l p
+        # prf:  r b h l m
+        # Out:  b h l (r p m)
+        
+        fused = jnp.einsum('bhlp,rbhlm->bhlrpm', poly_feat, prf_feat)
+        B, H, L, R, P, M = fused.shape
         fused = fused.reshape(B, H, L, -1)
         return fused
 

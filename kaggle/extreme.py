@@ -57,14 +57,15 @@ class PerformerFeatures(nnx.Module):
 
 class SLAYFeatures(nnx.Module):
     """
-    SLAY feature map: Hadamard product of Polynomial and PRF features.
-    Approximates Yat kernel (Spherical).
+    SLAY feature map: Tensor product of Anchor-based Polynomial and PRF features.
+    Approximates Yat kernel (Spherical) with Anchor approximation for polynomial part.
     """
-    def __init__(self, embed_dim: int, num_heads: int, num_features: int = 32, num_quadrature_nodes: int = 2, epsilon: float = 1e-6, *, rngs: nnx.Rngs):
+    def __init__(self, embed_dim: int, num_heads: int, num_features: int = 32, poly_dim: int = 16, num_quadrature_nodes: int = 2, epsilon: float = 1e-6, *, rngs: nnx.Rngs):
         self.num_heads = num_heads
         self.embed_dim = embed_dim
         self.head_dim = embed_dim // num_heads
-        self.num_features = num_features
+        self.num_features = num_features # PRF features (M)
+        self.poly_dim = poly_dim # Anchor/Poly features (P)
         self.num_quadrature_nodes = num_quadrature_nodes
         self.epsilon = epsilon
         self.C = 2.0 + epsilon
@@ -79,40 +80,65 @@ class SLAYFeatures(nnx.Module):
         self.quad_weights = nnx.Cache(jnp.array(weights, dtype=jnp.float32) / self.C)
         
         param_key = rngs.params()
-        self.omega = nnx.Cache(jax.random.normal(param_key, (num_quadrature_nodes, self.num_heads, self.head_dim, num_features)))
+        k1, k2 = jax.random.split(param_key)
+        
+        # PRF Projections
+        self.omega = nnx.Cache(jax.random.normal(k1, (num_quadrature_nodes, self.num_heads, self.head_dim, num_features)))
+        
+        # Anchors for polynomial part
+        anchors = jax.random.normal(k2, (poly_dim, self.head_dim))
+        anchors = anchors / jnp.linalg.norm(anchors, axis=-1, keepdims=True)
+        # Replicate for heads or shared? Generally shared anchors across heads or per-head?
+        # SLAYAnchorAttention in main.py uses (P, D) where D is head_dim. 
+        # So anchors are shared across heads relative to the subspace D? 
+        # Wait, in main.py: anchors = jax.random.normal(..., (P, D)). 
+        # In _poly_features: einsum('bhld,pd->bhlp', x_norm, anchors).
+        # Yes, shared anchors across heads.
+        self.anchor_vectors = nnx.Cache(anchors)
 
     def __call__(self, x):
         # x: [Batch, Dim]
         B = x.shape[0]
         x_reshaped = x.reshape(B, self.num_heads, self.head_dim)
         
-        # Normalize (SLAY expects normalized inputs)
+        # Normalize
         x_norm = safe_normalize(x_reshaped, axis=-1)
         
+        # 1. Polynomial Features (Anchors)
+        anchors = self.anchor_vectors[...] # [P, D]
+        # [B, H, D] @ [P, D].T -> [B, H, P]
+        poly_proj = jnp.einsum('bhd,pd->bhp', x_norm, anchors)
+        poly_feat = (poly_proj ** 2) / jnp.sqrt(self.poly_dim)
+        
+        # 2. PRF Features
         omega = self.omega[...] # [R, H, D, M]
         quad_nodes = self.quad_nodes[...]
         quad_weights = self.quad_weights[...]
         
         # proj: x [B,H,D], omega [R,H,D,M] -> [R, B, H, M]
-        proj = jnp.einsum('bhd,rhdm->rbhm', x_norm, omega)
+        prf_proj = jnp.einsum('bhd,rhdm->rbhm', x_norm, omega)
         
-        # Poly features: (x.w)^2 -> proj^2
-        poly_feat = (proj ** 2) / jnp.sqrt(self.num_features)
-        
-        # PRF features
         s_vals = quad_nodes.reshape(-1, 1, 1, 1) # [R, 1, 1, 1]
         sqrt_2s = jnp.sqrt(2.0 * jnp.clip(s_vals, a_min=0))
         
-        exp_arg = jnp.clip(proj * sqrt_2s - s_vals, a_min=-10.0, a_max=10.0)
-        prf_feat = jnp.exp(exp_arg) / jnp.sqrt(self.num_features)
+        exp_arg = jnp.clip(prf_proj * sqrt_2s - s_vals, a_min=-10.0, a_max=10.0)
+        prf_feat = jnp.exp(exp_arg) / jnp.sqrt(self.num_features) # [R, B, H, M]
         
-        fused = poly_feat * prf_feat
-        
+        # Apply quad weights
         sq_weights = jnp.sqrt(jnp.clip(quad_weights.reshape(-1, 1, 1, 1), a_min=0))
-        fused = fused * sq_weights
+        prf_feat = prf_feat * sq_weights
         
-        # [R, B, H, M] -> [B, H, R, M] -> Flatten
-        fused = fused.transpose(1, 2, 0, 3) 
+        # 3. Tensor Product Fusion
+        # poly_feat: [B, H, P]
+        # prf_feat:  [R, B, H, M]
+        # Output:    [B, H, R, P, M] -> Flatten
+        
+        # Move R to end for easier fusion logic or just broadcast
+        # poly: b h p
+        # prf:  r b h m
+        fused = jnp.einsum('bhp,rbhm->brhpm', poly_feat, prf_feat)
+        
+        # Flatten
         output = fused.reshape(B, -1)
         return output
 
@@ -204,12 +230,26 @@ class XMLDataset:
              padded_feats[i, :length] = indices
              masks[i, :length] = 1.0
              
-        batch_Y = [self.Y[i] for i in batch_indices]
+        # Y labels: Pad to max length in batch
+        max_labels = max((len(self.Y[i]) for i in batch_indices), default=0)
+        # We need a fixed shape? No, batch-dynamic shape is fine for JIT if we don't recompile too often.
+        # But for stability let's ensure at least 1.
+        max_labels = max(max_labels, 1)
+        
+        padded_labels = np.full((len(batch_indices), max_labels), -1, dtype=np.int32)
+        label_masks = np.zeros((len(batch_indices), max_labels), dtype=np.float32)
+        
+        for i, idx in enumerate(batch_indices):
+            lbls = self.Y[idx]
+            if len(lbls) > 0:
+                padded_labels[i, :len(lbls)] = lbls
+                label_masks[i, :len(lbls)] = 1.0
         
         return {
             'features': jnp.array(padded_feats),
             'masks': jnp.array(masks),
-            'labels': batch_Y 
+            'labels': jnp.array(padded_labels),
+            'label_masks': jnp.array(label_masks)
         }
 
 # --- MODELS ---
@@ -236,19 +276,44 @@ class FullSoftmaxXML(nnx.Module):
         embeds = self.encoder(indices, mask)
         return self.classifier(embeds)
         
-    def loss(self, indices, mask, labels_list):
+    def loss(self, indices, mask, labels, label_mask):
         logits = self(indices, mask) # [B, NumLabels]
         log_probs = nnx.log_softmax(logits, axis=-1)
         
         B = logits.shape[0]
-        L = logits.shape[1]
-        targets = jnp.zeros((B, L))
-        for i, lbls in enumerate(labels_list):
-            if len(lbls) > 0:
-                targets = targets.at[i, lbls].set(1.0)
+        
+        # Create multi-hot targets efficiently
+        # labels: [B, K] containing indices, -1 for padding
+        # We can use scatter
+        targets = jnp.zeros_like(logits) # [B, NumLabels]
+        
+        # We need batch indices for scatter: [B, K] -> [0,0,..0, 1,1,..1, ...]
+        batch_indices = jnp.arange(B)[:, None]
+        
+        # Only set 1 where label_mask is 1
+        # Set invalid indices (padding -1) to 0 temporarily (won't matter due to mask but cleaner for scatter)
+        safe_labels = jnp.where(label_mask > 0, labels, 0)
+        
+        # Scatter add? Or just set. XML is usually binary.
+        targets = targets.at[batch_indices, safe_labels].set(1.0)
+        
+        # Zero out the ones that were set from padding (index 0) if mask was 0
+        # Wait, if label was 0 and valid, we set index 0 to 1. 
+        # If label was -1 (invalid) and we mapped to 0, we set index 0 to 1.
+        # We need to NOT set index 0 if it came from padding.
+        # Alternative: use .add with mask value? targets.at[...].add(label_mask)
+        # If duplicated labels, add accumulates? set is usually fine for binary.
+        
+        # Proper way: use jnp.where in index? no.
+        # Use update with mask.
+        targets = targets.at[batch_indices, safe_labels].max(label_mask) # max ensures 1.0 if valid
                 
         multilabel_loss = -jnp.sum(targets * log_probs) / B
         return multilabel_loss
+
+    def predict(self, indices, mask, k=5):
+        logits = self(indices, mask)
+        return jax.lax.top_k(logits, k)
 
 
 class KernelXML(nnx.Module):
@@ -300,25 +365,60 @@ class KernelXML(nnx.Module):
         denom = jnp.dot(phi_query, Z_approx_vec) + 1e-6
         log_Z = jnp.log(denom) # [B]
         
-        loss_total = 0.0
+    def loss(self, indices, mask, labels, label_mask):
+        B = indices.shape[0]
+        # 1. Encode Query
+        query = self.encoder(indices, mask) # [B, D]
+        phi_query = self.get_features(query) # [B, M]
         
-        # For each sample, sum log prob of positives
-        for i, lbls in enumerate(labels_list):
-            if len(lbls) == 0: continue
-            lbls_arr = jnp.array(lbls)
-            
-            # phi(w_pos)
-            w_pos = W_vecs[lbls_arr] # [NumPos, D]
-            phi_w_pos = self.get_features(w_pos) # [NumPos, M]
-            
-            # Numerator: phi(q_i) . phi(w_pos)
-            nums = jnp.dot(phi_w_pos, phi_query[i]) + 1e-6
-            log_nums = jnp.log(nums)
-            
-            # Loss = -Sum(log_num - log_Z)
-            loss_i = -jnp.sum(log_nums - log_Z[i])
-            loss_total += loss_i
-            
+        # 2. Compute Global Denominator Sum(phi(W))
+        W_vecs = self.classifier.kernel[...] # [D, L] -- Wait, Linear kernel is [In, Out] i.e. [D, L]?
+        # Earlier I saw transpose logic. `nnx.Linear` kernel is [In, Out] -> [D, Labels].
+        # So W_vecs should be [Labels, D] for get_features input?
+        # get_features expects [Batch, D].
+        # So transposing W to [Labels, D] is correct.
+        
+        W_vecs = W_vecs.T # [L, D]
+        
+        phi_W = self.get_features(W_vecs) # [L, M]
+        
+        Z_approx_vec = jnp.sum(phi_W, axis=0) # [M]
+        
+        # Denominator: phi(q) . Z_vec
+        denom = jnp.dot(phi_query, Z_approx_vec) + 1e-6
+        log_Z = jnp.log(denom) # [B]
+        
+        # Numerator Vectorization
+        # labels: [B, K]
+        # We need phi(W_pos) for all B, K.
+        # W_pos: Gather from W_vecs using labels.
+        
+        # Handle padding in labels (-1) by clamping to 0 (will face mask later)
+        safe_labels = jnp.maximum(labels, 0)
+        
+        W_pos = W_vecs[safe_labels] # [B, K, D]
+        
+        # Flatten to apply feature map: [B*K, D]
+        W_pos_flat = W_pos.reshape(-1, W_pos.shape[-1])
+        phi_w_pos_flat = self.get_features(W_pos_flat) # [B*K, M]
+        
+        # Reshape back: [B, K, M]
+        phi_w_pos = phi_w_pos_flat.reshape(B, labels.shape[1], -1)
+        
+        # Dot product with phi_query [B, M] -> expand to [B, 1, M]
+        # [B, K, M] * [B, 1, M] -> [B, K, M] -> sum over M -> [B, K]
+        nums = jnp.sum(phi_w_pos * phi_query[:, None, :], axis=-1) + 1e-6
+        log_nums = jnp.log(nums) # [B, K]
+        
+        # Loss per positive: -(log_num - log_Z)
+        # log_Z is [B], broadcast to [B, K]
+        log_probs = log_nums - log_Z[:, None]
+        
+        # Mask out padding
+        masked_log_probs = log_probs * label_mask # [B, K]
+        
+        # Sum over K positives, then average over Batch
+        loss_total = -jnp.sum(masked_log_probs)
         return loss_total / B
         
     def predict(self, indices, mask, k=5):
@@ -340,7 +440,11 @@ def precision_at_k(targets_list, pred_indices, k=5):
     pred_indices = np.array(pred_indices)
 
     for i in range(n_samples):
-        true_labels = set(targets_list[i])
+        # targets_list[i] is likely a JAX array or numpy array with padding -1
+        t_row = np.array(targets_list[i]) 
+        # Filter out padding (-1)
+        true_labels = set(t_row[t_row != -1])
+        
         if len(true_labels) == 0: continue
         preds = pred_indices[i][:k]
         hits = len(true_labels.intersection(set(preds)))
@@ -389,6 +493,15 @@ def run_benchmark(dataset_path: str = "."):
             
         optimizer = nnx.Optimizer(model, optax.adam(LR), wrt=nnx.Param)
         
+        @nnx.jit
+        def train_step(model, optimizer, indices, mask, labels, label_mask):
+             def loss_fn(m):
+                 return m.loss(indices, mask, labels, label_mask)
+             
+             loss, grads = nnx.value_and_grad(loss_fn)(model)
+             optimizer.update(model, grads)
+             return loss
+
         def train_epoch(model, optimizer):
             total_loss = 0
             count = 0
@@ -396,14 +509,9 @@ def run_benchmark(dataset_path: str = "."):
                 indices = batch['features']
                 mask = batch['masks']
                 labels = batch['labels']
+                label_mask = batch['label_masks']
                 
-                # Grad of loss
-                def loss_fn(m):
-                    return m.loss(indices, mask, labels)
-                
-                grad_fn = nnx.value_and_grad(loss_fn)
-                loss, grads = grad_fn(model)
-                optimizer.update(model, grads) 
+                loss = train_step(model, optimizer, indices, mask, labels, label_mask)
                 
                 total_loss += loss
                 count += 1
