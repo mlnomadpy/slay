@@ -115,5 +115,5 @@ class TinyGPT(nn.Module):
             return logits
         return F.cross_entropy(
             logits.float().view(-1, self.vocab_size),  # ✅ force fp32
-            y.view(-1)
+            y.long().view(-1)
         )
