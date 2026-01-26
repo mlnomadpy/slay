@@ -10,86 +10,111 @@ import subprocess
 import numpy as np
 import jax
 import jax.numpy as jnp
-import flax.nnx as nnx
+from flax import nnx
 import optax
 from sklearn.datasets import load_svmlight_file
 from scipy.sparse import csr_matrix
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-# Try to import attention classes from main.py
-try:
-    from main import (
-        StandardAttention,
-        YatAttention,
-        YatSphericalAttention,
-        SLAYAttention,
-        SLAYRMAttention,
-        SLAYNystromAttention,
-        SLAYAnchorAttention,
-        safe_normalize,
-    )
-    # Check for FastAttention / Performer
-    try:
-        from main import FastAttention
-    except ImportError:
-        FastAttention = None
-        
-except ImportError:
-    # Fallback for script execution or interactive mode
-    try:
-        # If __file__ is defined (script mode)
-        sys.path.append(os.path.dirname(__file__))
-    except NameError:
-        # Interactive mode / Jupyter: assume we are in the directory or need to add 'kaggle'
-        # Try adding current directory and 'kaggle' subdirectory
-        sys.path.append(os.getcwd())
-        sys.path.append(os.path.join(os.getcwd(), 'kaggle'))
-    
-    try:
-        from main import (
-            StandardAttention,
-            YatAttention,
-            YatSphericalAttention,
-            SLAYAttention,
-            SLAYRMAttention,
-            SLAYNystromAttention,
-            SLAYAnchorAttention,
-            safe_normalize,
-        )
-        try:
-             from main import FastAttention
-        except ImportError:
-            FastAttention = None
-    except ImportError:
-        # Last ditch: check if we can find main.py in common locations
-        print("Warning: standard import failed. Checking relative paths...")
-        if os.path.exists("kaggle/main.py"):
-             sys.path.append("kaggle")
-        elif os.path.exists("../kaggle/main.py"):
-             sys.path.append("../kaggle")
-             
-        try:
-            from main import (
-                StandardAttention,
-                YatAttention,
-                YatSphericalAttention,
-                SLAYAttention,
-                SLAYRMAttention,
-                SLAYNystromAttention,
-                SLAYAnchorAttention,
-                safe_normalize,
-            )
-            try:
-                 from main import FastAttention
-            except ImportError:
-                 FastAttention = None
-        except ImportError as e:
-            print(f"Error: Could not import logic from main.py. {e}")
-            print(f"Current Path: {sys.path}")
-            print(f"CWD: {os.getcwd()}")
-            # Define dummies if needed or exit
-            sys.exit(1)
+# --- Helpers ---
 
+def safe_normalize(x, axis=-1, eps=1e-6):
+    """Safely normalize vectors to unit length, avoiding division by zero."""
+    norm = jnp.linalg.norm(x, axis=axis, keepdims=True)
+    return x / jnp.clip(norm, a_min=eps)
+
+# --- Feature Maps (Approximations) ---
+
+class PerformerFeatures(nnx.Module):
+    """
+    Performer (FAVOR+) feature map: ReLU(x @ W).
+    Approximates Softmax kernel.
+    """
+    def __init__(self, embed_dim: int, num_heads: int, kernel_size: int = 64, *, rngs: nnx.Rngs):
+        self.num_heads = num_heads
+        self.embed_dim = embed_dim
+        self.head_dim = embed_dim // num_heads
+        self.kernel_size = kernel_size
+        
+        proj_key = rngs.params()
+        # Random projection matrix for Performer (Fixed, so use Cache)
+        self.proj_matrix = nnx.Cache(jax.random.normal(proj_key, (self.num_heads, self.head_dim, kernel_size)) / jnp.sqrt(self.head_dim))
+
+    def __call__(self, x):
+        # x: [Batch, Dim]
+        orig_shape = x.shape
+        x_reshaped = x.reshape(x.shape[0], self.num_heads, self.head_dim)
+        
+        proj_matrix = self.proj_matrix[...] # [H, D, M]
+        
+        # [B, H, D] @ [H, D, M] -> [B, H, M]
+        proj = jnp.einsum('bhd,hdm->bhm', x_reshaped, proj_matrix)
+        
+        features = jax.nn.relu(proj)
+        
+        # Flatten back to [B, Features_Flat]
+        return features.reshape(orig_shape[0], -1)
+
+class SLAYFeatures(nnx.Module):
+    """
+    SLAY feature map: Hadamard product of Polynomial and PRF features.
+    Approximates Yat kernel (Spherical).
+    """
+    def __init__(self, embed_dim: int, num_heads: int, num_features: int = 32, num_quadrature_nodes: int = 2, epsilon: float = 1e-6, *, rngs: nnx.Rngs):
+        self.num_heads = num_heads
+        self.embed_dim = embed_dim
+        self.head_dim = embed_dim // num_heads
+        self.num_features = num_features
+        self.num_quadrature_nodes = num_quadrature_nodes
+        self.epsilon = epsilon
+        self.C = 2.0 + epsilon
+        
+        try:
+            nodes, weights = np.polynomial.laguerre.laggauss(num_quadrature_nodes)
+        except Exception:
+            nodes = np.array([0.585786, 3.414214]) if num_quadrature_nodes == 2 else np.array([1.0])
+            weights = np.array([0.853553, 0.146447]) if num_quadrature_nodes == 2 else np.array([1.0])
+            
+        self.quad_nodes = nnx.Cache(jnp.array(nodes, dtype=jnp.float32) / self.C)
+        self.quad_weights = nnx.Cache(jnp.array(weights, dtype=jnp.float32) / self.C)
+        
+        param_key = rngs.params()
+        self.omega = nnx.Cache(jax.random.normal(param_key, (num_quadrature_nodes, self.num_heads, self.head_dim, num_features)))
+
+    def __call__(self, x):
+        # x: [Batch, Dim]
+        B = x.shape[0]
+        x_reshaped = x.reshape(B, self.num_heads, self.head_dim)
+        
+        # Normalize (SLAY expects normalized inputs)
+        x_norm = safe_normalize(x_reshaped, axis=-1)
+        
+        omega = self.omega[...] # [R, H, D, M]
+        quad_nodes = self.quad_nodes[...]
+        quad_weights = self.quad_weights[...]
+        
+        # proj: x [B,H,D], omega [R,H,D,M] -> [R, B, H, M]
+        proj = jnp.einsum('bhd,rhdm->rbhm', x_norm, omega)
+        
+        # Poly features: (x.w)^2 -> proj^2
+        poly_feat = (proj ** 2) / jnp.sqrt(self.num_features)
+        
+        # PRF features
+        s_vals = quad_nodes.reshape(-1, 1, 1, 1) # [R, 1, 1, 1]
+        sqrt_2s = jnp.sqrt(2.0 * jnp.clip(s_vals, a_min=0))
+        
+        exp_arg = jnp.clip(proj * sqrt_2s - s_vals, a_min=-10.0, a_max=10.0)
+        prf_feat = jnp.exp(exp_arg) / jnp.sqrt(self.num_features)
+        
+        fused = poly_feat * prf_feat
+        
+        sq_weights = jnp.sqrt(jnp.clip(quad_weights.reshape(-1, 1, 1, 1), a_min=0))
+        fused = fused * sq_weights
+        
+        # [R, B, H, M] -> [B, H, R, M] -> Flatten
+        fused = fused.transpose(1, 2, 0, 3) 
+        output = fused.reshape(B, -1)
+        return output
 
 # --- CONFIGURATION ---
 GDRIVE_ID = "0B3lPMIHmG6vGU0VTR1pCejFpWjg"
@@ -166,35 +191,25 @@ class XMLDataset:
         self.n += self.batch_size
         
         # Prepare batch
-        # 1. Feature Bag: indices and offsets
         batch_X = self.X[batch_indices]
-        
-        # JAX requires fixed shapes or padding. For simplicity here with EmbeddingBag logic,
-        # we can flatten features and provide offsets.
-        # However, nnx/JAX usually prefers padded arrays.
-        # Let's use a padded strategy: Max features per doc in batch? Or simplified mean embedding logic.
-        # For simplicity and JAX friendliness: Pre-compute mean embedding on CPU? 
-        # No, let's just pad indices to max_len in this batch.
         
         max_feats = max((len(batch_X[i].indices) for i in range(len(batch_indices))), default=0)
         padded_feats = np.zeros((len(batch_indices), max_feats), dtype=np.int32)
         masks = np.zeros((len(batch_indices), max_feats), dtype=np.float32)
         
-        for i, row_idx in enumerate(range(len(batch_indices))): # iterate within batch
-             # manual sparse row access
-             row = batch_X[i] # batch_X is sliced CSR
+        for i, row_idx in enumerate(range(len(batch_indices))):
+             row = batch_X[i] 
              indices = row.indices
              length = len(indices)
              padded_feats[i, :length] = indices
              masks[i, :length] = 1.0
              
-        # Y labels: List of arrays
         batch_Y = [self.Y[i] for i in batch_indices]
         
         return {
             'features': jnp.array(padded_feats),
             'masks': jnp.array(masks),
-            'labels': batch_Y # Keep as list for now, easy to handle in loop or specialized collation
+            'labels': batch_Y 
         }
 
 # --- MODELS ---
@@ -225,13 +240,6 @@ class FullSoftmaxXML(nnx.Module):
         logits = self(indices, mask) # [B, NumLabels]
         log_probs = nnx.log_softmax(logits, axis=-1)
         
-        loss_total = 0.0
-        # Iterate over batch (slow in JAX if not careful, but for benchmarking we can loop or use vmap?)
-        # Since labels_list is variable length, standard vectorization is hard.
-        # We'll use a mask approach or simple loop for now (XML usually has few labels per doc).
-        # Better: Create a sparse target matrix or padded target matrix.
-        
-        # Construct multi-hot targets
         B = logits.shape[0]
         L = logits.shape[1]
         targets = jnp.zeros((B, L))
@@ -239,19 +247,13 @@ class FullSoftmaxXML(nnx.Module):
             if len(lbls) > 0:
                 targets = targets.at[i, lbls].set(1.0)
                 
-        # For multi-label, separate BCE is standard, or standard Softmax if we treat as probability distribution?
-        # The PyTorch baseline used: -sum(log_probs[pos])
-        # This implies we want to maximize prob of ANY positive label? Or all?
-        # Usually for XML: One-vs-All (BCE) or PLT.
-        # The user's PyTorch code used: log_probs[pos]. So it's "categorical cross entropy" style but summing over multiple positives.
-        
         multilabel_loss = -jnp.sum(targets * log_probs) / B
         return multilabel_loss
 
 
 class KernelXML(nnx.Module):
     """
-    Approximation-based XML using Attention Kernels.
+    Approximation-based XML using Attention Feature Maps.
     Z ~ Phi(q) . Sum(Phi(W))
     P(y|q) ~ Phi(q) . Phi(w_y) / Z
     """
@@ -259,70 +261,26 @@ class KernelXML(nnx.Module):
         self.encoder = MeanEmbedding(num_features, embed_dim, rngs=rngs)
         self.classifier = nnx.Linear(embed_dim, num_labels, use_bias=False, rngs=rngs) # W matrix
         
-        # Instantiate the Attention class to get the feature map logic
-        # We pass dummy args where needed used during init
-        dummy_rngs = nnx.Rngs(0) 
+        self.attention_type = attention_type
         
-        if attention_type == 'yat':
-            self.kernel_mod = YatAttention(embed_dim, 1, **attention_kwargs, rngs=rngs)
-            self.feature_fn = self.kernel_mod._prf_features # Yat uses prf features
-        elif attention_type == 'yat-spherical':
-            self.kernel_mod = YatSphericalAttention(embed_dim, 1, **attention_kwargs, rngs=rngs)
-            self.feature_fn = self.kernel_mod._prf_features
-        elif attention_type == 'slay':
-             self.kernel_mod = SLAYAttention(embed_dim, 1, **attention_kwargs, rngs=rngs)
-             # SLAY has split features (poly and prf), this is complex for single vector mapping.
-             # SLAY uses Hadamard product of two feature maps.
-             # phi(x) = poly(x) (*) prf(x) (flattened)
-             # We need to define a wrapper to compute this.
-             self.feature_fn = self._slay_feature_map
+        # num_heads=4 default to break vector down? 
+        # But we want to approximate a full vector dot product <x, y>.
+        # If we split into heads, we are approximating sum_<h> <x_h, y_h>.
+        # Which is <x, y>. So splitting into heads is valid way to reduce dim per feature map.
+        
+        num_heads = attention_kwargs.get('num_heads', 4)
+        if embed_dim % num_heads != 0:
+            num_heads = 1 # Fallback
+        
+        if attention_type in ['slay', 'yat', 'yat-spherical']:
+            self.feature_map = SLAYFeatures(embed_dim, num_heads, **attention_kwargs, rngs=rngs)
         elif attention_type == 'performer':
-             if FastAttention is None: raise ValueError("Performer not available")
-             self.kernel_mod = FastAttention(embed_dim, 1, **attention_kwargs, rngs=rngs)
-             self.feature_fn = self.kernel_mod._compute_features
-             
+            self.feature_map = PerformerFeatures(embed_dim, num_heads, **attention_kwargs, rngs=rngs)
         else:
-             # Fallback or generic
-             raise ValueError(f"Unsupported attention type for KernelXML: {attention_type}")
-
-    def _slay_feature_map(self, x):
-         # x: [..., D]
-         # SLAY expects [Batch, Head, Len, Dim]
-         # We reshape to [Batch, 1, 1, D]
-         orig_shape = x.shape
-         x_in = x.reshape(x.shape[0], 1, 1, x.shape[-1])
-         x_norm = safe_normalize(x_in, axis=-1)
-         
-         q_poly = self.kernel_mod._poly_features(x_norm) # [B, 1, 1, P]
-         q_prf = self.kernel_mod._prf_features(x_norm)   # [R, B, 1, 1, M]
-         
-         # Fuse: einsum 'bhlp,rbhlm->bhlrpm'
-         q_fuse = jnp.einsum('bhlp,rbhlm->bhlrpm', q_poly, q_prf)
-         # Flatten last dims
-         dim_flat = q_fuse.shape[-3] * q_fuse.shape[-2] * q_fuse.shape[-1]
-         return q_fuse.reshape(orig_shape[0], dim_flat)
+             raise ValueError(f"Unsupported attention type for KernelXML (only decomposable kernels allowed): {attention_type}")
 
     def get_features(self, x):
-        # Adapters for kernel mods that expect [B,H,L,D]
-        # Our x is [Batch, Dim]
-        # Some kernels like Yat use self._prf_features(x) where x is usually raw (Yat) or normalized?
-        # YatAttention call: q_norm = safe_normalize(q)... q_prf = self._prf_features(q_norm)
-        # So we should normalize first usually, or check what the kernel does.
-        # Yat _prf_features takes x.
-        
-        orig_shape = x.shape
-        # Fake heads/len: [B, 1, 1, D]
-        x_in = x.reshape(x.shape[0], 1, 1, x.shape[-1])
-        x_norm = safe_normalize(x_in, axis=-1)
-        
-        if hasattr(self, '_slay_feature_map') and self.feature_fn == self._slay_feature_map:
-             return self._slay_feature_map(x) # implementation above handles reshapes
-        
-        # Generic wrapper for others (Yat, Performer)
-        feats = self.feature_fn(x_norm) # [B, 1, 1, M] (or [R, ...])
-        
-        # Flatten
-        return feats.reshape(orig_shape[0], -1)
+        return self.feature_map(x)
 
     def loss(self, indices, mask, labels_list):
         B = indices.shape[0]
@@ -331,11 +289,7 @@ class KernelXML(nnx.Module):
         phi_query = self.get_features(query) # [B, M]
         
         # 2. Compute Global Denominator Sum(phi(W))
-        # This is expensive to do every step if W is huge (Labels=4K for Eurlex).
-        # But for Eurlex (4k) it's mostly fine on GPU.
-        # W: [L, D]
-        # Access kernel using index to avoid deprecated .value warnings
-        W_vecs = self.classifier.kernel[...]
+        W_vecs = self.classifier.kernel[...] # Access value for JAX
         W_vecs = W_vecs.T # [L, D]
         
         phi_W = self.get_features(W_vecs) # [L, M]
@@ -343,8 +297,6 @@ class KernelXML(nnx.Module):
         Z_approx_vec = jnp.sum(phi_W, axis=0) # [M]
         
         # Denominator: phi(q) . Z_vec
-        # Using abs/relu to ensure positivity if kernel is positive (Yat/Performer-ReLU are)
-        # Yat approximation is exp(..), so positive.
         denom = jnp.dot(phi_query, Z_approx_vec) + 1e-6
         log_Z = jnp.log(denom) # [B]
         
@@ -356,7 +308,6 @@ class KernelXML(nnx.Module):
             lbls_arr = jnp.array(lbls)
             
             # phi(w_pos)
-            # Gather relevant W rows
             w_pos = W_vecs[lbls_arr] # [NumPos, D]
             phi_w_pos = self.get_features(w_pos) # [NumPos, M]
             
@@ -372,11 +323,6 @@ class KernelXML(nnx.Module):
         
     def predict(self, indices, mask, k=5):
         query = self.encoder(indices, mask)
-        
-        # Use exact dot product for prediction evaluation? 
-        # Or kernel approximation? The user code uses the kernel approx for prediction in Favor.
-        # "Note: If training with ReLU features, inference should essentially maximize K(x, y)."
-        # Let's use kernel approx to be consistent.
         
         phi_query = self.get_features(query) # [B, M]
         W_vecs = self.classifier.kernel[...]
@@ -422,9 +368,9 @@ def run_benchmark(dataset_path: str = "."):
     # Models to test
     configs = [
         ('FullSoftmax', {}),
-        ('Yat', {'attention_type': 'yat'}),
-        ('YatSpherical', {'attention_type': 'yat-spherical'}),
-        # ('Performer', {'attention_type': 'performer'}),
+        ('Performer', {'attention_type': 'performer', 'attention_kwargs': {'kernel_size': 64}}),
+        ('Yat', {'attention_type': 'yat', 'attention_kwargs': {'num_features': 32, 'num_quadrature_nodes': 2}}),
+        ('YatSpherical', {'attention_type': 'yat-spherical', 'attention_kwargs': {'num_features': 32, 'num_quadrature_nodes': 2, 'epsilon': 1e-2}}),
         ('SLAY', {'attention_type': 'slay', 'attention_kwargs': {'num_features': 32, 'num_quadrature_nodes': 2}}),
     ]
     
@@ -435,21 +381,13 @@ def run_benchmark(dataset_path: str = "."):
         if name == 'FullSoftmax':
             model = FullSoftmaxXML(n_feat, n_lab, EMBED_DIM, rngs=rngs)
         else:
-            model = KernelXML(n_feat, n_lab, EMBED_DIM, **args, rngs=rngs)
+            try:
+                model = KernelXML(n_feat, n_lab, EMBED_DIM, **args, rngs=rngs)
+            except ValueError as e:
+                print(f"Skipping {name}: {e}")
+                continue
             
-        optimizer = nnx.Optimizer(model, optax.adam(LR))
-        
-        # JIT Step
-        @nnx.jit
-        def train_step(model, optimizer, indices, mask, batch_labels_tuple):
-            # We can't pass list of lists to JIT easily. 
-            # We must handle loss function inside python or pass a padded matrix.
-            # For this benchmark, let's keep loss outside JIT or use padded matrix for labels.
-            # Padded matrix strategy:
-            pass # TODO
-            
-        # Due to variable length labels, we might use a purely python loop for loss summation
-        # OR pad labels to max_labels_per_doc.
+        optimizer = nnx.Optimizer(model, optax.adam(LR), wrt=nnx.Param)
         
         def train_epoch(model, optimizer):
             total_loss = 0
@@ -465,7 +403,7 @@ def run_benchmark(dataset_path: str = "."):
                 
                 grad_fn = nnx.value_and_grad(loss_fn)
                 loss, grads = grad_fn(model)
-                optimizer.update(model, grads) # Fix for recent flax
+                optimizer.update(model, grads) 
                 
                 total_loss += loss
                 count += 1
