@@ -129,7 +129,9 @@ class _YatPerformerPolyBase(nn.Module):
             # Original: context_chunk = context_chunk.sum(dim=0) (since 'r' was output)
             # My einsum "rbhtpm,rbhtpmd->bhtd" sums over 'r'. Correct.
             
-            norm = torch.clamp(norm, dim=0, min=1e-6)
+            norm = torch.norm(x, dim=0)
+            norm = torch.clamp(norm, min=1e-6)
+            
             out = context / norm.unsqueeze(-1)
 
         else:
