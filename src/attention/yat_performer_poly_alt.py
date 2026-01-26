@@ -123,13 +123,8 @@ class _YatPerformerPolyBase(nn.Module):
             context = torch.einsum("rbhtpm,rbhtpmd->bhtd", q_outer, kv_cumsum)
             norm = torch.einsum("rbhtpm,rbhtpm->bht", q_outer, k_cumsum)
             
-            # Sum over R (dim 0) is handled by einsum above if we included 'r' in summation
-            # Wait, previous einsum "rbhtpm,rbhtpmd->bhtd" implies sum over r, p, m. Correct.
-            # But wait, original code summed explicitly?
-            # Original: context_chunk = context_chunk.sum(dim=0) (since 'r' was output)
-            # My einsum "rbhtpm,rbhtpmd->bhtd" sums over 'r'. Correct.
-            
             norm = torch.clamp(norm, min=1e-6)
+            
             out = context / norm.unsqueeze(-1)
 
         else:
