@@ -24,22 +24,22 @@
   "results": {
     "standard": {
       "256": {
-        "latency_ms": 6.361399999877904,
+        "latency_ms": 7.8539800000726245,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 18.747080000321148,
+        "latency_ms": 23.892139999952633,
         "memory_mb": 20.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 42.17600000047241,
+        "latency_ms": 66.24405999973533,
         "memory_mb": 72.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 157.74377999987337,
+        "latency_ms": 220.6770199998573,
         "memory_mb": 272.0,
         "status": "ok"
       }
@@ -68,154 +68,154 @@
     },
     "linear": {
       "256": {
-        "latency_ms": 3.3612999999604654,
+        "latency_ms": 5.054219999874476,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 6.058599999960279,
+        "latency_ms": 8.423319999565138,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 10.561540000344394,
+        "latency_ms": 14.19750000059139,
         "memory_mb": 12.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 20.853459999489132,
+        "latency_ms": 26.24768000023323,
         "memory_mb": 24.0,
         "status": "ok"
       }
     },
     "performer": {
       "256": {
-        "latency_ms": 6.261580000136746,
+        "latency_ms": 6.954240000050049,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 9.646080000675283,
+        "latency_ms": 12.144240000634454,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 17.723359999945387,
+        "latency_ms": 24.163039999984903,
         "memory_mb": 12.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 38.38249999971595,
+        "latency_ms": 34.553139999479754,
         "memory_mb": 24.0,
         "status": "ok"
       }
     },
     "cosformer": {
       "256": {
-        "latency_ms": 5.390760000591399,
+        "latency_ms": 5.638960000214865,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 7.8411200003756685,
+        "latency_ms": 9.439360000396846,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 14.311599999928148,
+        "latency_ms": 21.26401999994414,
         "memory_mb": 12.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 24.337799999921117,
+        "latency_ms": 31.529659999796422,
         "memory_mb": 24.0,
         "status": "ok"
       }
     },
     "rff": {
       "256": {
-        "latency_ms": 8.286219999718014,
+        "latency_ms": 9.313400000246475,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 14.619239999592537,
+        "latency_ms": 16.136440000263974,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 23.44786000030581,
+        "latency_ms": 31.451660000311673,
         "memory_mb": 12.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 45.11233999946853,
+        "latency_ms": 62.500159999763135,
         "memory_mb": 24.0,
         "status": "ok"
       }
     },
     "yat": {
       "256": {
-        "latency_ms": 6.56061999980011,
+        "latency_ms": 9.699100000580074,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 19.049939999968046,
+        "latency_ms": 23.851399999693967,
         "memory_mb": 20.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 49.28762000054121,
+        "latency_ms": 93.44176000013249,
         "memory_mb": 72.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 210.99716000026092,
+        "latency_ms": 272.4376400001347,
         "memory_mb": 272.0,
         "status": "ok"
       }
     },
     "yat-spherical": {
       "256": {
-        "latency_ms": 6.590860000142129,
+        "latency_ms": 9.097379999730038,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 19.459079999796813,
+        "latency_ms": 24.667699999554316,
         "memory_mb": 20.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 45.47673999986728,
+        "latency_ms": 73.7944400003471,
         "memory_mb": 72.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 178.7190199996985,
+        "latency_ms": 279.5148400000471,
         "memory_mb": 272.0,
         "status": "ok"
       }
     },
     "slay": {
       "256": {
-        "latency_ms": 6.932819999929052,
+        "latency_ms": 6.540259999746922,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 13.589840000349795,
+        "latency_ms": 14.585640000586864,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 23.756839999987278,
+        "latency_ms": 26.095060000079684,
         "memory_mb": 12.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 45.090959999652114,
+        "latency_ms": 49.312239999562735,
         "memory_mb": 24.0,
         "status": "ok"
       }
@@ -244,88 +244,88 @@
     },
     "slay-laplace": {
       "256": {
-        "latency_ms": 9.035099999891827,
+        "latency_ms": 9.5370200004254,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 16.437559999758378,
+        "latency_ms": 12.263679999887245,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 23.640859999431996,
+        "latency_ms": 22.18457999988459,
         "memory_mb": 12.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 52.11141999971005,
+        "latency_ms": 48.268620000453666,
         "memory_mb": 24.0,
         "status": "ok"
       }
     },
     "slay-rm": {
       "256": {
-        "latency_ms": 12.764359999709995,
+        "latency_ms": 10.705720000260044,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 20.355620000191266,
+        "latency_ms": 17.043179999745917,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 45.66629999972065,
+        "latency_ms": 37.86184000055073,
         "memory_mb": 12.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 85.11075999995228,
+        "latency_ms": 69.84911999970791,
         "memory_mb": 24.0,
         "status": "ok"
       }
     },
     "slay-nystrom": {
       "256": {
-        "latency_ms": 11.545579999801703,
+        "latency_ms": 9.702200000174344,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 23.84968000042136,
+        "latency_ms": 16.42809999975725,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 41.874339999776566,
+        "latency_ms": 33.122800000273855,
         "memory_mb": 12.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 63.36471999966306,
+        "latency_ms": 61.39636000007158,
         "memory_mb": 24.0,
         "status": "ok"
       }
     },
     "slay-anchor": {
       "256": {
-        "latency_ms": 11.29856000043219,
+        "latency_ms": 10.180539999419125,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 18.407720000686822,
+        "latency_ms": 16.90119999984745,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 37.693799999397015,
+        "latency_ms": 39.510580000205664,
         "memory_mb": 12.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 67.94994000010774,
+        "latency_ms": 62.17720000058762,
         "memory_mb": 24.0,
         "status": "ok"
       }

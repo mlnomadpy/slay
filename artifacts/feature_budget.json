@@ -31,7 +31,7 @@
       "num_features": 8,
       "poly_dim": null,
       "rel_l2": 3.3054163455963135,
-      "latency_ms": 2.134940000178176,
+      "latency_ms": 1.526689999809605,
       "feature_dim": 8
     },
     {
@@ -40,7 +40,7 @@
       "num_features": 16,
       "poly_dim": null,
       "rel_l2": 3.139747142791748,
-      "latency_ms": 1.9812799997453112,
+      "latency_ms": 3.4522100002504885,
       "feature_dim": 16
     },
     {
@@ -49,7 +49,7 @@
       "num_features": 32,
       "poly_dim": null,
       "rel_l2": 2.69698166847229,
-      "latency_ms": 3.6431799999263603,
+      "latency_ms": 3.012769999986631,
       "feature_dim": 32
     },
     {
@@ -58,7 +58,7 @@
       "num_features": 64,
       "poly_dim": null,
       "rel_l2": 2.6775319576263428,
-      "latency_ms": 3.6280600001191488,
+      "latency_ms": 4.9953899997490225,
       "feature_dim": 64
     },
     {
@@ -67,7 +67,7 @@
       "num_features": 8,
       "poly_dim": null,
       "rel_l2": 3.5799014568328857,
-      "latency_ms": 1.9776099998125574,
+      "latency_ms": 2.3506300000008196,
       "feature_dim": 16
     },
     {
@@ -76,7 +76,7 @@
       "num_features": 16,
       "poly_dim": null,
       "rel_l2": 3.5299947261810303,
-      "latency_ms": 3.711470000052941,
+      "latency_ms": 2.740049999920302,
       "feature_dim": 32
     },
     {
@@ -85,7 +85,7 @@
       "num_features": 32,
       "poly_dim": null,
       "rel_l2": 3.5398623943328857,
-      "latency_ms": 3.0217800001992146,
+      "latency_ms": 4.911859999992885,
       "feature_dim": 64
     },
     {
@@ -94,7 +94,7 @@
       "num_features": 64,
       "poly_dim": null,
       "rel_l2": 3.930997848510742,
-      "latency_ms": 5.365929999970831,
+      "latency_ms": 5.4347699999198085,
       "feature_dim": 128
     },
     {
@@ -103,7 +103,7 @@
       "num_features": 8,
       "poly_dim": null,
       "rel_l2": 3.670916795730591,
-      "latency_ms": 2.506089999951655,
+      "latency_ms": 2.5604599999496713,
       "feature_dim": 32
     },
     {
@@ -112,7 +112,7 @@
       "num_features": 16,
       "poly_dim": null,
       "rel_l2": 3.4894094467163086,
-      "latency_ms": 3.1302100000175415,
+      "latency_ms": 3.920540000035544,
       "feature_dim": 64
     },
     {
@@ -121,7 +121,7 @@
       "num_features": 32,
       "poly_dim": null,
       "rel_l2": 3.546698570251465,
-      "latency_ms": 4.299150000224472,
+      "latency_ms": 5.623859999832348,
       "feature_dim": 128
     },
     {
@@ -130,7 +130,7 @@
       "num_features": 64,
       "poly_dim": null,
       "rel_l2": 3.5206117630004883,
-      "latency_ms": 8.60011000004306,
+      "latency_ms": 11.7930599997635,
       "feature_dim": 256
     },
     {
@@ -139,7 +139,7 @@
       "num_features": 8,
       "poly_dim": null,
       "rel_l2": 1.1284126043319702,
-      "latency_ms": 1.54145000014978,
+      "latency_ms": 1.926639999874169,
       "feature_dim": 8
     },
     {
@@ -148,7 +148,7 @@
       "num_features": 16,
       "poly_dim": null,
       "rel_l2": 0.9400368928909302,
-      "latency_ms": 1.7524800001410767,
+      "latency_ms": 2.499549999993178,
       "feature_dim": 16
     },
     {
@@ -157,7 +157,7 @@
       "num_features": 32,
       "poly_dim": null,
       "rel_l2": 0.7270227074623108,
-      "latency_ms": 2.088069999808795,
+      "latency_ms": 2.8077099999791244,
       "feature_dim": 32
     },
     {
@@ -166,7 +166,7 @@
       "num_features": 64,
       "poly_dim": null,
       "rel_l2": 0.6131184697151184,
-      "latency_ms": 4.159129999970901,
+      "latency_ms": 4.640010000002803,
       "feature_dim": 64
     },
     {
@@ -175,7 +175,7 @@
       "num_features": 8,
       "poly_dim": null,
       "rel_l2": 1.0849486589431763,
-      "latency_ms": 2.200249999805237,
+      "latency_ms": 2.6922799999738345,
       "feature_dim": 16
     },
     {
@@ -184,7 +184,7 @@
       "num_features": 16,
       "poly_dim": null,
       "rel_l2": 0.9773277044296265,
-      "latency_ms": 2.222489999985555,
+      "latency_ms": 2.420899999924586,
       "feature_dim": 32
     },
     {
@@ -193,7 +193,7 @@
       "num_features": 32,
       "poly_dim": null,
       "rel_l2": 0.9498890042304993,
-      "latency_ms": 3.1171899998298613,
+      "latency_ms": 4.205710000314866,
       "feature_dim": 64
     },
     {
@@ -202,7 +202,7 @@
       "num_features": 64,
       "poly_dim": null,
       "rel_l2": 1.1951789855957031,
-      "latency_ms": 5.377819999921485,
+      "latency_ms": 7.869189999837545,
       "feature_dim": 128
     },
     {
@@ -211,7 +211,7 @@
       "num_features": 8,
       "poly_dim": null,
       "rel_l2": 1.0234638452529907,
-      "latency_ms": 2.5139000001217937,
+      "latency_ms": 2.82424999968498,
       "feature_dim": 32
     },
     {
@@ -220,7 +220,7 @@
       "num_features": 16,
       "poly_dim": null,
       "rel_l2": 0.9261910915374756,
-      "latency_ms": 3.432790000078967,
+      "latency_ms": 4.104169999845908,
       "feature_dim": 64
     },
     {
@@ -229,7 +229,7 @@
       "num_features": 32,
       "poly_dim": null,
       "rel_l2": 0.8536198139190674,
-      "latency_ms": 5.154210000182502,
+      "latency_ms": 5.377770000268356,
       "feature_dim": 128
     },
     {
@@ -238,7 +238,7 @@
       "num_features": 64,
       "poly_dim": null,
       "rel_l2": 0.8056394457817078,
-      "latency_ms": 7.433369999853312,
+      "latency_ms": 9.679280000273138,
       "feature_dim": 256
     },
     {
@@ -247,7 +247,7 @@
       "num_features": 8,
       "poly_dim": 8,
       "rel_l2": 1.4130057096481323,
-      "latency_ms": 2.5631099997553974,
+      "latency_ms": 3.4256199996889336,
       "feature_dim": 64
     },
     {
@@ -256,7 +256,7 @@
       "num_features": 8,
       "poly_dim": 16,
       "rel_l2": 1.2959847450256348,
-      "latency_ms": 3.9664299998548818,
+      "latency_ms": 4.154950000156532,
       "feature_dim": 128
     },
     {
@@ -265,7 +265,7 @@
       "num_features": 8,
       "poly_dim": 32,
       "rel_l2": 1.2279027700424194,
-      "latency_ms": 6.124970000018948,
+      "latency_ms": 6.32380999995803,
       "feature_dim": 256
     },
     {
@@ -274,7 +274,7 @@
       "num_features": 8,
       "poly_dim": 8,
       "rel_l2": 1.4642248153686523,
-      "latency_ms": 4.274819999773172,
+      "latency_ms": 5.441869999776827,
       "feature_dim": 128
     },
     {
@@ -283,7 +283,7 @@
       "num_features": 8,
       "poly_dim": 16,
       "rel_l2": 1.2772202491760254,
-      "latency_ms": 5.967279999822495,
+      "latency_ms": 7.343279999986407,
       "feature_dim": 256
     },
     {
@@ -292,7 +292,7 @@
       "num_features": 8,
       "poly_dim": 32,
       "rel_l2": 1.2092918157577515,
-      "latency_ms": 11.302300000170362,
+      "latency_ms": 13.499379999848315,
       "feature_dim": 512
     },
     {
@@ -301,7 +301,7 @@
       "num_features": 8,
       "poly_dim": 8,
       "rel_l2": 1.4079591035842896,
-      "latency_ms": 5.122119999941788,
+      "latency_ms": 10.24855999967258,
       "feature_dim": 256
     },
     {
@@ -310,7 +310,7 @@
       "num_features": 8,
       "poly_dim": 16,
       "rel_l2": 1.2006962299346924,
-      "latency_ms": 10.010250000050291,
+      "latency_ms": 13.124700000116718,
       "feature_dim": 512
     },
     {
@@ -319,7 +319,7 @@
       "num_features": 8,
       "poly_dim": 32,
       "rel_l2": 1.17786705493927,
-      "latency_ms": 20.437440000023344,
+      "latency_ms": 26.78421000018716,
       "feature_dim": 1024
     }
   ]

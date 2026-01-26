@@ -24,22 +24,22 @@
   "results": {
     "standard": {
       "256": {
-        "latency_ms": 2.622759999940172,
+        "latency_ms": 3.1425599998328835,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 8.04022000011173,
+        "latency_ms": 6.806459999643266,
         "memory_mb": 10.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 18.487800000002608,
+        "latency_ms": 23.30262000032235,
         "memory_mb": 36.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 66.72466000018176,
+        "latency_ms": 75.47522000022582,
         "memory_mb": 136.0,
         "status": "ok"
       }
@@ -68,264 +68,264 @@
     },
     "linear": {
       "256": {
-        "latency_ms": 1.842699999542674,
+        "latency_ms": 1.3644400001794565,
         "memory_mb": 1.5,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 2.2422200003347825,
+        "latency_ms": 2.2093999999924563,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 3.9958800000022165,
+        "latency_ms": 4.249940000590868,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 6.5508400002727285,
+        "latency_ms": 6.732419999752892,
         "memory_mb": 12.0,
         "status": "ok"
       }
     },
     "performer": {
       "256": {
-        "latency_ms": 2.650779999385122,
+        "latency_ms": 2.2064199998567346,
         "memory_mb": 1.5,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 3.300660000240896,
+        "latency_ms": 3.347380000195699,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 5.563479999545962,
+        "latency_ms": 5.34747999990941,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 11.076280000270344,
+        "latency_ms": 10.038940000231378,
         "memory_mb": 12.0,
         "status": "ok"
       }
     },
     "cosformer": {
       "256": {
-        "latency_ms": 2.682679999998072,
+        "latency_ms": 2.4575399998866487,
         "memory_mb": 1.5,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 3.7505200001760386,
+        "latency_ms": 3.0821800006378908,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 6.574919999548001,
+        "latency_ms": 5.974520000017947,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 9.224140000151237,
+        "latency_ms": 11.111720000189962,
         "memory_mb": 12.0,
         "status": "ok"
       }
     },
     "rff": {
       "256": {
-        "latency_ms": 3.349720000551315,
+        "latency_ms": 3.2162800001970027,
         "memory_mb": 1.5,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 5.4405200004111975,
+        "latency_ms": 5.020979999972042,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 9.17016000021249,
+        "latency_ms": 9.811880000052042,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 17.48435999979847,
+        "latency_ms": 24.294299999746727,
         "memory_mb": 12.0,
         "status": "ok"
       }
     },
     "yat": {
       "256": {
-        "latency_ms": 2.832079999643611,
+        "latency_ms": 4.3423999995866325,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 5.998600000020815,
+        "latency_ms": 12.14828000011039,
         "memory_mb": 10.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 14.775500000541797,
+        "latency_ms": 25.526299999910407,
         "memory_mb": 36.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 76.91504000031273,
+        "latency_ms": 86.96444000015617,
         "memory_mb": 136.0,
         "status": "ok"
       }
     },
     "yat-spherical": {
       "256": {
-        "latency_ms": 3.7384200004453305,
+        "latency_ms": 5.358459999843035,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 7.641660000081174,
+        "latency_ms": 10.413559999869904,
         "memory_mb": 10.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 20.41451999975834,
+        "latency_ms": 25.358840000262717,
         "memory_mb": 36.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 78.82526000030339,
+        "latency_ms": 96.97911999974167,
         "memory_mb": 136.0,
         "status": "ok"
       }
     },
     "slay": {
       "256": {
-        "latency_ms": 3.3335199994326103,
+        "latency_ms": 2.9415199998766184,
         "memory_mb": 1.5,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 3.9660599999479014,
+        "latency_ms": 5.909300000348594,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 6.423979999817675,
+        "latency_ms": 9.020759999839356,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 10.449179999704938,
+        "latency_ms": 17.256500000075903,
         "memory_mb": 12.0,
         "status": "ok"
       }
     },
     "slay-tensor": {
       "256": {
-        "latency_ms": 4.673080000065966,
+        "latency_ms": 4.701619999832474,
         "memory_mb": 1.5,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 6.808020000607939,
+        "latency_ms": 9.070100000099046,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 12.541539999801898,
+        "latency_ms": 15.079639999748906,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 21.529459999874234,
+        "latency_ms": 24.857019999762997,
         "memory_mb": 12.0,
         "status": "ok"
       }
     },
     "slay-laplace": {
       "256": {
-        "latency_ms": 2.9564799995569047,
+        "latency_ms": 3.4009399998467416,
         "memory_mb": 1.5,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 2.9030599995166995,
+        "latency_ms": 4.542579999542795,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 6.330339999840362,
+        "latency_ms": 10.717139999906067,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 8.839440000156173,
+        "latency_ms": 13.345699999626959,
         "memory_mb": 12.0,
         "status": "ok"
       }
     },
     "slay-rm": {
       "256": {
-        "latency_ms": 3.8569200005440507,
+        "latency_ms": 4.874139999446925,
         "memory_mb": 1.5,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 5.452019999938784,
+        "latency_ms": 6.96618000001763,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 9.994080000615213,
+        "latency_ms": 15.594299999793293,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 18.55809999979101,
+        "latency_ms": 24.69009999986156,
         "memory_mb": 12.0,
         "status": "ok"
       }
     },
     "slay-nystrom": {
       "256": {
-        "latency_ms": 4.4054800004232675,
+        "latency_ms": 4.311239999515237,
         "memory_mb": 1.5,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 6.5881399998033885,
+        "latency_ms": 7.912999999825843,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 11.401619999378454,
+        "latency_ms": 14.159520000248449,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 18.111119999957737,
+        "latency_ms": 21.67799999951967,
         "memory_mb": 12.0,
         "status": "ok"
       }
     },
     "slay-anchor": {
       "256": {
-        "latency_ms": 3.5918000001402106,
+        "latency_ms": 4.969839999830583,
         "memory_mb": 1.5,
         "status": "ok"
       },
       "512": {
-        "latency_ms": 6.266679999680491,
+        "latency_ms": 8.175199999823235,
         "memory_mb": 3.0,
         "status": "ok"
       },
       "1024": {
-        "latency_ms": 10.911940000369214,
+        "latency_ms": 13.852960000076564,
         "memory_mb": 6.0,
         "status": "ok"
       },
       "2048": {
-        "latency_ms": 18.491979999816976,
+        "latency_ms": 24.21628000010969,
         "memory_mb": 12.0,
         "status": "ok"
       }

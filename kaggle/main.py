@@ -22,6 +22,9 @@ from jax.sharding import PartitionSpec as P
 
 from tokenizers import Tokenizer
 
+# Clear any existing JAX caches to free memory
+jax.clear_caches()
+
 # --- Numerical Stability Helpers ---
 def safe_normalize(x, axis=-1, eps=1e-6):
     """Safely normalize vectors to unit length, avoiding division by zero."""
@@ -30,7 +33,7 @@ def safe_normalize(x, axis=-1, eps=1e-6):
 
 # --- JAX Device and Mesh Setup ---
 if jax.default_backend() == 'tpu':
-    mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
+    mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
 else:
     num_devices = len(jax.devices())
     mesh_shape = (num_devices, 1)
@@ -93,7 +96,7 @@ class RotarySelfAttention(nnx.Module):
         assert self.head_dim * num_heads == embed_dim, "embed_dim must be divisible by num_heads"
 
         if mesh is not None:
-            kernel_init = nnx.with_partitioning(nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model')))
+            kernel_init = nnx.with_partitioning(nnx.initializers.xavier_uniform(), P(None, 'model'))
         else:
             kernel_init = nnx.initializers.xavier_uniform()
 
@@ -239,7 +242,7 @@ class FastAttention(nnx.Module):
         k = k.transpose(0, 2, 1, 3)
         v = v.transpose(0, 2, 1, 3)
         
-        proj_matrix = jax.device_put(self.proj_matrix.value)
+        proj_matrix = self.proj_matrix[...]
         
         q_prime = jax.nn.relu(jnp.einsum('bhld,hdm->bhlm', q, proj_matrix))
         k_prime = jax.nn.relu(jnp.einsum('bhld,hdm->bhlm', k, proj_matrix))
@@ -356,8 +359,8 @@ class RFFAttention(nnx.Module):
             self.dropout = nnx.Dropout(rate=attn_dropout, rngs=rngs)
         
     def _rff_features(self, x):
-        omega = jax.device_put(self.omega.value)
-        bias = jax.device_put(self.bias.value)
+        omega = self.omega[...]
+        bias = self.bias[...]
         proj = jnp.einsum('bhld,hdm->bhlm', x, omega)
         proj = proj + bias[None, :, None, :]
         return jnp.sqrt(2.0 / self.num_features) * jnp.cos(proj)
@@ -533,9 +536,9 @@ class SLAYAttention(nnx.Module):
     def _compute_features_fast(self, x):
         x_norm = safe_normalize(x, axis=-1)
         
-        omega = jax.device_put(self.omega.value)
-        quad_nodes = jax.device_put(self.quad_nodes.value)
-        quad_weights = jax.device_put(self.quad_weights.value)
+        omega = self.omega[...]
+        quad_nodes = self.quad_nodes[...]
+        quad_weights = self.quad_weights[...]
         
         proj = jnp.einsum('bhld,rhdm->rbhlm', x_norm, omega)
         poly_feat = (proj ** 2) / jnp.sqrt(self.num_features)
@@ -679,11 +682,13 @@ class SLAYTensorAttention(nnx.Module):
         return out
 
     def _poly_tensor_sketch(self, x):
-        h1, s1 = jax.device_put(self.ts_hash1.value), jax.device_put(self.ts_sign1.value)
-        h2, s2 = jax.device_put(self.ts_hash2.value), jax.device_put(self.ts_sign2.value)
+        h1, s1 = self.ts_hash1[...]
+        h2, s2 = self.ts_hash2[...]
+        ts_sign1 = self.ts_sign1[...]
+        ts_sign2 = self.ts_sign2[...]
         
-        cs1 = self._count_sketch(x, h1, s1)
-        cs2 = self._count_sketch(x, h2, s2)
+        cs1 = self._count_sketch(x, h1, ts_sign1)
+        cs2 = self._count_sketch(x, h2, ts_sign2)
         
         # FFT conv
         fft_cs1 = jnp.fft.rfft(cs1, axis=-1)
@@ -692,8 +697,8 @@ class SLAYTensorAttention(nnx.Module):
         return ts / jnp.sqrt(self.poly_sketch_dim)
 
     def _prf_features(self, x):
-        omega = jax.device_put(self.omega.value) # [R,H,D,M]
-        quad_nodes = jax.device_put(self.quad_nodes.value)
+        omega = self.omega[...] # [R,H,D,M]
+        quad_nodes = self.quad_nodes[...]
         
         # x: [B,H,L,D] -> [1,B,H,L,D]
         # omega: [R,H,D,M] -> [R,1,H,1,D,M]
@@ -730,7 +735,7 @@ class SLAYTensorAttention(nnx.Module):
         k_prf = self._prf_features(k_norm)
         
         # Apply quad weights (sqrt)
-        quad_weights = jax.device_put(self.quad_weights.value)
+        quad_weights = self.quad_weights[...]
         sq_weights = jnp.sqrt(jnp.clip(quad_weights.reshape(-1, 1, 1, 1, 1), a_min=0))
         q_prf = q_prf * sq_weights
         k_prf = k_prf * sq_weights
@@ -797,9 +802,9 @@ class SLAYLaplaceAttention(nnx.Module):
 
     def _compute_features(self, x):
         x_norm = safe_normalize(x, axis=-1)
-        omega = jax.device_put(self.omega.value)
-        quad_nodes = jax.device_put(self.quad_nodes.value)
-        quad_weights = jax.device_put(self.quad_weights.value)
+        omega = self.omega[...]
+        quad_nodes = self.quad_nodes[...]
+        quad_weights = self.quad_weights[...]
         
         proj = jnp.einsum('bhld,rhdm->rbhlm', x_norm, omega)
         
@@ -890,8 +895,8 @@ class _SLAYPolyBase(nnx.Module):
         self.omega = nnx.Cache(jax.random.normal(param_key, (num_quadrature_nodes, self.num_heads, self.head_dim, num_prf_features)))
 
     def _prf_features(self, x):
-        omega = jax.device_put(self.omega.value)
-        quad_nodes = jax.device_put(self.quad_nodes.value)
+        omega = self.omega[...]
+        quad_nodes = self.quad_nodes[...]
         
         proj = jnp.einsum('bhld,rhdm->rbhlm', x, omega)
         
@@ -930,7 +935,7 @@ class _SLAYPolyBase(nnx.Module):
         k_prf = self._prf_features(k_norm)
         
         # Weights
-        quad_weights = jax.device_put(self.quad_weights.value)
+        quad_weights = self.quad_weights[...]
         sq_weights = jnp.sqrt(jnp.clip(quad_weights.reshape(-1, 1, 1, 1, 1), a_min=0))
         q_prf = q_prf * sq_weights
         k_prf = k_prf * sq_weights
@@ -982,8 +987,8 @@ class SLAYRMAttention(_SLAYPolyBase):
         self.rm_r2 = nnx.Cache(jax.random.normal(k2, (P, D)) / jnp.sqrt(D))
 
     def _poly_features(self, x_norm):
-        r1 = jax.device_put(self.rm_r1.value)
-        r2 = jax.device_put(self.rm_r2.value)
+        r1 = self.rm_r1[...]
+        r2 = self.rm_r2[...]
         
         proj1 = jnp.einsum('bhld,pd->bhlp', x_norm, r1)
         proj2 = jnp.einsum('bhld,pd->bhlp', x_norm, r2)
@@ -1014,8 +1019,8 @@ class SLAYNystromAttention(_SLAYPolyBase):
         self.nystrom_W = nnx.Cache(W)
 
     def _poly_features(self, x_norm):
-        anchors = jax.device_put(self.nystrom_anchors.value)
-        W = jax.device_put(self.nystrom_W.value)
+        anchors = self.nystrom_anchors[...]
+        W = self.nystrom_W[...]
         
         K_xA = (jnp.einsum('bhld,pd->bhlp', x_norm, anchors)) ** 2
         return jnp.einsum('bhlp,pq->bhlq', K_xA, W) / jnp.sqrt(self.poly_dim)
@@ -1033,7 +1038,7 @@ class SLAYAnchorAttention(_SLAYPolyBase):
         self.anchor_vectors = nnx.Cache(anchors)
 
     def _poly_features(self, x_norm):
-        anchors = jax.device_put(self.anchor_vectors.value)
+        anchors = self.anchor_vectors[...]
         return (jnp.einsum('bhld,pd->bhlp', x_norm, anchors) ** 2) / jnp.sqrt(self.poly_dim)
 
 
@@ -1080,7 +1085,8 @@ class ModernTransformerBlock(nnx.Module):
     """Transformer block with RMSNorm and RoPE."""
     def __init__(self, embed_dim: int, num_heads: int, ff_dim: int, *, rngs: nnx.Rngs, rate: float = 0.1, attention_type: str = 'rotary', attention_kwargs: dict = None):
         if mesh is not None:
-            kernel_init = nnx.with_partitioning(nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model')))
+             # FIX: Pass PartitionSpec directly, not NamedSharding
+            kernel_init = nnx.with_partitioning(nnx.initializers.xavier_uniform(), P(None, 'model'))
         else:
             kernel_init = nnx.initializers.xavier_uniform()
 
@@ -1157,7 +1163,8 @@ class MiniBERT(nnx.Module):
     """Modernized MiniBERT with RoPE, RMSNorm, and Tied Weights."""
     def __init__(self, maxlen: int, vocab_size: int, embed_dim: int, num_heads: int, feed_forward_dim: int, num_transformer_blocks: int, rngs: nnx.Rngs, attention_type: str = 'rotary', attention_kwargs: dict = None):
         self.embedding_layer = TokenEmbedding(vocab_size, embed_dim, rngs=rngs)
-        self.transformer_blocks = [ModernTransformerBlock(embed_dim, num_heads, feed_forward_dim, rngs=rngs, attention_type=attention_type, attention_kwargs=attention_kwargs) for _ in range(num_transformer_blocks)]
+        # Use nnx.List to store a list of Modules
+        self.transformer_blocks = nnx.List([ModernTransformerBlock(embed_dim, num_heads, feed_forward_dim, rngs=rngs, attention_type=attention_type, attention_kwargs=attention_kwargs) for _ in range(num_transformer_blocks)])
         self.norm_final = RMSNorm(embed_dim, rngs=rngs)
         
         # Precompute RoPE frequencies
@@ -1169,23 +1176,24 @@ class MiniBERT(nnx.Module):
     def __call__(self, inputs, attention_mask=None, training: bool = False):
         x = self.embedding_layer(inputs)
         
-        freqs_cos = jax.device_put(self.freqs_cos.value)
-        freqs_sin = jax.device_put(self.freqs_sin.value)
+        # FIX: Access variables using [...] to get the Tracer in JIT without creating new DevicePut ops
+        freqs_cos = self.freqs_cos[...]
+        freqs_sin = self.freqs_sin[...]
         
         for block in self.transformer_blocks:
             x = block(x, freqs_cos, freqs_sin, attention_mask, training)
             
         x = self.norm_final(x)
         
-        embedding_weights = self.embedding_layer.token_emb.embedding.value
+        embedding_weights = self.embedding_layer.token_emb.embedding[...]
         logits = x @ embedding_weights.T
         return logits
 
     def embed(self, inputs, attention_mask=None, training: bool = False):
         """Gets embeddings before the final output layer."""
         x = self.embedding_layer(inputs)
-        freqs_cos = jax.device_put(self.freqs_cos.value)
-        freqs_sin = jax.device_put(self.freqs_sin.value)
+        freqs_cos = self.freqs_cos[...]
+        freqs_sin = self.freqs_sin[...]
         
         for block in self.transformer_blocks:
             x = block(x, freqs_cos, freqs_sin, attention_mask, training)
@@ -1218,14 +1226,13 @@ def apply_positive_weights(model, rngs):
     def init_positive(path, param):
         nonlocal key
         key, subkey = jax.random.split(key)
-        if hasattr(param, 'value'):
-            old_val = param.value
-            # Use fan_in based scaling for better initialization
-            fan_in = old_val.shape[0] if len(old_val.shape) > 0 else 1
-            scale = 1.0 / jnp.sqrt(fan_in)
-            new_val = jnp.abs(jax.random.normal(subkey, old_val.shape) * scale)
-            return param.replace(value=new_val)
-        return param
+        # param is the array value
+        old_val = param
+        # Use fan_in based scaling for better initialization
+        fan_in = old_val.shape[0] if len(old_val.shape) > 0 else 1
+        scale = 1.0 / jnp.sqrt(fan_in)
+        new_val = jnp.abs(jax.random.normal(subkey, old_val.shape) * scale)
+        return new_val
     
     # Apply to all params using tree_map_with_path
     new_params = jax.tree_util.tree_map_with_path(init_positive, params)
@@ -1354,7 +1361,7 @@ def train_step_mlm(model: MiniBERT, optimizer: nnx.Optimizer, batch):
     # Calculate Gradient Norm
     grad_norm = optax.global_norm(grads)
     
-    optimizer.update(grads)
+    optimizer.update(model, grads)
     return loss, model, optimizer, grad_norm
 
 @nnx.jit
@@ -1405,27 +1412,46 @@ def main_pretrain(**kwargs):
     
     config['vocab_size'] = tokenizer.get_vocab_size()
     print(f"Vocab Size: {config['vocab_size']}")
-
-    model = create_model(rngs, config)
     
-    # Create learning rate schedule with warmup and cosine decay
-    schedule = optax.warmup_cosine_decay_schedule(
-        init_value=0.0,
-        peak_value=config['learning_rate'],
-        warmup_steps=config['warmup_steps'],
-        decay_steps=max_iterations,
-        end_value=config['learning_rate'] * 0.01
-    )
+    with jax.set_mesh(mesh):
+        model = create_model(rngs, config)
     
-    # Optimizer with gradient clipping and weight decay
-    optimizer = nnx.Optimizer(model, optax.chain(
-        optax.clip_by_global_norm(config['max_grad_norm']),
-        optax.adamw(schedule, weight_decay=config['weight_decay'])
-    ))
+        # Create learning rate schedule with warmup and cosine decay
+        schedule = optax.warmup_cosine_decay_schedule(
+            init_value=0.0,
+            peak_value=config['learning_rate'],
+            warmup_steps=config['warmup_steps'],
+            decay_steps=max_iterations,
+            end_value=config['learning_rate'] * 0.01
+        )
+        
+        # Optimizer with gradient clipping and weight decay
+        optimizer = nnx.Optimizer(model, optax.chain(
+            optax.clip_by_global_norm(config['max_grad_norm']),
+            optax.adamw(schedule, weight_decay=config['weight_decay'])
+        ), wrt=nnx.Param)
 
-    # Throughput tracking
-    total_tokens = 0
-    tokens_per_step = config['batch_size'] * config['maxlen']
+        # Throughput tracking
+        total_tokens = 0
+        tokens_per_step = config['batch_size'] * config['maxlen']
+
+        # --- Warmup Step ---
+        print("\n=== Warmup Step ===")
+        # Create dummy batch for compilation
+        dummy_input_ids = jnp.ones((config['batch_size'], config['maxlen']), dtype=jnp.int32)
+        dummy_labels = jnp.ones((config['batch_size'], config['maxlen']), dtype=jnp.int32)
+        dummy_batch = {'input_ids': dummy_input_ids, 'labels': dummy_labels}
+        
+        # Shard dummy batch
+        sharding = NamedSharding(mesh, P('batch', None))
+        sharded_dummy_batch = {k: jax.device_put(v, sharding) for k, v in dummy_batch.items()}
+        
+        print("Compiling training step...")
+        warmup_start = time.time()
+        # Run one step and block until ready
+        warmup_loss, _, _, _ = train_step_mlm(model, optimizer, sharded_dummy_batch)
+        jax.block_until_ready(warmup_loss)
+        print(f"Warmup complete. Time taken: {time.time() - warmup_start:.2f}s")
 
     print("\n=== Phase 1: MLM Pre-training ===")
     train_dataset = process_dataset_for_mlm(full_dataset.skip(config['val_set_size']), tokenizer, config['maxlen'], config['mask_prob'], config['vocab_size'])
@@ -1533,12 +1559,12 @@ if __name__ == '__main__':
     parser.add_argument('--warmup_steps', type=int, default=2000, help="Number of warmup steps for learning rate schedule.")
     parser.add_argument('--weight_decay', type=float, default=0.01, help="Weight decay for AdamW optimizer.")
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help="Maximum gradient norm for clipping.")
-    parser.add_argument('--max_tokens_to_process', type=int, default=1_000_000_000, help="Total tokens to process during training.")
+    parser.add_argument('--max_tokens_to_process', type=int, default=2_500_000_000, help="Total tokens to process during training.")
     
     # --- Evaluation & Checkpointing ---
     parser.add_argument('--eval_interval', type=int, default=10000, help="Steps between evaluations.")
     parser.add_argument('--eval_steps', type=int, default=50, help="Number of eval steps per evaluation.")
-    parser.add_argument('--val_set_size', type=int, default=2000, help="Validation set size.")
+    parser.add_argument('--val_set_size', type=int, default=10000, help="Validation set size.")
     parser.add_argument('--checkpoint_interval', type=int, default=10000, help="Steps between checkpoints.")
     parser.add_argument('--checkpoint_dir', type=str, default='./minibert_checkpoints', help="Checkpoint directory.")
     

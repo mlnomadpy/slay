@@ -22,721 +22,991 @@
       "task": "copy",
       "category": "basic",
       "attention": "standard",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.012646741233766079,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "copy",
       "category": "basic",
       "attention": "linear",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.014174329116940498,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "copy",
       "category": "basic",
       "attention": "performer",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.012353699654340744,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "copy",
+      "category": "basic",
+      "attention": "yat",
+      "final_loss": 0.014264778234064579,
+      "final_accuracy": 0.999755859375,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "copy",
+      "category": "basic",
+      "attention": "yat-spherical",
+      "final_loss": 0.014367396011948586,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "copy",
       "category": "basic",
       "attention": "slay",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.014719700440764427,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "copy",
       "category": "basic",
       "attention": "slay-tensor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 0.2318332940340042,
+      "final_accuracy": 0.977294921875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "copy",
       "category": "basic",
       "attention": "slay-laplace",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.013877654448151588,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "copy",
       "category": "basic",
       "attention": "slay-rm",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 0.20758193731307983,
+      "final_accuracy": 0.98828125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "copy",
       "category": "basic",
       "attention": "slay-nystrom",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 0.014825480058789253,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "copy",
       "category": "basic",
       "attention": "slay-anchor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.012666495516896248,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "reverse",
       "category": "basic",
       "attention": "standard",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.628209352493286,
+      "final_accuracy": 0.142578125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "reverse",
       "category": "basic",
       "attention": "linear",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.592785120010376,
+      "final_accuracy": 0.145263671875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "reverse",
       "category": "basic",
       "attention": "performer",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.5966250896453857,
+      "final_accuracy": 0.149658203125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "reverse",
+      "category": "basic",
+      "attention": "yat",
+      "final_loss": 2.6561851501464844,
+      "final_accuracy": 0.13720703125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "reverse",
+      "category": "basic",
+      "attention": "yat-spherical",
+      "final_loss": 2.5989766120910645,
+      "final_accuracy": 0.145263671875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "reverse",
       "category": "basic",
       "attention": "slay",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.6319682598114014,
+      "final_accuracy": 0.1396484375,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "reverse",
       "category": "basic",
       "attention": "slay-tensor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 2.8376646041870117,
+      "final_accuracy": 0.070556640625,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "reverse",
       "category": "basic",
       "attention": "slay-laplace",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.598020076751709,
+      "final_accuracy": 0.14794921875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "reverse",
       "category": "basic",
       "attention": "slay-rm",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 2.762665271759033,
+      "final_accuracy": 0.08203125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "reverse",
       "category": "basic",
       "attention": "slay-nystrom",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 2.661585807800293,
+      "final_accuracy": 0.138671875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "reverse",
       "category": "basic",
       "attention": "slay-anchor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.60345196723938,
+      "final_accuracy": 0.141357421875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "sort",
       "category": "basic",
       "attention": "standard",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.6245033740997314,
+      "final_accuracy": 0.134765625,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "sort",
       "category": "basic",
       "attention": "linear",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.5962090492248535,
+      "final_accuracy": 0.14892578125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "sort",
       "category": "basic",
       "attention": "performer",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.5858662128448486,
+      "final_accuracy": 0.15234375,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "sort",
+      "category": "basic",
+      "attention": "yat",
+      "final_loss": 2.640026330947876,
+      "final_accuracy": 0.136474609375,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "sort",
+      "category": "basic",
+      "attention": "yat-spherical",
+      "final_loss": 2.602039098739624,
+      "final_accuracy": 0.150634765625,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "sort",
       "category": "basic",
       "attention": "slay",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.6243231296539307,
+      "final_accuracy": 0.131591796875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "sort",
       "category": "basic",
       "attention": "slay-tensor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 2.755070447921753,
+      "final_accuracy": 0.086669921875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "sort",
       "category": "basic",
       "attention": "slay-laplace",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.5931930541992188,
+      "final_accuracy": 0.149658203125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "sort",
       "category": "basic",
       "attention": "slay-rm",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 2.7837636470794678,
+      "final_accuracy": 0.084716796875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "sort",
       "category": "basic",
       "attention": "slay-nystrom",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 2.6173434257507324,
+      "final_accuracy": 0.1435546875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "sort",
       "category": "basic",
       "attention": "slay-anchor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.5935921669006348,
+      "final_accuracy": 0.1484375,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "retrieval",
       "category": "memory",
       "attention": "standard",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 3.4569954872131348,
+      "final_accuracy": 0.016357421875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "retrieval",
       "category": "memory",
       "attention": "linear",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 3.4437270164489746,
+      "final_accuracy": 0.023681640625,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "retrieval",
       "category": "memory",
       "attention": "performer",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 3.4724278450012207,
+      "final_accuracy": 0.0087890625,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "retrieval",
+      "category": "memory",
+      "attention": "yat",
+      "final_loss": 3.473478317260742,
+      "final_accuracy": 0.0194091796875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "retrieval",
+      "category": "memory",
+      "attention": "yat-spherical",
+      "final_loss": 3.4417238235473633,
+      "final_accuracy": 0.0203857421875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "retrieval",
       "category": "memory",
       "attention": "slay",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 3.483328104019165,
+      "final_accuracy": 0.0107421875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "retrieval",
       "category": "memory",
       "attention": "slay-tensor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 3.5749454498291016,
+      "final_accuracy": 0.03076171875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "retrieval",
       "category": "memory",
       "attention": "slay-laplace",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 3.479245185852051,
+      "final_accuracy": 0.0079345703125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "retrieval",
       "category": "memory",
       "attention": "slay-rm",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 3.5164899826049805,
+      "final_accuracy": 0.035400390625,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "retrieval",
       "category": "memory",
       "attention": "slay-nystrom",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 3.4306607246398926,
+      "final_accuracy": 0.0230712890625,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "retrieval",
       "category": "memory",
       "attention": "slay-anchor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 3.4227652549743652,
+      "final_accuracy": 0.03759765625,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "selective_copy",
       "category": "memory",
       "attention": "standard",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.008210603147745132,
+      "final_accuracy": 0.999755859375,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "selective_copy",
       "category": "memory",
       "attention": "linear",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.01174344215542078,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "selective_copy",
       "category": "memory",
       "attention": "performer",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.009098580107092857,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "selective_copy",
+      "category": "memory",
+      "attention": "yat",
+      "final_loss": 0.008219514042139053,
+      "final_accuracy": 0.9970703125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "selective_copy",
+      "category": "memory",
+      "attention": "yat-spherical",
+      "final_loss": 0.010089969262480736,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "selective_copy",
       "category": "memory",
       "attention": "slay",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.009174571372568607,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "selective_copy",
       "category": "memory",
       "attention": "slay-tensor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 0.23118606209754944,
+      "final_accuracy": 0.976806640625,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "selective_copy",
       "category": "memory",
       "attention": "slay-laplace",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.010505114682018757,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "selective_copy",
       "category": "memory",
       "attention": "slay-rm",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 0.04077852517366409,
+      "final_accuracy": 0.990966796875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "selective_copy",
       "category": "memory",
       "attention": "slay-nystrom",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 0.01035164576023817,
+      "final_accuracy": 0.998779296875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "selective_copy",
       "category": "memory",
       "attention": "slay-anchor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.009794888086616993,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "first_token",
       "category": "memory",
       "attention": "standard",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.733104705810547,
+      "final_accuracy": 0.062255859375,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "first_token",
       "category": "memory",
       "attention": "linear",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.738101005554199,
+      "final_accuracy": 0.0860595703125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "first_token",
       "category": "memory",
       "attention": "performer",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.7330873012542725,
+      "final_accuracy": 0.07421875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "first_token",
+      "category": "memory",
+      "attention": "yat",
+      "final_loss": 2.734053134918213,
+      "final_accuracy": 0.0511474609375,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "first_token",
+      "category": "memory",
+      "attention": "yat-spherical",
+      "final_loss": 2.7384047508239746,
+      "final_accuracy": 0.0867919921875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "first_token",
       "category": "memory",
       "attention": "slay",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.7615737915039062,
+      "final_accuracy": 0.0826416015625,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "first_token",
       "category": "memory",
       "attention": "slay-tensor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 2.8134241104125977,
+      "final_accuracy": 0.056884765625,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "first_token",
       "category": "memory",
       "attention": "slay-laplace",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.7311015129089355,
+      "final_accuracy": 0.0750732421875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "first_token",
       "category": "memory",
       "attention": "slay-rm",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 2.809157371520996,
+      "final_accuracy": 0.065185546875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "first_token",
       "category": "memory",
       "attention": "slay-nystrom",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 2.7877793312072754,
+      "final_accuracy": 0.0654296875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "first_token",
       "category": "memory",
       "attention": "slay-anchor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.748629093170166,
+      "final_accuracy": 0.0826416015625,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "counting",
       "category": "arithmetic",
       "attention": "standard",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.7754502296447754,
+      "final_accuracy": 0.060791015625,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "counting",
       "category": "arithmetic",
       "attention": "linear",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.771998643875122,
+      "final_accuracy": 0.0634765625,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "counting",
       "category": "arithmetic",
       "attention": "performer",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.7744083404541016,
+      "final_accuracy": 0.0615234375,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "counting",
+      "category": "arithmetic",
+      "attention": "yat",
+      "final_loss": 2.7759342193603516,
+      "final_accuracy": 0.061767578125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "counting",
+      "category": "arithmetic",
+      "attention": "yat-spherical",
+      "final_loss": 2.7723586559295654,
+      "final_accuracy": 0.0673828125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "counting",
       "category": "arithmetic",
       "attention": "slay",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.7742021083831787,
+      "final_accuracy": 0.0693359375,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "counting",
       "category": "arithmetic",
       "attention": "slay-tensor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 2.8170742988586426,
+      "final_accuracy": 0.06298828125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "counting",
       "category": "arithmetic",
       "attention": "slay-laplace",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.774569511413574,
+      "final_accuracy": 0.060546875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "counting",
       "category": "arithmetic",
       "attention": "slay-rm",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 2.8161184787750244,
+      "final_accuracy": 0.069091796875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "counting",
       "category": "arithmetic",
       "attention": "slay-nystrom",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 2.7753450870513916,
+      "final_accuracy": 0.063720703125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "counting",
       "category": "arithmetic",
       "attention": "slay-anchor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 2.7741928100585938,
+      "final_accuracy": 0.059814453125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "parity",
       "category": "arithmetic",
       "attention": "standard",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.6939572095870972,
+      "final_accuracy": 0.4892578125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "parity",
       "category": "arithmetic",
       "attention": "linear",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.6934000849723816,
+      "final_accuracy": 0.4892578125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "parity",
       "category": "arithmetic",
       "attention": "performer",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.6926292777061462,
+      "final_accuracy": 0.500732421875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "parity",
+      "category": "arithmetic",
+      "attention": "yat",
+      "final_loss": 0.6926142573356628,
+      "final_accuracy": 0.4892578125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "parity",
+      "category": "arithmetic",
+      "attention": "yat-spherical",
+      "final_loss": 0.6931833028793335,
+      "final_accuracy": 0.4892578125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "parity",
       "category": "arithmetic",
       "attention": "slay",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.6957694292068481,
+      "final_accuracy": 0.4892578125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "parity",
       "category": "arithmetic",
       "attention": "slay-tensor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 0.6973320245742798,
+      "final_accuracy": 0.5048828125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "parity",
       "category": "arithmetic",
       "attention": "slay-laplace",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.6928503513336182,
+      "final_accuracy": 0.4892578125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "parity",
       "category": "arithmetic",
       "attention": "slay-rm",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 0.6928884387016296,
+      "final_accuracy": 0.5048828125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "parity",
       "category": "arithmetic",
       "attention": "slay-nystrom",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 0.6970638632774353,
+      "final_accuracy": 0.4892578125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "parity",
       "category": "arithmetic",
       "attention": "slay-anchor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.693145751953125,
+      "final_accuracy": 0.5048828125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "long_copy",
       "category": "long_range",
       "attention": "standard",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.008783007971942425,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "long_copy",
       "category": "long_range",
       "attention": "linear",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.011665304191410542,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "long_copy",
       "category": "long_range",
       "attention": "performer",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.009875359944999218,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "long_copy",
+      "category": "long_range",
+      "attention": "yat",
+      "final_loss": 0.009477201849222183,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "long_copy",
+      "category": "long_range",
+      "attention": "yat-spherical",
+      "final_loss": 0.010281169787049294,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "long_copy",
       "category": "long_range",
       "attention": "slay",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.009549015201628208,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "long_copy",
       "category": "long_range",
       "attention": "slay-tensor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 0.3524830937385559,
+      "final_accuracy": 0.950927734375,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "long_copy",
       "category": "long_range",
       "attention": "slay-laplace",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.010119935497641563,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "long_copy",
       "category": "long_range",
       "attention": "slay-rm",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 0.07149472832679749,
+      "final_accuracy": 0.99951171875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "long_copy",
       "category": "long_range",
       "attention": "slay-nystrom",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 0.00948253646492958,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "long_copy",
       "category": "long_range",
       "attention": "slay-anchor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.00961717963218689,
+      "final_accuracy": 1.0,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "distant_match",
       "category": "long_range",
       "attention": "standard",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.7067884206771851,
+      "final_accuracy": 0.45538330078125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "distant_match",
       "category": "long_range",
       "attention": "linear",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.7053550481796265,
+      "final_accuracy": 0.451416015625,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "distant_match",
       "category": "long_range",
       "attention": "performer",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.7060050964355469,
+      "final_accuracy": 0.45989990234375,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "distant_match",
+      "category": "long_range",
+      "attention": "yat",
+      "final_loss": 0.7062084078788757,
+      "final_accuracy": 0.5477294921875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
+    },
+    {
+      "task": "distant_match",
+      "category": "long_range",
+      "attention": "yat-spherical",
+      "final_loss": 0.703620433807373,
+      "final_accuracy": 0.46246337890625,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "distant_match",
       "category": "long_range",
       "attention": "slay",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.7088745832443237,
+      "final_accuracy": 0.4532470703125,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "distant_match",
       "category": "long_range",
       "attention": "slay-tensor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "SLAYTensorAttention.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 0.7063294649124146,
+      "final_accuracy": 0.50360107421875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "distant_match",
       "category": "long_range",
       "attention": "slay-laplace",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.7084084153175354,
+      "final_accuracy": 0.45916748046875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "distant_match",
       "category": "long_range",
       "attention": "slay-rm",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 0.7206305265426636,
+      "final_accuracy": 0.5291748046875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "distant_match",
       "category": "long_range",
       "attention": "slay-nystrom",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "_SLAYPolyBase.__init__() got an unexpected keyword argument 'num_features'. Did you mean 'num_prf_features'?"
+      "final_loss": 0.7017865777015686,
+      "final_accuracy": 0.45574951171875,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     },
     {
       "task": "distant_match",
       "category": "long_range",
       "attention": "slay-anchor",
-      "final_loss": NaN,
-      "final_accuracy": NaN,
-      "error": "Missing required argument `wrt`. As of Flax 0.11.0 the `wrt` argument is required, if you want to keep the previous use nnx.ModelAndOptimizer instead of nnx.Optimizer."
+      "final_loss": 0.7018243074417114,
+      "final_accuracy": 0.45306396484375,
+      "accuracy_std": 0.0,
+      "num_seeds": 1
     }
   ]
 }
