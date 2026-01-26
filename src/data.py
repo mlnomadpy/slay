@@ -12,13 +12,22 @@ class FineWebStream(IterableDataset):
     """Streaming dataset for FineWeb corpus."""
     
     def __init__(self, context_len=512):
-        AutoTokenizer.from_pretrained("gpt2")
-        self.vocab_size = self.tokenizer.vocab_size
         self.context_len = context_len
-        self.ds = load_dataset("HuggingFaceFW/fineweb", split="train", streaming=True)
+        self.ds = load_dataset(
+            "HuggingFaceFW/fineweb",
+            split="train",
+            streaming=True
+        )
+
+        # Load tokenizer ONCE to read vocab size
+        tok = AutoTokenizer.from_pretrained("gpt2")
+        self.vocab_size = tok.vocab_size
+        del tok
 
     def __iter__(self):
-        # Check for deepspeed distributed context
+        # ✅ tokenizer must be local to the worker/process
+        tokenizer = AutoTokenizer.from_pretrained("gpt2")
+
         try:
             import deepspeed
             if deepspeed.comm.is_initialized():
@@ -32,16 +41,22 @@ class FineWebStream(IterableDataset):
             world_size = 1
 
         buffer = []
+
         for i, sample in enumerate(self.ds):
             if i % world_size != rank:
                 continue
-            
-            # Use truncation to prevent massive single-doc memory spikes
-            tokens = self.tokenizer.encode(sample["text"], add_special_tokens=False)
+
+            tokens = tokenizer.encode(
+                sample["text"],
+                add_special_tokens=False
+            )
+
             buffer.extend(tokens)
+
             while len(buffer) >= self.context_len + 1:
                 chunk = buffer[: self.context_len + 1]
-                buffer = buffer[self.context_len :]
+                buffer = buffer[self.context_len :]  # ✅ correct stride
+
                 x = torch.tensor(chunk[:-1], dtype=torch.long)
                 y = torch.tensor(chunk[1:], dtype=torch.long)
                 yield x, y
