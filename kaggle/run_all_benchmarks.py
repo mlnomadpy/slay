@@ -46,7 +46,7 @@ def main():
         "--skip",
         nargs="*",
         default=[],
-        choices=["scaling", "kernel", "tasks", "ablation", "max_context", "feature_budget"],
+        choices=["scaling", "kernel", "tasks", "ablation", "max_context", "feature_budget", "extreme"],
         help="Benchmarks to skip",
     )
     args = parser.parse_args()
@@ -117,12 +117,17 @@ def main():
         )
     
     # 6. Feature Budget Trade-off
-    if "feature_budget" not in args.skip:
-        cmd = [python, "benchmark_feature_budget.py"]
         if args.full:
             cmd.append("--full")
         results["feature_budget"] = run_command(
             cmd, "Feature Budget Trade-off", cwd=cwd
+        )
+
+    # 7. Extreme Classification (Eurlex)
+    if "extreme" not in args.skip and args.full:
+        cmd = [python, "extreme.py"]
+        results["extreme"] = run_command(
+            cmd, "Extreme Classification (Eurlex) - SLAY/Yat Kernels", cwd=cwd
         )
     
     # Summary

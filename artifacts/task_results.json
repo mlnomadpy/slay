@@ -3,10 +3,10 @@
     "embed_dim": 64,
     "num_heads": 4,
     "n_layers": 2,
-    "ff_dim": 256,
-    "batch_size": 32,
-    "num_epochs": 50,
+    "batch_size": 16,
+    "num_epochs": 200,
     "lr": 0.001,
+<<<<<<< HEAD
     "eval_every": 10,
     "num_seeds": 1,
     "seed": 42,
@@ -1010,3 +1010,8 @@
     }
   ]
 }
+=======
+    "eval_every": 20,
+    "num_seeds": 3,
+    "device": 
+>>>>>>> 96ecd32c4be817147e2d08814660b650ed79244a
