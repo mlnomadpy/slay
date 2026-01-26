@@ -104,43 +104,68 @@ class YatPerformerCausalAttention(nn.Module):
         
         feat_dim = q_features.shape[-1]  # R * M (much smaller than R * M_poly * M_prf)
         
-        # --- Chunked Causal Linear Attention (larger chunks) ---
-        chunk_size = 512
-        num_chunks = (T + chunk_size - 1) // chunk_size
+        feat_dim = q_features.shape[-1]  # R * M (much smaller than R * M_poly * M_prf)
         
-        kv_state = torch.zeros(B, self.n_heads, feat_dim, self.head_dim, 
-                               device=x.device, dtype=q.dtype)
-        k_state = torch.zeros(B, self.n_heads, feat_dim, 
-                              device=x.device, dtype=q.dtype)
+        # --- Vectorized vs Chunked Causal Linear Attention ---
+        # For sequence lengths where the full state fits in memory (e.g. 1k-4k), 
+        # fully vectorized execution (like Cosformer) is much faster than chunking 
+        # due to reduced Python overhead and better GPU utilization.
         
-        out_chunks = []
-        
-        for i in range(num_chunks):
-            st = i * chunk_size
-            ed = min(st + chunk_size, T)
+        # If T is relatively small, use vectorized implementation
+        # A100s have enough memory for T=8192 with this state size.
+        if T <= 8192:
+             # (B, H, T, F, D) = (B, H, T, F, 1) * (B, H, T, 1, D)
+             kv = torch.einsum('bhtf,bhtd->bhtfd', k_features, v)
+             
+             # Cumulative sum along time dimension
+             kv_cumsum = torch.cumsum(kv, dim=2)
+             k_cumsum = torch.cumsum(k_features, dim=2)
+             
+             # (B, H, T, D) = (B, H, T, 1, F) * (B, H, T, F, D)
+             context = torch.einsum('bhtf,bhtfd->bhtd', q_features, kv_cumsum)
+             norm = torch.einsum('bhtf,bhtf->bht', q_features, k_cumsum)
+             
+             norm = torch.clamp(norm, min=1e-6)
+             out = context / norm.unsqueeze(-1)
+             
+        else:
+            # Chunked Causal Linear Attention (larger chunks)
+            chunk_size = 512
+            num_chunks = (T + chunk_size - 1) // chunk_size
             
-            q_chunk = q_features[:, :, st:ed]
-            k_chunk = k_features[:, :, st:ed]
-            v_chunk = v[:, :, st:ed]
+            kv_state = torch.zeros(B, self.n_heads, feat_dim, self.head_dim, 
+                                   device=x.device, dtype=q.dtype)
+            k_state = torch.zeros(B, self.n_heads, feat_dim, 
+                                  device=x.device, dtype=q.dtype)
             
-            kv_chunk_prod = torch.einsum('bhtf,bhtd->bhtfd', k_chunk, v_chunk)
-            kv_local_cumsum = torch.cumsum(kv_chunk_prod, dim=2)
-            k_local_cumsum = torch.cumsum(k_chunk, dim=2)
+            out_chunks = []
             
-            kv_current = kv_local_cumsum + kv_state.unsqueeze(2)
-            k_current = k_local_cumsum + k_state.unsqueeze(2)
-            
-            context_chunk = torch.einsum('bhtf,bhtfd->bhtd', q_chunk, kv_current)
-            denom_chunk = torch.einsum('bhtf,bhtf->bht', q_chunk, k_current)
-            
-            denom_chunk = torch.clamp(denom_chunk, min=1e-6)
-            out_chunk = context_chunk / denom_chunk.unsqueeze(-1)
-            out_chunks.append(out_chunk)
-            
-            kv_state = kv_current[:, :, -1]
-            k_state = k_current[:, :, -1]
-            
-        out = torch.cat(out_chunks, dim=2)
+            for i in range(num_chunks):
+                st = i * chunk_size
+                ed = min(st + chunk_size, T)
+                
+                q_chunk = q_features[:, :, st:ed]
+                k_chunk = k_features[:, :, st:ed]
+                v_chunk = v[:, :, st:ed]
+                
+                kv_chunk_prod = torch.einsum('bhtf,bhtd->bhtfd', k_chunk, v_chunk)
+                kv_local_cumsum = torch.cumsum(kv_chunk_prod, dim=2)
+                k_local_cumsum = torch.cumsum(k_chunk, dim=2)
+                
+                kv_current = kv_local_cumsum + kv_state.unsqueeze(2)
+                k_current = k_local_cumsum + k_state.unsqueeze(2)
+                
+                context_chunk = torch.einsum('bhtf,bhtfd->bhtd', q_chunk, kv_current)
+                denom_chunk = torch.einsum('bhtf,bhtf->bht', q_chunk, k_current)
+                
+                denom_chunk = torch.clamp(denom_chunk, min=1e-6)
+                out_chunk = context_chunk / denom_chunk.unsqueeze(-1)
+                out_chunks.append(out_chunk)
+                
+                kv_state = kv_current[:, :, -1]
+                k_state = k_current[:, :, -1]
+                
+            out = torch.cat(out_chunks, dim=2)
         out = out.to(input_dtype)
         
         out = out.transpose(1, 2).contiguous().view(B, T, C)
