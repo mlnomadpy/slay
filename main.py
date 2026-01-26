@@ -274,7 +274,7 @@ def main():
 
     step = 0
     total_tokens = 0
-    tokens_per_batch = model_engine.train_micro_batch_size_per_gpu() * config['context_len']
+    tokens_per_batch = model_engine.train_micro_batch_size_per_gpu() * config['context_len'] * deepspeed.comm.get_world_size()
     t0 = time.time()
     
     for batch_idx, batch in enumerate(loader):

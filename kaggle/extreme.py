@@ -179,10 +179,12 @@ def download_data():
 def load_xml_data(file_path):
     print(f"Loading {file_path}...")
     with open(file_path, 'rb') as f:
-        header = f.readline().decode('utf-8').strip().split()
+        header_line = f.readline()
+        header = header_line.decode('utf-8').strip().split()
         num_samples, num_features, num_labels = map(int, header)
-
-    data = load_svmlight_file(file_path, multilabel=True, n_features=num_features, offset=1)
+        offset = len(header_line)
+        
+    data = load_svmlight_file(file_path, multilabel=True, n_features=num_features, offset=offset)
     # Convert to list of lists for labels
     labels = [np.array(l, dtype=np.int32) for l in data[1]]
     return data[0], labels, num_features, num_labels
@@ -270,10 +272,14 @@ class MeanEmbedding(nnx.Module):
 class FullSoftmaxXML(nnx.Module):
     def __init__(self, num_features: int, num_labels: int, embed_dim: int, *, rngs: nnx.Rngs):
         self.encoder = MeanEmbedding(num_features, embed_dim, rngs=rngs)
-        self.classifier = nnx.Linear(embed_dim, num_labels, rngs=rngs)
+        # Use bias=False to match KernelXML (dot product similarity)
+        self.classifier = nnx.Linear(embed_dim, num_labels, use_bias=False, rngs=rngs)
         
     def __call__(self, indices, mask):
         embeds = self.encoder(indices, mask)
+        # Normalize embeddings to match the "Spherical" nature of SLAY/Performer benchmarks
+        # and to correct for the small norm of mean-pooled vectors.
+        embeds = safe_normalize(embeds, axis=-1)
         return self.classifier(embeds)
         
     def loss(self, indices, mask, labels, label_mask):
@@ -295,18 +301,10 @@ class FullSoftmaxXML(nnx.Module):
         safe_labels = jnp.where(label_mask > 0, labels, 0)
         
         # Scatter add? Or just set. XML is usually binary.
-        targets = targets.at[batch_indices, safe_labels].set(1.0)
-        
-        # Zero out the ones that were set from padding (index 0) if mask was 0
-        # Wait, if label was 0 and valid, we set index 0 to 1. 
-        # If label was -1 (invalid) and we mapped to 0, we set index 0 to 1.
-        # We need to NOT set index 0 if it came from padding.
-        # Alternative: use .add with mask value? targets.at[...].add(label_mask)
-        # If duplicated labels, add accumulates? set is usually fine for binary.
-        
-        # Proper way: use jnp.where in index? no.
-        # Use update with mask.
-        targets = targets.at[batch_indices, safe_labels].max(label_mask) # max ensures 1.0 if valid
+        # We rely on max(label_mask) to set 1s only where mask is valid.
+        # safe_labels has 0 for padding. mask has 0.0 for padding.
+        # So padding entries will do .max(0.0) on index 0, keeping it 0 (unless real label 0 exists).
+        targets = targets.at[batch_indices, safe_labels].max(label_mask)
                 
         multilabel_loss = -jnp.sum(targets * log_probs) / B
         return multilabel_loss
