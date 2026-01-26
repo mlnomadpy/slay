@@ -128,15 +128,15 @@ class SLAYFeatures(nnx.Module):
         sq_weights = jnp.sqrt(jnp.clip(quad_weights.reshape(-1, 1, 1, 1), a_min=0))
         prf_feat = prf_feat * sq_weights
         
-        # 3. Tensor Product Fusion
-        # poly_feat: [B, H, P]
-        # prf_feat:  [R, B, H, M]
-        # Output:    [B, H, R, P, M] -> Flatten
-        
-        # Move R to end for easier fusion logic or just broadcast
+        # 3. Fusion: Tensor Product
         # poly: b h p
         # prf:  r b h m
+        # Out:  b h (r p m)
+        
         fused = jnp.einsum('bhp,rbhm->brhpm', poly_feat, prf_feat)
+        # Flatten: [B, R, H, P, M] -> [B, -1]
+        output = fused.reshape(B, -1)
+        return output
         
         # Flatten
         output = fused.reshape(B, -1)
@@ -392,18 +392,14 @@ class KernelXML(nnx.Module):
         # labels: [B, K]
         # We need phi(W_pos) for all B, K.
         # W_pos: Gather from W_vecs using labels.
+        # OPTIMIZATION: We already computed phi_W for all labels [L, M].
+        # We can just gather from phi_W instead of re-projecting W_pos.
         
         # Handle padding in labels (-1) by clamping to 0 (will face mask later)
         safe_labels = jnp.maximum(labels, 0)
         
-        W_pos = W_vecs[safe_labels] # [B, K, D]
-        
-        # Flatten to apply feature map: [B*K, D]
-        W_pos_flat = W_pos.reshape(-1, W_pos.shape[-1])
-        phi_w_pos_flat = self.get_features(W_pos_flat) # [B*K, M]
-        
-        # Reshape back: [B, K, M]
-        phi_w_pos = phi_w_pos_flat.reshape(B, labels.shape[1], -1)
+        # Gather from phi_W: [L, M] -> [B, K, M]
+        phi_w_pos = phi_W[safe_labels]
         
         # Dot product with phi_query [B, M] -> expand to [B, 1, M]
         # [B, K, M] * [B, 1, M] -> [B, K, M] -> sum over M -> [B, K]
@@ -459,7 +455,7 @@ def run_benchmark(dataset_path: str = "."):
     n_feat = max(n_feat, X_test.shape[1])
     
     # Config
-    BATCH_SIZE = 128
+    BATCH_SIZE = 1024
     EMBED_DIM = 256
     LR = 1e-3
     EPOCHS = 10

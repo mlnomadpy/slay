@@ -1,5 +1,5 @@
 \documentclass{article}
-\usepackage[accepted]{icml2026}
+\usepackage{icml2026}
 
 % ------------------------------------------------------------
 % Packages
@@ -21,6 +21,8 @@
 \usepackage[english,provide=*]{babel}
 \usepackage{changepage}
 \usepackage{pgfplots}
+\usepgfplotslibrary{groupplots}
+
 
 \pgfplotsset{compat=1.18}
 
@@ -59,19 +61,16 @@
 \twocolumn[
 \icmltitle{SLAY:\\
 Spherical Linearized Attention with Yat-Kernel}
-\icmltitlerunning{SLAY}
+\icmltitlerunning{SLAY: Spherical Linearized Attention with Yat-Kernel}
 
 \begin{icmlauthorlist}
-\icmlauthor{Jose Miguel Luna}{columbia}
-\icmlauthor{Taha Bouhsine}{azetta}
-\icmlauthor{Krzysztof Choromanski}{deepmind}
+\icmlauthor{Jose Miguel Luna}{equal}
+\icmlauthor{Taha Bouhsine}{equal}
+\icmlauthor{Krzysztof Choromanski}{}
 \end{icmlauthorlist}
 
-\icmlaffiliation{columbia}{Columbia University}
-\icmlaffiliation{azetta}{Azetta.ai}
-\icmlaffiliation{deepmind}{Google DeepMind}
-
-\icmlcorrespondingauthor{Taha Bouhsine}{taha@azetta.ai}
+\icmlaffiliation{equal}{Anonymous Institution}
+\icmlcorrespondingauthor{Anonymous}{anon.email@domain.com}
 
 \icmlkeywords{Linear Attention, Neural Matter Networks, Random Features, Long Context}
 
@@ -345,13 +344,15 @@ See Appendix~\ref{app:impl} for explicit tensor-product scaling (without sketchi
 \section{Experiments}
 \label{sec:experiments}
 
-We evaluate Spherical \E-Attention along three axes. First, we run one-epoch end-to-end training for base encoder (BERT-style) and decoder (GPT-style) models to verify optimization stability under a fixed training recipe. Second, we benchmark a single attention layer to measure latency and memory scaling with sequence length. Third, we measure full-model inference behavior and the maximum context length attainable under a fixed GPU memory budget.
+We evaluate SLAY along several axes. First, we analyze polynomial approximation options to identify optimal configurations. Second, we benchmark computational costs by measuring latency, memory, and throughput scaling with sequence length. Third, we evaluate SLAY on 22 synthetic tasks spanning core capabilities and higher-level behaviors. Fourth, we assess the linear approximation quality of SLAY against standard attention. Fifth, we conduct an extreme classification test to evaluate performance under challenging conditions. Finally, we train 2.5B parameter transformers to compare SLAY against both quadratic and linear complexity attention mechanisms.
 
-Unless stated otherwise, the softmax and Spherical \E variants share the same architecture and training/inference settings; we change only the attention operator and its feature configuration.
+Unless stated otherwise, all variants share the same architecture and training settings; we change only the attention operator and its feature configuration.
 
-\subsection{Ablation: Polynomial Approximation Choices}
+\subsection{Ablation: Polynomial and Attention Approximation}
 \label{subsec:poly-ablation}
 
+
+\paragraph{Polynomial Approximation}
 We isolate the polynomial factor $(\hat q^\top \hat k)^2$ and compare several approximations (anchor, Nystr\"om, TensorSketch, Random Maclaurin). We report (i) kernel-normalized attention output error relative to exact spherical \E-attention and (ii) forward-pass latency, under matched feature budgets; protocol details and the multi-scale sweep are in Appendix~\ref{app:experiments} and Table~\ref{tab:poly-sweep} (Appendix~\ref{app:poly-ablation}).
 
 For reference, we also include Laplace-only and a Hadamard-fusion variant. These are not polynomial approximations of $(\hat q^\top \hat k)^2$: they change the estimator by removing or altering the polynomial factor. Under feature-budget matching, they can therefore require substantially larger PRF feature dimension to reach comparable overall feature counts, which can dominate runtime.
@@ -379,6 +380,8 @@ Random Maclaurin & $1.77\times 10^6$ & 551.43 \\
 \end{tabular}
 \end{table}
 
+\paragraph{Attention Approximation Errors}
+
 \subsection{Computational Costs}
 \label{subsec:computational-costs}
 
@@ -390,354 +393,275 @@ All attention mechanisms are benchmarked in isolation using a causal attention k
 \paragraph{Results overview.}
 Figures~\ref{fig:latency-scaling}--\ref{fig:throughput-scaling} summarize the scaling behavior. Quadratic attention mechanisms (standard softmax and exact YAT) exhibit rapidly increasing latency and memory usage, failing beyond 16K tokens. In contrast, linear attention methods scale approximately linearly and remain stable up to 128K tokens.
 
-SLAY closely follows the scaling behavior of other linear attention mechanisms while substantially reducing memory usage relative to exact spherical YAT attention. At long sequence lengths, SLAY sustains high throughput comparable to other linear baselines, demonstrating that its added geometric structure does not compromise scalability.
 
-\begin{figure}[t]
+\begin{figure}[htbp]
 \centering
+\caption{Attention mechanisms scaling behaviors.}
+\label{fig:scaling}
+\vspace{0.3em}
+
 \begin{tikzpicture}
+
+% ================== Legend ==================
 \begin{axis}[
-    width=\columnwidth,
-    height=0.75\columnwidth,
+    hide axis,
+    xmin=0, xmax=1,
+    ymin=0, ymax=1,
+    width=\columnwidth*.8,
+    height=0.38\columnwidth,
+    scale only axis,
+    legend columns=3,
+    legend style={
+        font=\scriptsize,
+        at={(0.5,1.03)}, 
+        anchor=south,
+        draw=none,
+        column sep=0.5em,
+        /tikz/every even column/.append style={column sep=0.8em}
+    },
+]
+\addlegendimage{black, thick, mark=*, mark size=1.5pt}
+\addlegendentry{Standard}
+\addlegendimage{black, dashed, thick, mark=square*, mark size=1.5pt}
+\addlegendentry{YAT}
+\addlegendimage{blue, mark=triangle*, mark size=1.5pt}
+\addlegendentry{Linear}
+\addlegendimage{orange, mark=triangle*, mark size=1.5pt}
+\addlegendentry{Cosformer}
+\addlegendimage{purple, mark=x, mark size=2pt}
+\addlegendentry{FAVOR+}
+\addlegendimage{red, thick, mark=star, mark size=2pt}
+\addlegendentry{SLAY}
+\end{axis}
+
+% ================== Grouped plots ==================
+\begin{groupplot}[
+    group style={
+        group size=1 by 3,
+        vertical sep=0.5cm,
+    },
+    width=\columnwidth*.8,
+    height=0.38\columnwidth,
     xmode=log,
     log basis x=2,
-    xlabel={Sequence length},
-    ylabel={Latency (ms)},
-    legend style={font=\footnotesize, at={(0.02,0.98)}, anchor=north west},
+    scale only axis,
     grid=both,
+    grid style={line width=0.3pt, gray!30},
+    major grid style={line width=0.4pt, gray!50},
+    tick label style={font=\scriptsize},
+    label style={font=\scriptsize},
+    every axis plot/.append style={line width=0.6pt, mark size=1.2pt},
 ]
 
-% ---------- Quadratic ----------
+% ================== (a) Latency ==================
+\nextgroupplot[
+    ylabel={Latency (ms)},
+    xticklabels={},
+    ymin=0,
+]
+
 \addplot+[black, thick, mark=*] coordinates {
 (128,0.41) (256,0.43) (512,0.45) (1024,0.67)
 (2048,2.08) (4096,7.04) (8192,22.84) (16384,85.60)
 };
-\addlegendentry{Standard}
-
 \addplot+[black, dashed, thick, mark=square*] coordinates {
 (128,0.57) (256,0.56) (512,0.63) (1024,0.90)
 (2048,2.79) (4096,9.79) (8192,37.38) (16384,141.43)
 };
-\addlegendentry{YAT}
-
-% ---------- Linear ----------
 \addplot+[blue, mark=triangle*] coordinates {
 (128,0.58) (256,0.58) (512,0.72) (1024,1.18)
 (2048,2.10) (4096,3.91) (8192,8.42) (16384,18.82)
 (32768,36.68) (65536,73.27) (131072,147.63)
 };
-\addlegendentry{Linear}
-
 \addplot+[orange, mark=triangle*] coordinates {
 (128,0.96) (256,0.98) (512,1.29) (1024,2.20)
 (2048,4.01) (4096,7.52) (8192,14.84) (16384,35.32)
 (32768,72.19) (65536,144.60) (131072,291.17)
 };
-\addlegendentry{Cosformer}
-
-\addplot+[green!60!black, mark=diamond*] coordinates {
-(128,0.67) (256,0.68) (512,0.99) (1024,1.60)
-(2048,2.75) (4096,5.04) (8192,9.77) (16384,19.49)
-(32768,38.95) (65536,77.82) (131072,155.84)
-};
-\addlegendentry{RFF}
-
 \addplot+[purple, mark=x] coordinates {
 (128,0.63) (256,0.64) (512,0.99) (1024,1.55)
 (2048,2.69) (4096,4.99) (8192,9.73) (16384,19.38)
 (32768,38.77) (65536,77.48) (131072,155.06)
 };
-\addlegendentry{FAVOR+}
-
-\addplot+[red, very thick, mark=star] coordinates {
+\addplot+[red, thick, mark=star] coordinates {
 (128,1.46) (256,1.45) (512,1.71) (1024,2.17)
 (2048,3.26) (4096,5.47) (8192,9.78) (16384,19.02)
 (32768,37.69) (65536,75.05) (131072,149.63)
 };
-\addlegendentry{SLAY}
 
-\end{axis}
-\end{tikzpicture}
-\caption{Latency versus sequence length. Quadratic attention mechanisms scale poorly and fail beyond 16K tokens, while all linear methods—including SLAY—exhibit linear scaling up to 128K tokens.}
-\label{fig:latency-scaling}
-\end{figure}
-
-
-\begin{figure}[t]
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-    width=\columnwidth,
-    height=0.75\columnwidth,
-    xmode=log,
-    log basis x=2,
-    xlabel={Sequence length},
-    ylabel={Peak memory (MB)},
-    legend style={font=\footnotesize, at={(0.02,0.98)}, anchor=north west},
-    grid=both,
+% ================== (b) Memory ==================
+\nextgroupplot[
+    ylabel={Peak Memory (MB)},
+    xticklabels={},
 ]
 
 \addplot+[black, thick, mark=*] coordinates {
 (128,11.9) (256,15.7) (512,29.4) (1024,81.1)
 (2048,282.1) (4096,1074.1) (8192,4218.1) (16384,16746.1)
 };
-\addlegendentry{Standard}
-
 \addplot+[black, dashed, thick, mark=square*] coordinates {
 (128,13.4) (256,21.7) (512,53.4) (1024,177.2)
 (2048,666.3) (4096,2610.4) (8192,10362.6) (16384,41323.1)
 };
-\addlegendentry{YAT}
-
 \addplot+[blue, mark=triangle*] coordinates {
 (128,22.9) (256,35.6) (512,61.1) (1024,112.1)
 (2048,214.1) (4096,418.1) (8192,826.1) (16384,1642.1)
 (32768,3274.1) (65536,6538.1) (131072,13066.1)
 };
-\addlegendentry{Linear}
-
 \addplot+[orange, mark=triangle*] coordinates {
 (128,31.5) (256,52.9) (512,95.6) (1024,181.1)
 (2048,352.2) (4096,694.2) (8192,1378.2) (16384,2746.3)
 (32768,5482.5) (65536,10954.9) (131072,21899.6)
 };
-\addlegendentry{Cosformer}
-
-\addplot+[green!60!black, mark=diamond*] coordinates {
-(128,27.8) (256,45.5) (512,80.7) (1024,152.1)
-(2048,292.3) (4096,574.3) (8192,1138.4) (16384,2266.7)
-(32768,4523.2) (65536,9036.2) (131072,18062.2)
-};
-\addlegendentry{RFF}
-
 \addplot+[purple, mark=x] coordinates {
 (128,27.8) (256,45.4) (512,80.7) (1024,151.2)
 (2048,292.3) (4096,574.3) (8192,1138.4) (16384,2266.7)
 (32768,4523.2) (65536,9036.2) (131072,18062.2)
 };
-\addlegendentry{FAVOR+}
-
-\addplot+[red, very thick, mark=star] coordinates {
+\addplot+[red, thick, mark=star] coordinates {
 (128,36.2) (256,62.2) (512,114.2) (1024,151.7)
 (2048,160.7) (4096,178.7) (8192,214.7) (16384,314.2)
 (32768,618.2) (65536,1226.2) (131072,2442.2)
 };
-\addlegendentry{SLAY}
 
-\end{axis}
-\end{tikzpicture}
-\caption{Peak GPU memory usage versus sequence length. Exact quadratic methods exhibit quadratic memory growth and fail beyond 16K tokens, while SLAY maintains a low and strictly linear memory footprint.}
-\label{fig:memory-scaling}
-\end{figure}
-
-
-\begin{figure}[t]
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-    width=\columnwidth,
-    height=0.75\columnwidth,
-    xmode=log,
-    log basis x=2,
+% ================== (c) Throughput ==================
+\nextgroupplot[
+    ylabel={Throughput (tok/s)},
     xlabel={Sequence length},
-    ylabel={Throughput (tokens/s)},
-    legend style={font=\footnotesize, at={(0.02,0.02)}, anchor=south west},
-    grid=both,
 ]
 
 \addplot+[black, thick, mark=*] coordinates {
 (128,309605) (256,601515) (512,1140190) (1024,1535463)
 (2048,984540) (4096,581929) (8192,358680) (16384,191393)
 };
-\addlegendentry{Standard}
-
 \addplot+[black, dashed, thick, mark=square*] coordinates {
 (128,223026) (256,457217) (512,812948) (1024,1132992)
 (2048,733302) (4096,418302) (8192,219174) (16384,115845)
 };
-\addlegendentry{YAT}
-
 \addplot+[blue, mark=triangle*] coordinates {
 (128,220935) (256,441509) (512,715210) (1024,869111)
 (2048,973777) (4096,1046247) (8192,973413) (16384,870581)
 (32768,893397) (65536,894465) (131072,887852)
 };
-\addlegendentry{Linear}
-
 \addplot+[orange, mark=triangle*] coordinates {
 (128,132910) (256,260132) (512,396415) (1024,466298)
 (2048,511045) (4096,544607) (8192,552194) (16384,463905)
 (32768,453914) (65536,453236) (131072,450163)
 };
-\addlegendentry{Cosformer}
-
-\addplot+[green!60!black, mark=diamond*] coordinates {
-(128,190123) (256,377653) (512,518545) (1024,640919)
-(2048,743937) (4096,813471) (8192,838907) (16384,840637)
-(32768,841283) (65536,842144) (131072,841091)
-};
-\addlegendentry{RFF}
-
 \addplot+[purple, mark=x] coordinates {
 (128,202368) (256,400720) (512,514787) (1024,660425)
 (2048,762536) (4096,820486) (8192,841800) (16384,845487)
 (32768,845161) (65536,845833) (131072,845286)
 };
-\addlegendentry{FAVOR+}
-
-\addplot+[red, very thick, mark=star] coordinates {
+\addplot+[red, thick, mark=star] coordinates {
 (128,87397) (256,176813) (512,299006) (1024,472417)
 (2048,628732) (4096,748980) (8192,837345) (16384,861529)
 (32768,869331) (65536,873279) (131072,875953)
 };
-\addlegendentry{SLAY}
 
-\end{axis}
+\end{groupplot}
 \end{tikzpicture}
-\caption{Throughput versus sequence length. Linear attention methods—including SLAY—maintain high throughput at long context lengths, while quadratic methods rapidly degrade and become infeasible.}
-\label{fig:throughput-scaling}
 \end{figure}
 
-\subsection{Attention Approximation Errors}
-\label{subsec:attention-approximation}
+SLAY closely follows the scaling behavior of other linear attention mechanisms while substantially reducing memory usage relative to exact spherical YAT attention. At long sequence lengths, SLAY sustains high throughput comparable to other linear baselines, demonstrating that its added geometric structure does not compromise scalability.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Kernel approximation quality. Rel.~$\ell_2$ is relative L2 error (lower is better), Cos is cosine similarity (higher is better).}
+\label{tab:kernel-quality}
+\begin{tabular}{lccc}
+\toprule
+Method & Rel.~$\ell_2\downarrow$ & Cos$\uparrow$ & MSE$\downarrow$\\
+\midrule
+yat-performer-anchor & 0.5275 & 0.8496 & 4.55e-03\\
+yat-performer-laplace & 0.5440 & 0.8391 & 4.84e-03\\
+yat-performer & 0.7894 & 0.7321 & 1.02e-02\\
+yat-performer-nystrom & 70.2908 & -0.0088 & 8.08e+01\\
+yat-performer-rm & 15826.8408 & 0.0043 & 4.10e+06\\
+yat-performer-tensor & 24823.6855 & 0.0024 & 1.01e+07\\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Synthetic Tasks Experimentation}
 \label{subsec:synthetic-experiments}
 
-\vspace{-0.5em}
-\begin{table}[htbp]
-\centering
-\small
-\caption{Synthetic task performance (Basic). Accuracy (mean $\pm$ std over 3 seeds).}
-\label{tab:task-basic}
-\begin{tabular}{lccc}
-\toprule
-Method & Copy & Sort & Reverse \\
-\midrule
-Standard & 1.00$\pm$0.00 & 0.28$\pm$0.02 & 0.51$\pm$0.00 \\
-Spherical--YAT & 1.00$\pm$0.00 & 0.24$\pm$0.01 & 0.33$\pm$0.02 \\
-Performer & 1.00$\pm$0.00 & 0.27$\pm$0.02 & 0.09$\pm$0.01 \\
-Linear & 1.00$\pm$0.00 & 0.26$\pm$0.02 & 0.05$\pm$0.01 \\
-SLAY & 1.00$\pm$0.00 & 0.29$\pm$0.01 & 0.42$\pm$0.04 \\
-\bottomrule
-\end{tabular}
-\end{table}
+We evaluate all attention mechanisms on a suite of synthetic sequence modeling tasks
+covering basic operations, arithmetic, long-range dependencies, memory, and reasoning. The full results and descriptions of these tasks can be found in the Appendix.
 
-\vspace{-0.5em}
 \begin{table}[htbp]
 \centering
 \small
-\caption{Synthetic task performance (Arithmetic). Accuracy (mean $\pm$ std over 3 seeds).}
-\label{tab:task-arithmetic}
+\caption{Average accuracy by task category.}
+\label{tab:summary}
+
+% ---------- Core capabilities ----------
+\textbf{(a) Core capabilities}
+
+\vspace{0.3em}
+
+\makebox[\columnwidth][c]{%
+\setlength{\tabcolsep}{3pt}%
 \begin{tabular}{lcccc}
 \toprule
-Method & Counting & Parity & Addition & Modular \\
+Method & Basic & Arithmetic & Long-Range & Memory \\
 \midrule
-Standard & 0.72$\pm$0.01 & 0.49$\pm$0.03 & 0.78$\pm$0.03 & 0.15$\pm$0.03 \\
-Spherical--YAT & 0.78$\pm$0.04 & 0.49$\pm$0.03 & 0.68$\pm$0.16 & 0.16$\pm$0.01 \\
-Performer & 0.81$\pm$0.06 & 0.49$\pm$0.03 & 0.84$\pm$0.02 & 0.15$\pm$0.02 \\
-Linear & 0.83$\pm$0.05 & 0.49$\pm$0.03 & 0.91$\pm$0.04 & 0.15$\pm$0.03 \\
-SLAY & 0.74$\pm$0.13 & 0.49$\pm$0.03 & 0.86$\pm$0.05 & 0.20$\pm$0.03 \\
+Softmax        & 0.60 & 0.54 & 0.68 & 0.73 \\
+Standard YAT  & 0.52 & 0.53 & 0.68 & 0.73 \\
+FAVOR+       & 0.45 & 0.57 & 0.68 & 0.73 \\
+Linear          & 0.44 & 0.60 & 0.67 & 0.72 \\
+\textbf{SLAY}   & \textbf{0.57} & \textbf{0.57} & \textbf{0.68} & \textbf{0.73} \\
 \bottomrule
-\end{tabular}
-\end{table}
+\end{tabular}%
+}
 
-\vspace{-0.5em}
-\begin{table}[htbp]
-\centering
-\small
-\caption{Synthetic task performance (Long‑Range). Accuracy (mean $\pm$ std over 3 seeds).}
-\label{tab:task-longrange}
+\vspace{0.8em}
+
+% ---------- Higher-level behavior ----------
+\textbf{(b) Higher-level behavior}
+
+\vspace{0.3em}
+
+\makebox[\columnwidth][c]{%
 \begin{tabular}{lccc}
 \toprule
-Method & Long Copy & Distant Match & Multihop \\
+Method & Patterns & Reasoning & Robustness \\
 \midrule
-Standard & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 0.04$\pm$0.01 \\
-Spherical--YAT & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 0.04$\pm$0.01 \\
-Performer & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 0.03$\pm$0.02 \\
-Linear & 1.00$\pm$0.00 & 0.99$\pm$0.02 & 0.03$\pm$0.00 \\
-SLAY & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 0.04$\pm$0.01 \\
+Softmax        & 0.83 & 0.56 & 0.80 \\
+Standard YAT  & 0.81 & 0.56 & 0.80 \\
+FAVOR+       & 0.85 & 0.56 & 0.80 \\
+Linear          & 0.85 & 0.56 & 0.80 \\
+\textbf{SLAY}   & \textbf{0.86} & \textbf{0.57} & \textbf{0.80} \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
+
 \end{table}
 
-\vspace{-0.5em}
-\begin{table}[htbp]
-\centering
-\small
-\caption{Synthetic task performance (Memory). Accuracy (mean $\pm$ std over 3 seeds).}
-\label{tab:task-memory}
-\begin{tabular}{lcccc}
-\toprule
-Method & Retrieval & Kv Recall & First Token & Selective Copy \\
-\midrule
-Standard & 1.00$\pm$0.00 & 0.02$\pm$0.02 & 1.00$\pm$0.00 & 0.88$\pm$0.00 \\
-Spherical--YAT & 1.00$\pm$0.00 & 0.02$\pm$0.03 & 1.00$\pm$0.00 & 0.88$\pm$0.00 \\
-Performer & 1.00$\pm$0.00 & 0.03$\pm$0.00 & 1.00$\pm$0.00 & 0.88$\pm$0.00 \\
-Linear & 1.00$\pm$0.00 & 0.02$\pm$0.02 & 0.97$\pm$0.02 & 0.88$\pm$0.00 \\
-SLAY & 1.00$\pm$0.00 & 0.02$\pm$0.01 & 1.00$\pm$0.00 & 0.88$\pm$0.00 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\vspace{-0.5em}
-\begin{table}[htbp]
-\centering
-\small
-\caption{Synthetic task performance (Patterns). Accuracy (mean $\pm$ std over 3 seeds).}
-\label{tab:task-patterns}
-\begin{tabular}{lccc}
-\toprule
-Method & Bigram & Majority & Histogram \\
-\midrule
-Standard & -- & 0.78$\pm$0.07 & 0.87$\pm$0.00 \\
-Spherical--YAT & -- & 0.75$\pm$0.06 & 0.87$\pm$0.00 \\
-Performer & -- & 0.82$\pm$0.02 & 0.87$\pm$0.00 \\
-Linear & -- & 0.82$\pm$0.06 & 0.87$\pm$0.00 \\
-SLAY & -- & 0.84$\pm$0.03 & 0.87$\pm$0.00 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\vspace{-0.5em}
-\begin{table}[htbp]
-\centering
-\small
-\caption{Synthetic task performance (Reasoning). Accuracy (mean $\pm$ std over 3 seeds).}
-\label{tab:task-reasoning}
-\begin{tabular}{lccc}
-\toprule
-Method & Stack & Induction & Pattern \\
-\midrule
-Standard & 0.75$\pm$0.01 & 0.02$\pm$0.02 & 0.91$\pm$0.00 \\
-Spherical--YAT & 0.75$\pm$0.01 & 0.02$\pm$0.02 & 0.91$\pm$0.00 \\
-Performer & 0.76$\pm$0.01 & 0.02$\pm$0.01 & 0.91$\pm$0.00 \\
-Linear & 0.75$\pm$0.01 & 0.01$\pm$0.01 & 0.91$\pm$0.00 \\
-SLAY & 0.76$\pm$0.01 & 0.03$\pm$0.01 & 0.91$\pm$0.00 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\vspace{-0.5em}
-\begin{table}[htbp]
-\centering
-\small
-\caption{Synthetic task performance (Robustness). Accuracy (mean $\pm$ std over 3 seeds).}
-\label{tab:task-robustness}
-\begin{tabular}{lcc}
-\toprule
-Method & Noisy Copy & Compression \\
-\midrule
-Standard & 1.00$\pm$0.00 & 0.59$\pm$0.00 \\
-Spherical--YAT & 1.00$\pm$0.00 & 0.59$\pm$0.00 \\
-Performer & 1.00$\pm$0.00 & 0.59$\pm$0.01 \\
-Linear & 1.00$\pm$0.00 & 0.59$\pm$0.01 \\
-SLAY & 1.00$\pm$0.00 & 0.59$\pm$0.01 \\
-\bottomrule
-\end{tabular}
-\end{table}
+Overall, SLAY matches or exceeds the performance of existing linearized attention mechanisms across the full spectrum of evaluated tasks. As shown in Table~\ref{tab:summary}, SLAY consistently performs on par with the strongest linear baselines on core capabilities such as long‑range dependency modeling and memory, while closing much of the gap to standard attention on basic operations. Notably, SLAY demonstrates competitive or superior accuracy in arithmetic and pattern‑based tasks, and achieves the highest average performance on higher‑level behaviors including patterns and reasoning. These results indicate that SLAY preserves the representational strengths of linear attention while, in many settings, providing measurable gains over comparable linearized approaches.
 
 \subsection{Extreme Classification Test}
 \label{subsec:extreme-classification}
+
+We conducted the extreme classification test and found that the SLAY mechanism performs the best out of the tested attention mechanisms, even better than the non-linearized softmax and YAT.
+
+\begin{table}[htbp]
+\centering
+\caption{Precision@5 (P@5) results on the Eurlex dataset for different output layer methods.}
+\label{tab:eurlex_p5}
+\begin{tabular}{l c}
+\hline
+\textbf{Method} & \textbf{P@5} \\
+\hline
+Full Softmax      & 0.2638 \\
+Performer         & 0.2551 \\
+Yat               & 0.2612 \\
+Yat (Spherical)   & 0.2597 \\
+\textbf{SLAY}     & \textbf{0.2652} \\
+\hline
+\end{tabular}
+\end{table}
 
 % ------------------------------------------------------------
 \subsection{SLAYformer: Testing SLAY on Transformer Architectures}
@@ -1164,9 +1088,61 @@ $131072$ & ---        & OOM \\
 \end{tabular}
 \end{table}
 
+\paragraph{Detailed Synthetic Tests.}
+
+\vspace{-0.5em}
+\begin{table}[htbp]
+\centering
+\small
+\caption{Synthetic task performance across all categories. Accuracy (mean $\pm$ std over 3 seeds).}
+\label{tab:tasks-all}
+\begin{tabular}{lccccc}
+\toprule
+Task & Standard & Spherical--YAT & Performer & Linear & SLAY \\
+\midrule
+\multicolumn{6}{l}{\emph{Basic}} \\
+Copy            & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 1.00$\pm$0.00 \\
+Sort            & 0.28$\pm$0.02 & 0.24$\pm$0.01 & 0.27$\pm$0.02 & 0.26$\pm$0.02 & 0.29$\pm$0.01 \\
+Reverse         & 0.51$\pm$0.00 & 0.33$\pm$0.02 & 0.09$\pm$0.01 & 0.05$\pm$0.01 & 0.42$\pm$0.04 \\
+\midrule
+\multicolumn{6}{l}{\emph{Arithmetic}} \\
+Counting        & 0.72$\pm$0.01 & 0.78$\pm$0.04 & 0.81$\pm$0.06 & 0.83$\pm$0.05 & 0.74$\pm$0.13 \\
+Parity          & 0.49$\pm$0.03 & 0.49$\pm$0.03 & 0.49$\pm$0.03 & 0.49$\pm$0.03 & 0.49$\pm$0.03 \\
+Addition        & 0.78$\pm$0.03 & 0.68$\pm$0.16 & 0.84$\pm$0.02 & 0.91$\pm$0.04 & 0.86$\pm$0.05 \\
+Modular         & 0.15$\pm$0.03 & 0.16$\pm$0.01 & 0.15$\pm$0.02 & 0.15$\pm$0.03 & 0.20$\pm$0.03 \\
+\midrule
+\multicolumn{6}{l}{\emph{Long-Range}} \\
+Long Copy       & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 1.00$\pm$0.00 \\
+Distant Match   & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 0.99$\pm$0.02 & 1.00$\pm$0.00 \\
+Multihop        & 0.04$\pm$0.01 & 0.04$\pm$0.01 & 0.03$\pm$0.02 & 0.03$\pm$0.00 & 0.04$\pm$0.01 \\
+\midrule
+\multicolumn{6}{l}{\emph{Memory}} \\
+Retrieval       & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 1.00$\pm$0.00 \\
+Kv Recall       & 0.02$\pm$0.02 & 0.02$\pm$0.03 & 0.03$\pm$0.00 & 0.02$\pm$0.02 & 0.02$\pm$0.01 \\
+First Token     & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 0.97$\pm$0.02 & 1.00$\pm$0.00 \\
+Selective Copy  & 0.88$\pm$0.00 & 0.88$\pm$0.00 & 0.88$\pm$0.00 & 0.88$\pm$0.00 & 0.88$\pm$0.00 \\
+\midrule
+\multicolumn{6}{l}{\emph{Patterns}} \\
+Bigram          & -- & -- & -- & -- & -- \\
+Majority        & 0.78$\pm$0.07 & 0.75$\pm$0.06 & 0.82$\pm$0.02 & 0.82$\pm$0.06 & 0.84$\pm$0.03 \\
+Histogram       & 0.87$\pm$0.00 & 0.87$\pm$0.00 & 0.87$\pm$0.00 & 0.87$\pm$0.00 & 0.87$\pm$0.00 \\
+\midrule
+\multicolumn{6}{l}{\emph{Reasoning}} \\
+Stack           & 0.75$\pm$0.01 & 0.75$\pm$0.01 & 0.76$\pm$0.01 & 0.75$\pm$0.01 & 0.76$\pm$0.01 \\
+Induction       & 0.02$\pm$0.02 & 0.02$\pm$0.02 & 0.02$\pm$0.01 & 0.01$\pm$0.01 & 0.03$\pm$0.01 \\
+Pattern         & 0.91$\pm$0.00 & 0.91$\pm$0.00 & 0.91$\pm$0.00 & 0.91$\pm$0.00 & 0.91$\pm$0.00 \\
+\midrule
+\multicolumn{6}{l}{\emph{Robustness}} \\
+Noisy Copy      & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 1.00$\pm$0.00 & 1.00$\pm$0.00 \\
+Compression     & 0.59$\pm$0.00 & 0.59$\pm$0.00 & 0.59$\pm$0.01 & 0.59$\pm$0.01 & 0.59$\pm$0.01 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \paragraph{Code availability.}
 An open-source implementation of Spherical \E-Attention, including training scripts and experimental configurations, is available at
 \url{https://github.com/jomilu93/Spherical-Yat-Performer.git}.
+
 
 \section{Implementation Notes: Quadrature Scaling and Shapes}
 \label{app:impl}
@@ -1286,6 +1262,7 @@ e^{2s(\hat q^\top \hat k)}=\sum_{n=0}^\infty \frac{(2s)^n}{n!}(\hat q^\top \hat 
 \]
 is a nonnegative linear combination of PD polynomial kernels, hence PD, and (iii) products of PD kernels are PD. Since the weight $e^{-sC}\ge 0$, the nonnegative mixture over $s$ is PD by Lemma~\ref{lem:mixture-pd}.
 \end{proof}
+
 
 \end{document}
 
