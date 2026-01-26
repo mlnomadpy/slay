@@ -25,6 +25,12 @@ from tokenizers import Tokenizer
 # Clear any existing JAX caches to free memory
 jax.clear_caches()
 
+# --- Diagnostics ---
+print(f"JAX Default Backend: {jax.default_backend()}")
+print(f"JAX Devices: {jax.devices()}")
+num_devices = len(jax.devices())
+print(f"Number of Devices: {num_devices}")
+
 # --- Numerical Stability Helpers ---
 def safe_normalize(x, axis=-1, eps=1e-6):
     """Safely normalize vectors to unit length, avoiding division by zero."""
@@ -35,7 +41,6 @@ def safe_normalize(x, axis=-1, eps=1e-6):
 if jax.default_backend() == 'tpu':
     mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
 else:
-    num_devices = len(jax.devices())
     mesh_shape = (num_devices, 1)
     mesh = Mesh(mesh_utils.create_device_mesh(mesh_shape), ('batch', 'model'))
 
@@ -1440,7 +1445,14 @@ def main_pretrain(**kwargs):
         # Create dummy batch for compilation
         dummy_input_ids = jnp.ones((config['batch_size'], config['maxlen']), dtype=jnp.int32)
         dummy_labels = jnp.ones((config['batch_size'], config['maxlen']), dtype=jnp.int32)
-        dummy_batch = {'input_ids': dummy_input_ids, 'labels': dummy_labels}
+        # FIX: Add attention_mask to match real batch structure and prevent recompilation
+        dummy_attn_mask = jnp.ones((config['batch_size'], config['maxlen']), dtype=jnp.int32)
+        
+        dummy_batch = {
+            'input_ids': dummy_input_ids, 
+            'labels': dummy_labels,
+            'attention_mask': dummy_attn_mask 
+        }
         
         # Shard dummy batch
         sharding = NamedSharding(mesh, P('batch', None))
@@ -1580,7 +1592,7 @@ if __name__ == '__main__':
     parser.add_argument('--rff_num_features', type=int, default=64, help="Number of RFF features for RFF attention.")
     
     # --- Yat exact attention ---
-    parser.add_argument('--yat_epsilon', type=float, default=1e-6, help="Epsilon for Yat kernel denominator.")
+    parser.add_argument('--yat_epsilon', type=float, default=1e-4, help="Epsilon for Yat kernel denominator.")
     parser.add_argument('--yat_score_scale', type=float, default=1.0, help="Score scaling for Yat attention.")
     
     # --- Yat-Spherical exact attention ---
