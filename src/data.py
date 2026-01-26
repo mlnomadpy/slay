@@ -27,7 +27,8 @@ class FineWebStream(IterableDataset):
     def __iter__(self):
         # ✅ tokenizer must be local to the worker/process
         tokenizer = AutoTokenizer.from_pretrained("gpt2")
-        tokenizer.model_max_length = int(1e9)
+        tokenizer.model_max_length = self.context_len
+        tokenizer.truncation_side = "right"
 
         try:
             import deepspeed
@@ -47,10 +48,12 @@ class FineWebStream(IterableDataset):
             if i % world_size != rank:
                 continue
 
-            tokens = tokenizer.encode(
+            tokens = tokenizer(
                 sample["text"],
-                add_special_tokens=False
-            )
+                add_special_tokens=False,
+                truncation=True,
+                max_length=10 * self.context_len,  # defensive cap
+            )["input_ids"]
 
             buffer.extend(tokens)
 
