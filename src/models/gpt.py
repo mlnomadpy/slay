@@ -113,4 +113,7 @@ class TinyGPT(nn.Module):
         logits = self.head(x)
         if y is None:
             return logits
-        return F.cross_entropy(logits.view(-1, self.vocab_size), y.view(-1))
+        return F.cross_entropy(
+            logits.float().view(-1, self.vocab_size),  # ✅ force fp32
+            y.view(-1)
+        )
