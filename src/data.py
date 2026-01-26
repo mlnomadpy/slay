@@ -27,6 +27,7 @@ class FineWebStream(IterableDataset):
     def __iter__(self):
         # ✅ tokenizer must be local to the worker/process
         tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        tokenizer.model_max_length = int(1e9)
 
         try:
             import deepspeed
