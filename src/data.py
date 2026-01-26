@@ -12,7 +12,7 @@ class FineWebStream(IterableDataset):
     """Streaming dataset for FineWeb corpus."""
     
     def __init__(self, context_len=512):
-        self.tokenizer = AutoTokenizer.from_pretrained("gpt2", model_max_length=100000)
+        AutoTokenizer.from_pretrained("gpt2")
         self.vocab_size = self.tokenizer.vocab_size
         self.context_len = context_len
         self.ds = load_dataset("HuggingFaceFW/fineweb", split="train", streaming=True)
@@ -37,11 +37,11 @@ class FineWebStream(IterableDataset):
                 continue
             
             # Use truncation to prevent massive single-doc memory spikes
-            tokens = self.tokenizer.encode(sample["text"], truncation=True, max_length=100000)
+            tokens = self.tokenizer.encode(sample["text"], add_special_tokens=False)
             buffer.extend(tokens)
             while len(buffer) >= self.context_len + 1:
                 chunk = buffer[: self.context_len + 1]
-                buffer = buffer[self.context_len + 1 :]
+                buffer = buffer[self.context_len :]
                 x = torch.tensor(chunk[:-1], dtype=torch.long)
                 y = torch.tensor(chunk[1:], dtype=torch.long)
                 yield x, y
