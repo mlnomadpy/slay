@@ -263,10 +263,11 @@ def main():
     eval_loader = get_eval_loader(config['context_len'], batch_size=16)
     
     loader = DataLoader(
-        dataset, 
+        dataset,
         batch_size=model_engine.train_micro_batch_size_per_gpu(),
-        pin_memory=True
-    )
+        pin_memory=True,
+        num_workers=0, 
+        )    
     
     if rank == 0:
         print("Starting training loop...")
@@ -277,8 +278,8 @@ def main():
     t0 = time.time()
     
     for batch_idx, batch in enumerate(loader):
-        x = batch[0].to(model_engine.device)
-        y = batch[1].to(model_engine.device)
+        x = batch[0].to(model_engine.device, dtype=torch.long)
+        y = batch[1].to(model_engine.device, dtype=torch.long)
         
         loss = model_engine(x, y)
         model_engine.backward(loss)
