@@ -96,6 +96,7 @@ class TinyGPT(nn.Module):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
     def forward(self, x, y=None):
+        x = x.long()
         B, T = x.shape
         pos = torch.arange(T, device=x.device)
         x = self.tok(x) + self.pos(pos)
