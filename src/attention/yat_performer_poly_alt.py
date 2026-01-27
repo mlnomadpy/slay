@@ -236,38 +236,38 @@ class _YatPerformerPolyBase(nn.Module):
         """
         raise NotImplementedError
 
-    def _can_use_vectorized(self, B, T, dtype, device):
-            # Conservative safety margin
-            SAFETY = 0.3
+    def forward_with_profiling(self, x):
+        """
+        Forward pass with memory profiling at each step.
+        """
+        if not torch.cuda.is_available():
+            print("CUDA not available, cannot profile memory.")
+            return self.forward(x)
+            
+        torch.cuda.reset_peak_memory_stats()
+        torch.cuda.empty_cache()
+        base_mem = torch.cuda.memory_allocated()
         
-            bytes_per_elem = torch.tensor(0, dtype=dtype).element_size()
-        
-            R = self.num_quadrature_nodes
-            H = self.n_heads
-            P = self.poly_dim
-            M = self.num_prf_features
-            D = self.head_dim
-        
-            # Size of the largest tensor: kv
-            estimated_bytes = (
-                R * B * H * T * P * M * D * bytes_per_elem
-            )
-        
-            total_mem = torch.cuda.get_device_properties(device).total_memory
-        
-            return estimated_bytes < SAFETY * total_mem
+        def log_mem(step_name):
+            current_mem = torch.cuda.memory_allocated()
+            delta = (current_mem - base_mem) / 1024**2
+            peak = torch.cuda.max_memory_allocated() / 1024**2
+            print(f"[{step_name:<20}] Delta: {delta:>8.2f} MB | Peak: {peak:>8.2f} MB")
+            return current_mem
+
+        print(f"\nProfiling {self.__class__.__name__} with input {x.shape}...")
+        log_mem("Start")
+        return self.forward(x)
 
     def forward(self, x):
         """
         Forward pass implementing linearized spherical ε-attention.
+        Uses Chunked Hybrid Attention to enable linear memory complexity O(P*M).
         
-        Paper Eq. 7: Y = [Ψ(Q)(Ψ(K)^T V)] / [Ψ(Q)(Ψ(K)^T 1) + δ]
-        
-        Args:
-            x: Input tensor (B, T, C)
-            
-        Returns:
-            Output tensor (B, T, C)
+        Strategy:
+        1. Process sequence in chunks (size C)
+        2. Intra-chunk: Compute standard quadratic attention (C^2 complexity) via features
+        3. Inter-chunk: Use running state (linear attention) for history
         """
         B, T, C = x.shape
         qkv = self.qkv(x)
@@ -279,146 +279,98 @@ class _YatPerformerPolyBase(nn.Module):
 
         input_dtype = q.dtype
         
-        if q.dtype in (torch.float16, torch.bfloat16):
-            q, k, v = q, k, v
-        else:
-            q, k, v = q.float(), k.float(), v.float()
-
+        # State buffers (R, B, H, P, M, D) - kept in float32 for stability
         R = self.num_quadrature_nodes
         P = self.poly_dim
         M = self.num_prf_features
+        D = self.head_dim
+        
+        kv_state = torch.zeros(
+            R, B, self.n_heads, P, M, D, 
+            device=x.device, 
+            dtype=torch.float32
+        )
+        k_state = torch.zeros(
+            R, B, self.n_heads, P, M, 
+            device=x.device, 
+            dtype=torch.float32
+        )
+        
+        out_chunks = []
+        chunk_size = self.chunk_size
+        
+        for st in range(0, T, chunk_size):
+            ed = min(st + chunk_size, T)
+            q_chunk = q[:, :, st:ed]
+            k_chunk = k[:, :, st:ed]
+            v_chunk = v[:, :, st:ed]
             
-        # --- Vectorized vs Chunked Causal Linear Attention ---
-        # For sequence lengths where the full state fits in memory (e.g. T=8192 on A100), 
-        # vectorized execution is much faster than chunking.
-        # FIXED: Unified feature computation following Algorithm 1 in both paths
-        if T <= 8192 and not self.use_sketching:
-            # Vectorized path (for shorter sequences without sketching)
-            # Normalize inputs (Algorithm 1, Step 1)
-            q_norm = F.normalize(q, p=2, dim=-1)
-            k_norm = F.normalize(k, p=2, dim=-1)
+            # 1. Compute Features (Algorithm 1, Steps 2-3) relative to chunk
+            # Normalize inputs
+            q_norm = F.normalize(q_chunk.float(), p=2, dim=-1)
+            k_norm = F.normalize(k_chunk.float(), p=2, dim=-1)
             
-            # Compute features (Algorithm 1, Steps 2-3)
-            q_poly = self._poly_features(q_norm)  # (B, H, T, P)
+            q_poly = self._poly_features(q_norm)
             k_poly = self._poly_features(k_norm)
             
-            q_prf = self._prf_features(q_norm)  # (R, B, H, T, M)
+            q_prf = self._prf_features(q_norm)
             k_prf = self._prf_features(k_norm)
             
-            # FIXED: Apply quadrature weights in vectorized path too!
             q_prf = self._apply_quadrature_weights(q_prf)
             k_prf = self._apply_quadrature_weights(k_prf)
             
-            # Fuse features via tensor product (Algorithm 1, Step 5)
-            # Shape: (R, B, H, T, P, M)
-            q_outer = torch.einsum("bhtp,rbhtm->rbhtpm", q_poly, q_prf)
-            k_outer = torch.einsum("bhtp,rbhtm->rbhtpm", k_poly, k_prf)
-            
-            # Linear attention computation
-            # KV projection: (R, B, H, T, P, M, D)
-            kv = torch.einsum("rbhtpm,bhtd->rbhtpmd", k_outer, v)
-            
-            # Causal cumsum along T (dim 3)
-            # FORCE FLOAT32 for accumulation stability
-            kv_cumsum = torch.cumsum(kv.float(), dim=3).to(dtype=q.dtype)
-            k_cumsum = torch.cumsum(k_outer.float(), dim=3).to(dtype=q.dtype)
-            
-            # Attention: sum over quadrature nodes
-            context = torch.einsum("rbhtpm,rbhtpmd->bhtd", q_outer, kv_cumsum)
-            norm = torch.einsum("rbhtpm,rbhtpm->bht", q_outer, k_cumsum)
-            
-            # FIXED: Add denominator stabilizer δ instead of just clamping
-            norm = norm + self.delta
-            out = context / norm.unsqueeze(-1)
+            # Fuse features for the chunk: (R, B, H, T_c, P, M)
+            q_feat = torch.einsum("bhtp,rbhtm->rbhtpm", q_poly, q_prf)
+            k_feat = torch.einsum("bhtp,rbhtm->rbhtpm", k_poly, k_prf)
 
-        else:
-            # Chunked causal linear attention (for longer sequences or with sketching)
-            chunk_size = self.chunk_size
-            num_chunks = (T + chunk_size - 1) // chunk_size
-    
-            if self.use_sketching:
-                D_t = self.sketch_dim
-                kv_state = torch.zeros(
-                    R, B, self.n_heads, D_t, self.head_dim,
-                    device=x.device, dtype=q.dtype,
-                )
-                k_state = torch.zeros(
-                    R, B, self.n_heads, D_t,
-                    device=x.device, dtype=q.dtype,
-                )
-            else:
-                kv_state = torch.zeros(
-                    R, B, self.n_heads, P, M, self.head_dim,
-                    device=x.device, dtype=q.dtype,
-                )
-                k_state = torch.zeros(
-                    R, B, self.n_heads, P, M,
-                    device=x.device, dtype=q.dtype,
-                )
-    
-            out_chunks = []
-    
-            for i in range(num_chunks):
-                st = i * chunk_size
-                ed = min(st + chunk_size, T)
-    
-                q_chunk = q[:, :, st:ed]
-                k_chunk = k[:, :, st:ed]
-                v_chunk = v[:, :, st:ed]
-    
-                # Compute features following Algorithm 1
-                q_poly, q_prf = self._compute_chunk_features(q_chunk)
-                k_poly, k_prf = self._compute_chunk_features(k_chunk)
-    
-                # Tensor product (with optional sketching)
-                if self.use_sketching:
-                    q_outer = self._sketch_tensor_product(q_poly, q_prf)  # (R, B, H, T, D_t)
-                    k_outer = self._sketch_tensor_product(k_poly, k_prf)
-                else:
-                    q_outer = torch.einsum("bhtp,rbhtm->rbhtpm", q_poly, q_prf)
-                    k_outer = torch.einsum("bhtp,rbhtm->rbhtpm", k_poly, k_prf)
-    
-                # Local cumsum and state updates
-                if self.use_sketching:
-                    kv_chunk_prod = torch.einsum("rbhtd,bhtv->rbhtdv", k_outer, v_chunk)
-                    kv_local_cumsum = torch.cumsum(kv_chunk_prod.float(), dim=3).to(dtype=q.dtype)
-                    k_local_cumsum = torch.cumsum(k_outer.float(), dim=3).to(dtype=q.dtype)
-                else:
-                    kv_chunk_prod = torch.einsum("rbhtpm,bhtd->rbhtpmd", k_outer, v_chunk)
-                    kv_local_cumsum = torch.cumsum(kv_chunk_prod.float(), dim=3).to(dtype=q.dtype)
-                    k_local_cumsum = torch.cumsum(k_outer.float(), dim=3).to(dtype=q.dtype)
-    
-                kv_local_cumsum += kv_state.unsqueeze(3)
-                kv_current = kv_local_cumsum
-                
-                k_local_cumsum += k_state.unsqueeze(3)
-                k_current = k_local_cumsum
-    
-                # Compute attention for this chunk
-                if self.use_sketching:
-                    context_chunk = torch.einsum("rbhtd,rbhtdv->rbhtv", q_outer, kv_current)
-                    denom_chunk = torch.einsum("rbhtd,rbhtd->rbht", q_outer, k_current)
-                else:
-                    context_chunk = torch.einsum("rbhtpm,rbhtpmd->rbhtd", q_outer, kv_current)
-                    denom_chunk = torch.einsum("rbhtpm,rbhtpm->rbht", q_outer, k_current)
-    
-                # Sum over quadrature nodes
-                context_chunk = context_chunk.sum(dim=0)
-                denom_chunk = denom_chunk.sum(dim=0)
-    
-                # FIXED: Add denominator stabilizer δ
-                denom_chunk = denom_chunk + self.delta
-                out_chunk = context_chunk / denom_chunk.unsqueeze(-1)
-                out_chunks.append(out_chunk)
-    
-                # Update state for next chunk
-                kv_state = kv_current[:, :, :, -1]
-                k_state = k_current[:, :, :, -1]
-    
-            out = torch.cat(out_chunks, dim=2)
+            # 2. Inter-Chunk Attention (History)
+            # Query x Previous State
+            context_hist = torch.einsum("rbhtpm,rbhpmd->rbhtd", q_feat, kv_state)
+            norm_hist = torch.einsum("rbhtpm,rbhpm->rbht", q_feat, k_state)
             
-        out = out.to(input_dtype)
+            # 3. Intra-Chunk Attention (Current Window) via explicit feature dot-product
+            # To avoid huge T_c x T_c x P x M tensordot, we flatten P,M
+            q_feat_flat = q_feat.flatten(start_dim=-2) # (R, B, H, T_c, PM)
+            k_feat_flat = k_feat.flatten(start_dim=-2)
+            
+            # Standard attention weights within chunk: (Q @ K^T)
+            # Shape: (R, B, H, T_c, T_c)
+            attn_weights = torch.matmul(q_feat_flat, k_feat_flat.transpose(-1, -2))
+            
+            # Apply causal mask
+            Tc = q_chunk.shape[2]
+            causal_mask = torch.tril(torch.ones(Tc, Tc, device=x.device, dtype=torch.bool))
+            attn_weights = attn_weights.masked_fill(~causal_mask, 0.0)
+            
+            # Apply to V: (Attn @ V)
+            # v_chunk: (B, H, T_c, D) -> broadcast over R
+            context_intra = torch.matmul(attn_weights, v_chunk.float().unsqueeze(0))
+            
+            # Norm: Sum of attn weights
+            norm_intra = attn_weights.sum(dim=-1)
+            
+            # 4. Combine and Normalize
+            context_chunk = context_hist + context_intra
+            norm_chunk = norm_hist + norm_intra
+            
+            # Sum over Quadrature nodes (dim 0)
+            context_chunk = context_chunk.sum(dim=0)
+            norm_chunk = norm_chunk.sum(dim=0)
+            
+            norm_chunk = norm_chunk + self.delta
+            out_chunk = context_chunk / norm_chunk.unsqueeze(-1)
+            out_chunks.append(out_chunk.to(input_dtype))
+            
+            # 5. Update State (Accumulate current chunk into state)
+            # State += K_chunk^T @ V_chunk
+            # k_feat: (R, B, H, T_c, P, M) -> flatten to (R, B, H, T_c, PM)?
+            # Better to keep dimensions for clarity or flatten? 
+            # Einsum is cleaner: "rbhtpm,bhtd->rbhpmd"
+            kv_state += torch.einsum("rbhtpm,bhtd->rbhpmd", k_feat, v_chunk.float())
+            # K state: sum over T_c
+            k_state += k_feat.sum(dim=3)
 
+        out = torch.cat(out_chunks, dim=2)
         out = out.transpose(1, 2).contiguous().view(B, T, C)
         return self.out(out)
 
@@ -1151,6 +1103,58 @@ def test_float16_stability():
     print("="*80 + "\n")
 
 
+def run_memory_profile():
+    """
+    Run detailed memory profiling for YatPerformer variants.
+    """
+    print("\n" + "="*80)
+    print(" MEMORY PROFILING STEP-BY-STEP")
+    print("="*80)
+    
+    if not torch.cuda.is_available():
+        print("CUDA not available, skipping profiling.")
+        return
+
+    device = torch.device("cuda")
+    B, T, embed_dim, n_heads = 1, 2048, 256, 4
+    
+    variants = [
+        ("Anchor", YatPerformerAnchorCausalAttention),
+        ("RandMac", YatPerformerRMCausalAttention),
+        # ("Nystrom", YatPerformerNystromCausalAttention), # Skip Nystrom for brevity if needed
+    ]
+    
+    # Config similar to "Medium" or "Large" to make memory usage visible
+    R, M, P = 2, 16, 32
+    
+    # Reduce T to avoid OOM on crowded GPU
+    T = 1024 
+    
+    for name, Cls in variants:
+        print(f"\n--- Profiling {name} ---")
+        model = Cls(
+            embed_dim=embed_dim,
+            n_heads=n_heads,
+            num_prf_features=M,
+            num_quadrature_nodes=R,
+            poly_dim=P
+        ).to(device).eval()
+        
+        x = torch.randn(B, T, embed_dim, device=device)
+        
+        # Profile directly (skip warmup to save memory)
+        try:
+             _ = model.forward_with_profiling(x)
+        except RuntimeError as e:
+             if "out of memory" in str(e):
+                 print(f"OOM triggered! The last logged step was likely the culprit.")
+             else:
+                 raise
+        
+        del model, x
+        torch.cuda.empty_cache()
+
+
 
 if __name__ == "__main__":
     print("\n" + "="*80)
@@ -1164,3 +1168,5 @@ if __name__ == "__main__":
     test_memory_scaling()
     test_float16_stability()
     test_speed_benchmarking()
+    
+    run_memory_profile()
