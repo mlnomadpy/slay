@@ -509,7 +509,7 @@ def run_benchmark(dataset_name: str = "all", method_filter: str = "all"):
         BATCH_SIZE = 128 if jax.devices()[0].platform == "metal" else 512
         EMBED_DIM = 256
         LR = 5e-4
-        EPOCHS = 5  # Fewer epochs, faster iteration
+        EPOCHS = 10  # Fewer epochs, faster iteration
         NUM_NEGATIVES = min(2048, n_lab // 4)  # Scale negatives with label space
         
         train_ds = XMLDataset(X_train, Y_train, n_lab, BATCH_SIZE, shuffle=True)
