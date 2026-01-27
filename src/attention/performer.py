@@ -181,9 +181,9 @@ class FastAttention(nn.Module):
             out_chunk = context_chunk / norm_chunk.unsqueeze(-1)
             out_chunks.append(out_chunk.to(input_dtype))
             
-            # === Update state (in-place addition) ===
-            kv_state.add_(torch.einsum('bhtm,bhtd->bhmd', k_prime, v_chunk))
-            k_state.add_(k_prime.sum(dim=2))
+            # === Update state (non-in-place for gradient compatibility) ===
+            kv_state = kv_state + torch.einsum('bhtm,bhtd->bhmd', k_prime, v_chunk)
+            k_state = k_state + k_prime.sum(dim=2)
         
         out = torch.cat(out_chunks, dim=2)
         out = out.transpose(1, 2).contiguous().view(B, T, C)
@@ -193,12 +193,14 @@ class FastAttention(nn.Module):
         """
         Forward pass with automatic selection of vectorized vs chunked.
         
-        Uses chunked for long sequences to save memory.
+        Defaults to vectorized (faster) for most cases.
+        Uses chunked only for very long sequences (T > 4096) where memory is a concern.
         """
         B, T, C = x.shape
         
-        # Use chunked for sequences longer than 2x chunk_size
-        if T > 2 * self.chunk_size:
+        # Use vectorized by default - it's much faster with cumsum
+        # Only use chunked for very long sequences where memory is a concern
+        if T > 4096:
             return self.forward_chunked(x)
         else:
             return self.forward_vectorized(x)
@@ -623,63 +625,112 @@ def test_speed_benchmarking():
                         raise
 
 
-def test_float16_stability():
+def test_gradient_flow():
     """
-    Test numerical stability with float16 inputs.
+    Test that gradients flow correctly through the attention mechanism.
     """
     print("\n" + "="*80)
-    print("FLOAT16 STABILITY TEST")
+    print("GRADIENT FLOW TEST")
+    print("="*80)
+    
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch.manual_seed(42)
+    
+    B, T, embed_dim, n_heads = 2, 64, 256, 4
+    
+    model = FastAttention(
+        embed_dim=embed_dim,
+        n_heads=n_heads,
+        kernel_size=64,
+        chunk_size=32,
+    ).to(device)
+    
+    x = torch.randn(B, T, embed_dim, device=device, requires_grad=True)
+    
+    # Test gradient flow for each forward method (Triton doesn't support backward)
+    print(f"\n{'Method':<15} {'Output Shape':<20} {'Has Grad':<12} {'Grad Finite':<15} {'Status':<10}")
+    print("-" * 70)
+    
+    for method_name in ["Vectorized", "Chunked"]:
+        x_clone = x.clone().detach().requires_grad_(True)
+        model.zero_grad()
+        
+        try:
+            if method_name == "Vectorized":
+                out = model.forward_vectorized(x_clone)
+            elif method_name == "Chunked":
+                out = model.forward_chunked(x_clone)
+            else:
+                out = model.forward_triton(x_clone)
+            
+            # Backward pass
+            loss = out.sum()
+            loss.backward()
+            
+            has_grad = x_clone.grad is not None
+            grad_finite = has_grad and torch.isfinite(x_clone.grad).all().item()
+            passed = has_grad and grad_finite
+            
+            status = "✓ PASS" if passed else "✗ FAIL"
+            print(f"{method_name:<15} {str(tuple(out.shape)):<20} {str(has_grad):<12} {str(grad_finite):<15} {status:<10}")
+            
+        except Exception as e:
+            print(f"{method_name:<15} {'ERROR':<20} {'-':<12} {'-':<15} {'✗ FAIL':<10}")
+            print(f"  Error: {e}")
+
+
+def test_mixed_precision_stability():
+    """
+    Test numerical stability with float16 and bfloat16 inputs.
+    """
+    print("\n" + "="*80)
+    print("MIXED PRECISION STABILITY TEST")
     print("="*80)
     
     if not torch.cuda.is_available():
-        print("CUDA not available, skipping float16 test")
+        print("CUDA not available, skipping mixed precision test")
         return
 
     device = torch.device("cuda")
-    dtype = torch.float16
-    
-    # Test parameters
     B, T, embed_dim, n_heads = 1, 256, 256, 4
     
-    try:
-        model = FastAttention(
-            embed_dim=embed_dim,
-            n_heads=n_heads,
-            kernel_size=64,
-            chunk_size=128,
-        ).to(device).half().eval()  # Weights cast to float16
-        
-        # Input in float16
-        x = torch.randn(B, T, embed_dim, device=device, dtype=dtype)
-        
-        print(f"Input dtype: {x.dtype}")
-        
-        # Test both methods
-        for method_name in ["Vectorized", "Chunked"]:
-            method_fn = model.forward_vectorized if method_name == "Vectorized" else model.forward_chunked
-            
-            with torch.no_grad():
-                out = method_fn(x)
-            
-            print(f"\n{method_name}:")
-            print(f"  Output dtype: {out.dtype}")
-            print(f"  Finite elements: {torch.isfinite(out).sum()}/{out.numel()}")
-            
-            if torch.isnan(out).any() or torch.isinf(out).any():
-                print(f"  ✗ FAILED: Output contains NaNs or Infs")
-            elif out.dtype != dtype:
-                print(f"  ✗ FAILED: Output dtype mismatch (expected {dtype}, got {out.dtype})")
-            else:
-                print(f"  ✓ PASSED: Forward pass successful in float16")
-
-    except Exception as e:
-        print(f"✗ FAILED: Exception occurred: {e}")
-        import traceback
-        traceback.print_exc()
+    # Test dtypes
+    dtypes = [torch.float16]
+    if torch.cuda.is_bf16_supported():
+        dtypes.append(torch.bfloat16)
     
-    print("\n" + "="*80)
-    print(" ALL TESTS COMPLETED")
-    print("="*80 + "\n")
+    print(f"\n{'Dtype':<15} {'Method':<15} {'Output Dtype':<15} {'Finite':<15} {'Status':<10}")
+    print("-" * 70)
+    
+    for dtype in dtypes:
+        dtype_name = "float16" if dtype == torch.float16 else "bfloat16"
+        
+        try:
+            model = FastAttention(
+                embed_dim=embed_dim,
+                n_heads=n_heads,
+                kernel_size=64,
+                chunk_size=128,
+            ).to(device, dtype=dtype).eval()
+            
+            x = torch.randn(B, T, embed_dim, device=device, dtype=dtype)
+            
+            for method_name in ["Vectorized", "Chunked"]:
+                method_fn = model.forward_vectorized if method_name == "Vectorized" else model.forward_chunked
+                
+                with torch.no_grad():
+                    out = method_fn(x)
+                
+                is_finite = torch.isfinite(out).all().item()
+                correct_dtype = out.dtype == dtype
+                passed = is_finite and correct_dtype
+                
+                status = "✓ PASS" if passed else "✗ FAIL"
+                print(f"{dtype_name:<15} {method_name:<15} {str(out.dtype):<15} {str(is_finite):<15} {status:<10}")
+
+        except Exception as e:
+            print(f"{dtype_name:<15} {'ERROR':<15} {'-':<15} {'-':<15} {'✗ FAIL':<10}")
+            print(f"  Error: {e}")
 
 
 def run_memory_profile():
@@ -728,7 +779,69 @@ if __name__ == "__main__":
     test_feature_properties()
     test_consistency()
     test_memory_scaling()
-    test_float16_stability()
+    test_gradient_flow()
+    test_mixed_precision_stability()
     test_speed_benchmarking()
     
     run_memory_profile()
+    
+    # Triton comparison test
+    print("\n" + "="*80)
+    print("PERFORMER: TRITON COMPARISON TEST")
+    print("="*80)
+    
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        torch.manual_seed(42)
+        
+        model = FastAttention(embed_dim=256, n_heads=4, kernel_size=64).to(device).eval()
+        
+        configs = [(1, 512), (1, 1024), (1, 2048)]
+        
+        print(f"\n{'Seq Length':<15} {'Max Diff':<15} {'Mean Diff':<15} {'PyTorch (ms)':<15} {'Triton (ms)':<15} {'Speedup':<10}")
+        print("-" * 95)
+        
+        for B, T in configs:
+            x = torch.randn(B, T, 256, device=device)
+            
+            with torch.no_grad():
+                out_pytorch = model.forward(x)
+                out_triton = model.forward_triton(x)
+            
+            diff = (out_pytorch - out_triton).abs()
+            max_diff = diff.max().item()
+            mean_diff = diff.mean().item()
+            
+            # Warmup
+            for _ in range(3):
+                _ = model.forward(x)
+                _ = model.forward_triton(x)
+            torch.cuda.synchronize()
+            
+            start = torch.cuda.Event(enable_timing=True)
+            end = torch.cuda.Event(enable_timing=True)
+            
+            start.record()
+            for _ in range(10):
+                _ = model.forward(x)
+            end.record()
+            torch.cuda.synchronize()
+            pytorch_time = start.elapsed_time(end) / 10
+            
+            start.record()
+            for _ in range(10):
+                _ = model.forward_triton(x)
+            end.record()
+            torch.cuda.synchronize()
+            triton_time = start.elapsed_time(end) / 10
+            
+            speedup = pytorch_time / triton_time
+            print(f"{T:<15} {max_diff:<15.2e} {mean_diff:<15.2e} {pytorch_time:<15.2f} {triton_time:<15.2f} {speedup:<10.2f}x")
+        
+        print("\n✓ Triton test completed")
+    else:
+        print("CUDA not available. Skipping Triton test.")
+    
+    print("\n" + "="*80)
+    print(" ALL TESTS COMPLETED")
+    print("="*80)

@@ -1116,61 +1116,115 @@ def test_speed_benchmarking():
                         raise
 
 
-def test_float16_stability():
+def test_gradient_flow():
     """
-    Test numerical stability with float16 inputs.
+    Test that gradients flow correctly through the attention mechanism.
     """
     print("\n" + "="*80)
-    print("FLOAT16 STABILITY TEST")
+    print("GRADIENT FLOW TEST")
+    print("="*80)
+    
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch.manual_seed(42)
+    
+    B, T, embed_dim, n_heads = 2, 64, 128, 4
+    
+    variants = [
+        ("Anchor", YatPerformerAnchorCausalAttention),
+        ("RandMac", YatPerformerRMCausalAttention),
+        ("Nystrom", YatPerformerNystromCausalAttention),
+    ]
+    
+    print(f"\n{'Variant':<12} {'Output Shape':<20} {'Has Grad':<12} {'Grad Finite':<15} {'Status':<10}")
+    print("-" * 70)
+    
+    for variant_name, VariantClass in variants:
+        try:
+            model = VariantClass(
+                embed_dim=embed_dim,
+                n_heads=n_heads,
+                num_prf_features=8,
+                num_quadrature_nodes=1,
+                poly_dim=8,
+            ).to(device)
+            
+            x = torch.randn(B, T, embed_dim, device=device, requires_grad=True)
+            
+            # Forward pass
+            out = model.forward(x)
+            
+            # Backward pass
+            loss = out.sum()
+            loss.backward()
+            
+            has_grad = x.grad is not None
+            grad_finite = has_grad and torch.isfinite(x.grad).all().item()
+            passed = has_grad and grad_finite
+            
+            status = "✓ PASS" if passed else "✗ FAIL"
+            print(f"{variant_name:<12} {str(tuple(out.shape)):<20} {str(has_grad):<12} {str(grad_finite):<15} {status:<10}")
+            
+        except Exception as e:
+            print(f"{variant_name:<12} {'ERROR':<20} {'-':<12} {'-':<15} {'✗ FAIL':<10}")
+            print(f"  Error: {e}")
+
+
+def test_mixed_precision_stability():
+    """
+    Test numerical stability with float16 and bfloat16 inputs.
+    """
+    print("\n" + "="*80)
+    print("MIXED PRECISION STABILITY TEST")
     print("="*80)
     
     if not torch.cuda.is_available():
-        print("CUDA not available, skipping float16 test")
+        print("CUDA not available, skipping mixed precision test")
         return
 
     device = torch.device("cuda")
-    dtype = torch.float16
-    
-    # Test parameters
     B, T, embed_dim, n_heads = 1, 128, 64, 2
     
-    try:
-        model = YatPerformerAnchorCausalAttention(
-            embed_dim=embed_dim,
-            n_heads=n_heads,
-            num_prf_features=8,
-            num_quadrature_nodes=1,
-            poly_dim=8,
-        ).to(device).half().eval()  # Weights cast to float16
-        
-        # Input in float16
-        x = torch.randn(B, T, embed_dim, device=device, dtype=dtype)
-        
-        print(f"Input dtype: {x.dtype}")
-        
-        # Forward pass
-        with torch.no_grad():
-            out = model(x)
-        
-        print(f"Output dtype: {out.dtype}")
-        print(f"Output finite elements: {torch.isfinite(out).sum()}/{out.numel()}")
-        
-        if torch.isnan(out).any() or torch.isinf(out).any():
-             print("✗ FAILED: Output contains NaNs or Infs")
-        elif out.dtype != dtype:
-             print(f"✗ FAILED: Output dtype mismatch (expected {dtype}, got {out.dtype})")
-        else:
-             print("✓ PASSED: Forward pass successful in float16")
-
-    except Exception as e:
-        print(f"✗ FAILED: Exception occurred: {e}")
-        # print full traceback if needed
-        import traceback
-        traceback.print_exc()
+    # Test dtypes
+    dtypes = [torch.float16]
+    if torch.cuda.is_bf16_supported():
+        dtypes.append(torch.bfloat16)
     
-    print("\n" + "="*80)
-    print(" ALL TESTS COMPLETED")
-    print("="*80 + "\n")
+    variants = [
+        ("Anchor", YatPerformerAnchorCausalAttention),
+        ("RandMac", YatPerformerRMCausalAttention),
+    ]
+    
+    print(f"\n{'Dtype':<12} {'Variant':<12} {'Output Dtype':<18} {'Finite':<12} {'Status':<10}")
+    print("-" * 65)
+    
+    for dtype in dtypes:
+        dtype_name = "float16" if dtype == torch.float16 else "bfloat16"
+        
+        for variant_name, VariantClass in variants:
+            try:
+                model = VariantClass(
+                    embed_dim=embed_dim,
+                    n_heads=n_heads,
+                    num_prf_features=8,
+                    num_quadrature_nodes=1,
+                    poly_dim=8,
+                ).to(device, dtype=dtype).eval()
+                
+                x = torch.randn(B, T, embed_dim, device=device, dtype=dtype)
+                
+                with torch.no_grad():
+                    out = model.forward(x)
+                
+                is_finite = torch.isfinite(out).all().item()
+                correct_dtype = out.dtype == dtype
+                passed = is_finite and correct_dtype
+                
+                status = "✓ PASS" if passed else "✗ FAIL"
+                print(f"{dtype_name:<12} {variant_name:<12} {str(out.dtype):<18} {str(is_finite):<12} {status:<10}")
+
+            except Exception as e:
+                print(f"{dtype_name:<12} {variant_name:<12} {'ERROR':<18} {'-':<12} {'✗ FAIL':<10}")
+                print(f"  Error: {e}")
 
 
 def run_memory_profile():
@@ -1338,7 +1392,8 @@ if __name__ == "__main__":
     test_feature_properties()
     test_consistency()
     test_memory_scaling()
-    test_float16_stability()
+    test_gradient_flow()
+    test_mixed_precision_stability()
     test_speed_benchmarking()
     
     run_memory_profile()
