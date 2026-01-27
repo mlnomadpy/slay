@@ -204,8 +204,11 @@ class _YatPerformerPolyBase(nn.Module):
                 kv_local_cumsum = torch.cumsum(kv_chunk_prod, dim=3)
                 k_local_cumsum = torch.cumsum(k_outer, dim=3)
     
-                kv_current = kv_local_cumsum + kv_state.unsqueeze(3)
-                k_current = k_local_cumsum + k_state.unsqueeze(3)
+                kv_local_cumsum += kv_state.unsqueeze(3)
+                kv_current = kv_local_cumsum
+                
+                k_local_cumsum += k_state.unsqueeze(3)
+                k_current = k_local_cumsum
     
                 context_chunk = torch.einsum("rbhtpm,rbhtpmd->rbhtd", q_outer, kv_current)
                 denom_chunk = torch.einsum("rbhtpm,rbhtpm->rbht", q_outer, k_current)
