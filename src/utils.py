@@ -37,3 +37,27 @@ def log_metrics(log_file, step, train_loss, val_loss, ppl, tps):
         if not file_exists:
             writer.writerow(['step', 'train_loss', 'val_loss', 'perplexity', 'tokens_per_sec'])
         writer.writerow([step, f"{train_loss:.4f}", f"{val_loss:.4f}", f"{ppl:.4f}", f"{tps:.2f}"])
+
+
+class LossPlateauDetector:
+    """Detects when validation loss plateaus."""
+    def __init__(self, patience=3, min_delta=0.001):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.best_loss = float('inf')
+        self.counter = 0
+
+    def check(self, val_loss):
+        """
+        Check if loss has plateaued.
+        Returns True if plateau detected, False otherwise.
+        """
+        if val_loss < self.best_loss - self.min_delta:
+            self.best_loss = val_loss
+            self.counter = 0
+            return False
+        else:
+            self.counter += 1
+            if self.counter >= self.patience:
+                return True
+            return False

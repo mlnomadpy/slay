@@ -42,6 +42,7 @@ __all__ = [
     # Utils
     'evaluate',
     'log_metrics',
+    'LossPlateauDetector',
 ]
 
 
@@ -56,9 +57,9 @@ def __getattr__(name: str):
 
         return {'GPT2Block': GPT2Block, 'NovelBlock': NovelBlock, 'TinyGPT': TinyGPT}[name]
 
-    if name in {'evaluate', 'log_metrics'}:
-        from .utils import evaluate, log_metrics
+    if name in {'evaluate', 'log_metrics', 'LossPlateauDetector'}:
+        from .utils import evaluate, log_metrics, LossPlateauDetector
 
-        return {'evaluate': evaluate, 'log_metrics': log_metrics}[name]
+        return {'evaluate': evaluate, 'log_metrics': log_metrics, 'LossPlateauDetector': LossPlateauDetector}[name]
 
     raise AttributeError(f"module 'src' has no attribute {name!r}")

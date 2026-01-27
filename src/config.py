@@ -8,16 +8,16 @@ DEFAULT_CONFIG = {
     'n_layers': 12,
     'n_heads': 12,
     'lr': 3e-4,
-    'batch_size': 4,
-    'gradient_accumulation_steps': 4,
+    'batch_size': 64,  # Optimized for A100 (40GB/80GB)
+    'gradient_accumulation_steps': 1,  # Global batch = 64 * 8 * 1 = 512
     'weight_decay': 0.01,
     'activation_type': 'novel',
-    'log_dir': 'logs',
-    'checkpoint_dir': 'checkpoints',
+    'log_dir': 'logs_fineweb_bert',
+    'checkpoint_dir': 'checkpoints_fineweb_bert',
     'eval_interval': 500,
     'save_interval': 1000,
-    'total_steps': 10000,
-    'wandb_project': 'tiny-gpt-novel',
+    'total_steps': 20000,  # Increased for more significant training (~10B tokens)
+    'wandb_project': 'slay-bert-base-fineweb',
     'num_rff_features': 64,
     'num_prf_features': 16,
     'num_poly_features': 8,

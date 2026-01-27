@@ -26,6 +26,7 @@ from src import (
     TinyGPT,
     evaluate,
     log_metrics,
+    LossPlateauDetector,
 )
 
 
@@ -38,7 +39,7 @@ def create_ds_config(config):
         "train_micro_batch_size_per_gpu": config['batch_size'],
         "gradient_accumulation_steps": config['gradient_accumulation_steps'],
         "steps_per_print": 100,
-        "gradient_clipping": 2.0,
+        "gradient_clipping": 1.0,
         "optimizer": {
             "type": "AdamW",
             "params": {
@@ -68,6 +69,7 @@ def create_ds_config(config):
     }
     with open("ds_zero2.json", "w") as f:
         json.dump(ds_config, f)
+    return ds_config
 
 
 # --------------------
@@ -183,7 +185,7 @@ def main():
     args = parse_args()
     config = args_to_config(args)
     
-    create_ds_config(config)
+    ds_config = create_ds_config(config)
     deepspeed.init_distributed()
     rank = deepspeed.comm.get_rank()
 
@@ -272,6 +274,10 @@ def main():
     if rank == 0:
         print("Starting training loop...")
 
+    # Plateau detector for optimizer switching
+    plateau_detector = LossPlateauDetector(patience=3)
+    switched_to_sgd = False
+
     step = 0
     total_tokens = 0
     tokens_per_batch = model_engine.train_micro_batch_size_per_gpu() * config['context_len'] * deepspeed.comm.get_world_size()
@@ -317,6 +323,40 @@ def main():
                         "tokens_per_sec": tps,
                         "step": step
                     })
+            
+            # Check for plateau and switch to SGD if needed
+            if not switched_to_sgd and plateau_detector.check(val_loss):
+                if rank == 0:
+                    print(f"Step {step} | Loss plateau detected. Switching optimizer from AdamW to SGD.")
+                
+                switched_to_sgd = True
+                
+                # Create SGD config based on original config
+                sgd_config = ds_config.copy()
+                sgd_config['optimizer'] = {
+                    "type": "SGD",
+                    "params": {
+                        "lr": config['lr'],
+                        "momentum": 0.9 
+                    }
+                }
+                
+                # Write SGD config
+                sgd_config_path = "ds_sgd.json"
+                with open(sgd_config_path, "w") as f:
+                    json.dump(sgd_config, f)
+                
+                if rank == 0:
+                    print("Re-initializing DeepSpeed with SGD...")
+                
+                # Re-initialize DeepSpeed
+                # We reuse the underlying module from the current engine
+                current_model = model_engine.module
+                model_engine, optimizer, _, _ = deepspeed.initialize(
+                    model=current_model,
+                    model_parameters=current_model.parameters(),
+                    config=sgd_config_path
+                )
 
         # CHECKPOINTING
         if step % config['save_interval'] == 0:
