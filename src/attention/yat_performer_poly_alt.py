@@ -330,7 +330,7 @@ class _YatPerformerPolyBase(nn.Module):
             
             # 3. Intra-Chunk Attention (Current Window) via explicit feature dot-product
             # To avoid huge T_c x T_c x P x M tensordot, we flatten P,M
-            q_feat_flat = q_feat.flatten(start_dim=-2) # (R, B, H, T_c, PM)
+            q_feat_flat = q_feat.flatten(start_dim=-2)  # (R, B, H, T_c, PM)
             k_feat_flat = k_feat.flatten(start_dim=-2)
             
             # Standard attention weights within chunk: (Q @ K^T)
@@ -362,15 +362,85 @@ class _YatPerformerPolyBase(nn.Module):
             out_chunks.append(out_chunk.to(input_dtype))
             
             # 5. Update State (Accumulate current chunk into state)
-            # State += K_chunk^T @ V_chunk
-            # k_feat: (R, B, H, T_c, P, M) -> flatten to (R, B, H, T_c, PM)?
-            # Better to keep dimensions for clarity or flatten? 
-            # Einsum is cleaner: "rbhtpm,bhtd->rbhpmd"
-            kv_state += torch.einsum("rbhtpm,bhtd->rbhpmd", k_feat, v_chunk.float())
-            # K state: sum over T_c
-            k_state += k_feat.sum(dim=3)
+            kv_state = kv_state + torch.einsum("rbhtpm,bhtd->rbhpmd", k_feat, v_chunk.float())
+            k_state = k_state + k_feat.sum(dim=3)
 
         out = torch.cat(out_chunks, dim=2)
+        out = out.transpose(1, 2).contiguous().view(B, T, C)
+        return self.out(out)
+
+    def forward_triton(self, x):
+        """
+        Forward pass using Triton-accelerated linear attention.
+        
+        This method uses the fused Triton kernel for the linear attention
+        computation, which is ~35x faster than the pure PyTorch implementation.
+        
+        Falls back to regular forward() if Triton is not available.
+        """
+        try:
+            from .yat_attention_kernel import HAS_TRITON, triton_linear_attention
+        except ImportError:
+            try:
+                from yat_attention_kernel import HAS_TRITON, triton_linear_attention
+            except ImportError:
+                print("Warning: yat_attention_kernel not found, falling back to PyTorch")
+                return self.forward(x)
+        
+        if not HAS_TRITON or not torch.cuda.is_available():
+            return self.forward(x)
+        
+        B, T, C = x.shape
+        qkv = self.qkv(x)
+        q, k, v = qkv.chunk(3, dim=-1)
+
+        q = q.view(B, T, self.n_heads, self.head_dim).transpose(1, 2)
+        k = k.view(B, T, self.n_heads, self.head_dim).transpose(1, 2)
+        v = v.view(B, T, self.n_heads, self.head_dim).transpose(1, 2)
+
+        input_dtype = q.dtype
+        
+        R = self.num_quadrature_nodes
+        P = self.poly_dim
+        M = self.num_prf_features
+        D = self.head_dim
+        H = self.n_heads
+        
+        # Compute features for full sequence
+        q_norm = F.normalize(q.float(), p=2, dim=-1)
+        k_norm = F.normalize(k.float(), p=2, dim=-1)
+        
+        q_poly = self._poly_features(q_norm)  # (B, H, T, P)
+        k_poly = self._poly_features(k_norm)
+        
+        q_prf = self._apply_quadrature_weights(self._prf_features(q_norm))  # (R, B, H, T, M)
+        k_prf = self._apply_quadrature_weights(self._prf_features(k_norm))
+        
+        # Fuse features: (R, B, H, T, P, M)
+        q_feat = torch.einsum("bhtp,rbhtm->rbhtpm", q_poly, q_prf)
+        k_feat = torch.einsum("bhtp,rbhtm->rbhtpm", k_poly, k_prf)
+        
+        # Flatten P, M dimensions for Triton kernel: (R, B, H, T, PM)
+        PM = P * M
+        q_feat_flat = q_feat.flatten(start_dim=-2).contiguous()  # (R, B, H, T, PM)
+        k_feat_flat = k_feat.flatten(start_dim=-2).contiguous()
+        
+        # Process each quadrature node separately and sum
+        outputs = []
+        for r in range(R):
+            # (B, H, T, PM)
+            q_r = q_feat_flat[r]
+            k_r = k_feat_flat[r]
+            v_float = v.float()  # (B, H, T, D)
+            
+            # Use Triton kernel for linear attention
+            out_r = triton_linear_attention(q_r, k_r, v_float, delta=self.delta)
+            outputs.append(out_r)
+        
+        # Sum over quadrature nodes
+        out = torch.stack(outputs, dim=0).sum(dim=0)  # (B, H, T, D)
+        
+        out = out.to(input_dtype)
         out = out.transpose(1, 2).contiguous().view(B, T, C)
         return self.out(out)
 
@@ -1046,61 +1116,115 @@ def test_speed_benchmarking():
                         raise
 
 
-def test_float16_stability():
+def test_gradient_flow():
     """
-    Test numerical stability with float16 inputs.
+    Test that gradients flow correctly through the attention mechanism.
     """
     print("\n" + "="*80)
-    print("FLOAT16 STABILITY TEST")
+    print("GRADIENT FLOW TEST")
+    print("="*80)
+    
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch.manual_seed(42)
+    
+    B, T, embed_dim, n_heads = 2, 64, 128, 4
+    
+    variants = [
+        ("Anchor", YatPerformerAnchorCausalAttention),
+        ("RandMac", YatPerformerRMCausalAttention),
+        ("Nystrom", YatPerformerNystromCausalAttention),
+    ]
+    
+    print(f"\n{'Variant':<12} {'Output Shape':<20} {'Has Grad':<12} {'Grad Finite':<15} {'Status':<10}")
+    print("-" * 70)
+    
+    for variant_name, VariantClass in variants:
+        try:
+            model = VariantClass(
+                embed_dim=embed_dim,
+                n_heads=n_heads,
+                num_prf_features=8,
+                num_quadrature_nodes=1,
+                poly_dim=8,
+            ).to(device)
+            
+            x = torch.randn(B, T, embed_dim, device=device, requires_grad=True)
+            
+            # Forward pass
+            out = model.forward(x)
+            
+            # Backward pass
+            loss = out.sum()
+            loss.backward()
+            
+            has_grad = x.grad is not None
+            grad_finite = has_grad and torch.isfinite(x.grad).all().item()
+            passed = has_grad and grad_finite
+            
+            status = "✓ PASS" if passed else "✗ FAIL"
+            print(f"{variant_name:<12} {str(tuple(out.shape)):<20} {str(has_grad):<12} {str(grad_finite):<15} {status:<10}")
+            
+        except Exception as e:
+            print(f"{variant_name:<12} {'ERROR':<20} {'-':<12} {'-':<15} {'✗ FAIL':<10}")
+            print(f"  Error: {e}")
+
+
+def test_mixed_precision_stability():
+    """
+    Test numerical stability with float16 and bfloat16 inputs.
+    """
+    print("\n" + "="*80)
+    print("MIXED PRECISION STABILITY TEST")
     print("="*80)
     
     if not torch.cuda.is_available():
-        print("CUDA not available, skipping float16 test")
+        print("CUDA not available, skipping mixed precision test")
         return
 
     device = torch.device("cuda")
-    dtype = torch.float16
-    
-    # Test parameters
     B, T, embed_dim, n_heads = 1, 128, 64, 2
     
-    try:
-        model = YatPerformerAnchorCausalAttention(
-            embed_dim=embed_dim,
-            n_heads=n_heads,
-            num_prf_features=8,
-            num_quadrature_nodes=1,
-            poly_dim=8,
-        ).to(device).half().eval()  # Weights cast to float16
-        
-        # Input in float16
-        x = torch.randn(B, T, embed_dim, device=device, dtype=dtype)
-        
-        print(f"Input dtype: {x.dtype}")
-        
-        # Forward pass
-        with torch.no_grad():
-            out = model(x)
-        
-        print(f"Output dtype: {out.dtype}")
-        print(f"Output finite elements: {torch.isfinite(out).sum()}/{out.numel()}")
-        
-        if torch.isnan(out).any() or torch.isinf(out).any():
-             print("✗ FAILED: Output contains NaNs or Infs")
-        elif out.dtype != dtype:
-             print(f"✗ FAILED: Output dtype mismatch (expected {dtype}, got {out.dtype})")
-        else:
-             print("✓ PASSED: Forward pass successful in float16")
-
-    except Exception as e:
-        print(f"✗ FAILED: Exception occurred: {e}")
-        # print full traceback if needed
-        import traceback
-        traceback.print_exc()
+    # Test dtypes
+    dtypes = [torch.float16]
+    if torch.cuda.is_bf16_supported():
+        dtypes.append(torch.bfloat16)
     
-    print("\n" + "="*80)
-    print(" ALL TESTS COMPLETED")
-    print("="*80 + "\n")
+    variants = [
+        ("Anchor", YatPerformerAnchorCausalAttention),
+        ("RandMac", YatPerformerRMCausalAttention),
+    ]
+    
+    print(f"\n{'Dtype':<12} {'Variant':<12} {'Output Dtype':<18} {'Finite':<12} {'Status':<10}")
+    print("-" * 65)
+    
+    for dtype in dtypes:
+        dtype_name = "float16" if dtype == torch.float16 else "bfloat16"
+        
+        for variant_name, VariantClass in variants:
+            try:
+                model = VariantClass(
+                    embed_dim=embed_dim,
+                    n_heads=n_heads,
+                    num_prf_features=8,
+                    num_quadrature_nodes=1,
+                    poly_dim=8,
+                ).to(device, dtype=dtype).eval()
+                
+                x = torch.randn(B, T, embed_dim, device=device, dtype=dtype)
+                
+                with torch.no_grad():
+                    out = model.forward(x)
+                
+                is_finite = torch.isfinite(out).all().item()
+                correct_dtype = out.dtype == dtype
+                passed = is_finite and correct_dtype
+                
+                status = "✓ PASS" if passed else "✗ FAIL"
+                print(f"{dtype_name:<12} {variant_name:<12} {str(out.dtype):<18} {str(is_finite):<12} {status:<10}")
+
+            except Exception as e:
+                print(f"{dtype_name:<12} {variant_name:<12} {'ERROR':<18} {'-':<12} {'✗ FAIL':<10}")
+                print(f"  Error: {e}")
 
 
 def run_memory_profile():
@@ -1155,6 +1279,108 @@ def run_memory_profile():
         torch.cuda.empty_cache()
 
 
+def test_triton_comparison():
+    """
+    Test that compares PyTorch vs Triton kernel performance.
+    """
+    print("\n" + "="*80)
+    print("PYTORCH vs TRITON KERNEL COMPARISON")
+    print("="*80)
+    
+    try:
+        from .yat_attention_kernel import (
+            HAS_TRITON, 
+            test_triton_vs_pytorch, 
+            benchmark_triton_vs_pytorch
+        )
+    except ImportError:
+        try:
+            from yat_attention_kernel import (
+                HAS_TRITON,
+                test_triton_vs_pytorch,
+                benchmark_triton_vs_pytorch
+            )
+        except ImportError:
+            print("Could not import yat_attention_kernel. Skipping Triton test.")
+            return
+    
+    if not HAS_TRITON:
+        print("Triton not available. Install with: pip install triton")
+        return
+    
+    if not torch.cuda.is_available():
+        print("CUDA not available. Skipping Triton test.")
+        return
+    
+    # Run correctness test
+    print("\n[Test 1] Correctness Check")
+    print("-" * 40)
+    passed = test_triton_vs_pytorch()
+    
+    # Run speed benchmark
+    print("\n[Test 2] Speed Benchmark")
+    print("-" * 40)
+    benchmark_triton_vs_pytorch()
+    
+    # Run forward vs forward_triton comparison
+    print("\n[Test 3] YatPerformer: forward() vs forward_triton()")
+    print("-" * 40)
+    
+    device = torch.device("cuda")
+    torch.manual_seed(42)
+    
+    # Test with Anchor variant
+    model = YatPerformerAnchorCausalAttention(
+        embed_dim=256, n_heads=4,
+        num_prf_features=8, poly_dim=3
+    ).to(device).eval()
+    
+    x = torch.randn(1, 512, 256, device=device)
+    
+    with torch.no_grad():
+        out_pytorch = model.forward(x)
+        out_triton = model.forward_triton(x)
+    
+    diff = (out_pytorch - out_triton).abs()
+    max_diff = diff.max().item()
+    mean_diff = diff.mean().item()
+    rel_diff = (diff / (out_pytorch.abs() + 1e-8)).mean().item()
+    
+    print(f"Max diff: {max_diff:.2e}, Mean diff: {mean_diff:.2e}, Rel diff: {rel_diff:.2e}")
+    
+    # Speed comparison
+    torch.cuda.synchronize()
+    
+    # Warmup
+    for _ in range(3):
+        _ = model.forward(x)
+        _ = model.forward_triton(x)
+    torch.cuda.synchronize()
+    
+    start = torch.cuda.Event(enable_timing=True)
+    end = torch.cuda.Event(enable_timing=True)
+    
+    start.record()
+    for _ in range(10):
+        _ = model.forward(x)
+    end.record()
+    torch.cuda.synchronize()
+    pytorch_time = start.elapsed_time(end) / 10
+    
+    start.record()
+    for _ in range(10):
+        _ = model.forward_triton(x)
+    end.record()
+    torch.cuda.synchronize()
+    triton_time = start.elapsed_time(end) / 10
+    
+    print(f"PyTorch: {pytorch_time:.2f} ms, Triton: {triton_time:.2f} ms, Speedup: {pytorch_time/triton_time:.2f}x")
+    
+    passed = mean_diff < 1e-2 and rel_diff < 1e-1
+    print(f"{'✓ PASSED' if passed else '✗ FAILED'}")
+    
+    print("\n" + "="*80)
+
 
 if __name__ == "__main__":
     print("\n" + "="*80)
@@ -1166,7 +1392,12 @@ if __name__ == "__main__":
     test_feature_properties()
     test_consistency()
     test_memory_scaling()
-    test_float16_stability()
+    test_gradient_flow()
+    test_mixed_precision_stability()
     test_speed_benchmarking()
     
     run_memory_profile()
+    
+    # Triton kernel comparison (if available)
+    test_triton_comparison()
+

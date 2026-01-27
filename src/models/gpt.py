@@ -26,6 +26,7 @@ class TinyGPT(nn.Module):
         context_len = config['context_len']
         n_layers = config['n_layers']
         n_heads = config['n_heads']
+        use_triton = config.get('use_triton', False)
         
         # Get attention class from registry
         attention_class = ATTENTION_CLASSES.get(attention_type, FastAttention)
@@ -39,7 +40,7 @@ class TinyGPT(nn.Module):
         self.tok = nn.Embedding(vocab_size, embed_dim)
         self.pos = nn.Embedding(context_len, embed_dim)
         self.blocks = nn.ModuleList([
-            block_class(embed_dim, n_heads, attention_class) 
+            block_class(embed_dim, n_heads, attention_class, use_triton=use_triton) 
             for _ in range(n_layers)
         ])
         self.ln = nn.LayerNorm(embed_dim)
