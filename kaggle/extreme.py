@@ -143,19 +143,59 @@ class SLAYFeatures(nnx.Module):
         return output
 
 # --- CONFIGURATION ---
-GDRIVE_ID = "0B3lPMIHmG6vGU0VTR1pCejFpWjg"
-RESOURCE_KEY = "0-SurjZ4z_5Tr38jENzf2Iwg"
-DATASET_NAME = "Eurlex"
+# --- CONFIGURATION ---
+DATASETS = {
+    'Eurlex-4K': {
+        'id': '0B3lPMIHmG6vGU0VTR1pCejFpWjg',
+        'train': 'Eurlex/eurlex_train.txt',
+        'test': 'Eurlex/eurlex_test.txt'
+    },
+    'LF-AmazonTitles-131K': {
+        'id': '1VlfcdJKJA99223fLEawRmrXhXpwjwJKn',
+        'train': 'LF-AmazonTitles-131K/train.txt',
+        'test': 'LF-AmazonTitles-131K/test.txt'
+    },
+    'LF-Amazon-131K': {
+        'id': '1YNGEifTHu4qWBmCaLEBfjx07qRqw9DVW',
+        'train': 'LF-Amazon-131K/train.txt',
+        'test': 'LF-Amazon-131K/test.txt'
+    },
+    'LF-WikiSeeAlsoTitles-320K': {
+        'id': '1edWtizAFBbUzxo9Z2wipGSEA9bfy5mdX',
+        'train': 'LF-WikiSeeAlsoTitles-320K/train.txt',
+        'test': 'LF-WikiSeeAlsoTitles-320K/test.txt'
+    },
+    'LF-Wikipedia-500K': {
+        'id': '0B3lPMIHmG6vGRmEzVDVkNjBMR3c',
+        'train': 'LF-Wikipedia-500K/train.txt',
+        'test': 'LF-Wikipedia-500K/test.txt'
+    },
+    'LF-AmazonTitles-1.3M': {
+        'id': '1Davc6BIfoTIAS3mP1mUY5EGcGr2zN2pO',
+        'train': 'LF-AmazonTitles-1.3M/train.txt',
+        'test': 'LF-AmazonTitles-1.3M/test.txt'
+    },
+}
 TRAIN_FILE = "Eurlex/eurlex_train.txt"
 TEST_FILE = "Eurlex/eurlex_test.txt"
 
 # --- DATA DOWNLOADER ---
-def download_data():
-    if os.path.exists(TRAIN_FILE):
-        print(f"Dataset already exists at {TRAIN_FILE}")
+# --- DATA DOWNLOADER ---
+def download_data(dataset_name):
+    if dataset_name not in DATASETS:
+        print(f"Unknown dataset: {dataset_name}")
         return
 
-    print(f"Downloading {DATASET_NAME} from Google Drive...")
+    info = DATASETS[dataset_name]
+    train_file = info['train']
+    
+    # Check if extracted dir exists (heuristic: dirname of train file)
+    dataset_dir = os.path.dirname(train_file)
+    if os.path.exists(dataset_dir):
+        print(f"Dataset {dataset_name} already exists at {dataset_dir}")
+        return
+
+    print(f"Downloading {dataset_name} from Google Drive...")
     try:
         import gdown
     except ImportError:
@@ -163,14 +203,15 @@ def download_data():
         subprocess.check_call([sys.executable, "-m", "pip", "install", "gdown"])
         import gdown
 
-    output = f"{DATASET_NAME}.zip"
+    file_id = info['id']
+    output = f"{dataset_name}.zip"
+    
     if not os.path.exists(output):
-        url = f'https://drive.google.com/uc?id={GDRIVE_ID}'
-        if RESOURCE_KEY:
-            url += f'&resourcekey={RESOURCE_KEY}'
+        url = f'https://drive.google.com/uc?id={file_id}'
+        # Resource key handling if needed (simplified for now as most new links don't seem to need it explicitly or gdown handles it)
         gdown.download(url, output, quiet=False)
 
-    print("Extracting...")
+    print(f"Extracting {dataset_name}...")
     with zipfile.ZipFile(output, 'r') as zip_ref:
         zip_ref.extractall(".")
     print("Done.")
@@ -178,6 +219,19 @@ def download_data():
 # --- DATA LOADER ---
 def load_xml_data(file_path):
     print(f"Loading {file_path}...")
+    
+    # Log head of file before loading
+    print(f"--- Head of {file_path} (Raw) ---")
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            for _ in range(5):
+                line = f.readline()
+                if not line: break
+                print(line.strip())
+    except Exception as e:
+        print(f"Could not read raw file head: {e}")
+    print("-----------------------------------")
+
     with open(file_path, 'rb') as f:
         header_line = f.readline()
         header = header_line.decode('utf-8').strip().split()
@@ -187,6 +241,18 @@ def load_xml_data(file_path):
     data = load_svmlight_file(file_path, multilabel=True, n_features=num_features, offset=offset)
     # Convert to list of lists for labels
     labels = [np.array(l, dtype=np.int32) for l in data[1]]
+
+    # Log head of data after loading
+    print(f"--- Head of Loaded Data ({file_path}) ---")
+    print(f"Num Samples: {num_samples}, Num Features: {num_features}, Num Labels: {num_labels}")
+    print("First 5 samples X (indices):")
+    for i in range(min(5, data[0].shape[0])):
+        print(f"  Sample {i}: {data[0][i].indices}")
+    print("First 5 samples Y (labels):")
+    for i in range(min(5, len(labels))):
+        print(f"  Sample {i}: {labels[i]}")
+    print("-----------------------------------------")
+
     return data[0], labels, num_features, num_labels
 
 class XMLDataset:
@@ -345,28 +411,16 @@ class KernelXML(nnx.Module):
     def get_features(self, x):
         return self.feature_map(x)
 
-    def loss(self, indices, mask, labels_list):
-        B = indices.shape[0]
-        # 1. Encode Query
-        query = self.encoder(indices, mask) # [B, D]
-        phi_query = self.get_features(query) # [B, M]
-        
-        # 2. Compute Global Denominator Sum(phi(W))
-        W_vecs = self.classifier.kernel[...] # Access value for JAX
-        W_vecs = W_vecs.T # [L, D]
-        
-        phi_W = self.get_features(W_vecs) # [L, M]
-        
-        Z_approx_vec = jnp.sum(phi_W, axis=0) # [M]
-        
         # Denominator: phi(q) . Z_vec
         denom = jnp.dot(phi_query, Z_approx_vec) + 1e-6
-        log_Z = jnp.log(denom) # [B]
+        # log_Z = jnp.log(denom) # This was part of an incomplete method
+
         
     def loss(self, indices, mask, labels, label_mask):
         B = indices.shape[0]
         # 1. Encode Query
         query = self.encoder(indices, mask) # [B, D]
+        query = safe_normalize(query, axis=-1)
         phi_query = self.get_features(query) # [B, M]
         
         # 2. Compute Global Denominator Sum(phi(W))
@@ -417,6 +471,7 @@ class KernelXML(nnx.Module):
         
     def predict(self, indices, mask, k=5):
         query = self.encoder(indices, mask)
+        query = safe_normalize(query, axis=-1)
         
         phi_query = self.get_features(query) # [B, M]
         W_vecs = self.classifier.kernel[...]
@@ -427,9 +482,136 @@ class KernelXML(nnx.Module):
         return jax.lax.top_k(scores, k) # values, indices
 
 
+class ExactSphericalYatXML(nnx.Module):
+    """
+    Exact Spherical Yat Kernel: K(q, k) = (q.k)^2 / (2 + eps - 2 q.k)
+    Used when q, k are on unit sphere.
+    """
+    def __init__(self, num_features: int, num_labels: int, embed_dim: int, epsilon: float = 1e-6, *, rngs: nnx.Rngs):
+        self.encoder = MeanEmbedding(num_features, embed_dim, rngs=rngs)
+        self.classifier = nnx.Linear(embed_dim, num_labels, use_bias=False, rngs=rngs)
+        self.C = 2.0 + epsilon
+
+    def kernel_fn(self, q, k_vecs):
+        # q, k must be normalized
+        dot = jnp.dot(q, k_vecs.T)
+        raw_kernel = (dot ** 2) / (self.C - 2 * dot)
+        return raw_kernel
+
+    def loss(self, indices, mask, labels, label_mask):
+        B = indices.shape[0]
+        query = self.encoder(indices, mask) 
+        query = safe_normalize(query, axis=-1)
+        
+        W_vecs = self.classifier.kernel[...] 
+        W_vecs = W_vecs.T 
+        W_vecs = safe_normalize(W_vecs, axis=-1)
+        
+        sf_scores = self.kernel_fn(query, W_vecs) # [B, L]
+        
+        Z_vec = jnp.sum(sf_scores, axis=1) # [B]
+        log_Z = jnp.log(Z_vec + 1e-9)
+        
+        # Numerator
+        safe_labels = jnp.maximum(labels, 0)
+        pos_scores = jnp.take_along_axis(sf_scores, safe_labels, axis=1) # [B, K]
+        log_pos = jnp.log(pos_scores + 1e-9)
+        
+        log_probs = log_pos - log_Z[:, None]
+        masked_log_probs = log_probs * label_mask
+        loss_total = -jnp.sum(masked_log_probs)
+        return loss_total / B
+        
+    def predict(self, indices, mask, k=5):
+        query = self.encoder(indices, mask)
+        query = safe_normalize(query, axis=-1)
+        
+        W_vecs = self.classifier.kernel[...]
+        W_vecs = safe_normalize(W_vecs.T, axis=-1)
+        
+        scores = self.kernel_fn(query, W_vecs)
+        return jax.lax.top_k(scores, k)
+
+class ExactYatXML(nnx.Module):
+    """
+    Exact (General) Yat Kernel: K(q, k) = (q.k)^2 / (||q-k||^2 + eps)
+    Does NOT enforce spherical constraint.
+    """
+    def __init__(self, num_features: int, num_labels: int, embed_dim: int, epsilon: float = 1e-6, *, rngs: nnx.Rngs):
+        self.encoder = MeanEmbedding(num_features, embed_dim, rngs=rngs)
+        self.classifier = nnx.Linear(embed_dim, num_labels, use_bias=False, rngs=rngs)
+        self.epsilon = epsilon
+
+    def kernel_fn(self, q, k_vecs):
+        # q: [B, D]
+        # k_vecs: [L, D]
+        
+        dot = jnp.dot(q, k_vecs.T) # [B, L]
+        
+        q_norm2 = jnp.sum(q**2, axis=-1, keepdims=True) # [B, 1]
+        k_norm2 = jnp.sum(k_vecs**2, axis=-1) # [L]
+        
+        # ||q-k||^2 = ||q||^2 + ||k||^2 - 2 q.k
+        dist2 = q_norm2 + k_norm2[None, :] - 2 * dot # [B, L]
+        dist2 = jnp.maximum(dist2, 0.0) # Numerical safety
+        
+        denom = dist2 + self.epsilon
+        raw_kernel = (dot ** 2) / denom
+        return raw_kernel
+
+    def loss(self, indices, mask, labels, label_mask):
+        B = indices.shape[0]
+        query = self.encoder(indices, mask) # [B, D] (No normalization)
+        
+        W_vecs = self.classifier.kernel[...] 
+        W_vecs = W_vecs.T # [L, D] (No normalization)
+        
+        sf_scores = self.kernel_fn(query, W_vecs) # [B, L]
+        
+        Z_vec = jnp.sum(sf_scores, axis=1) # [B]
+        log_Z = jnp.log(Z_vec + 1e-9)
+        
+        safe_labels = jnp.maximum(labels, 0)
+        pos_scores = jnp.take_along_axis(sf_scores, safe_labels, axis=1) # [B, K]
+        log_pos = jnp.log(pos_scores + 1e-9)
+        
+        log_probs = log_pos - log_Z[:, None]
+        masked_log_probs = log_probs * label_mask
+        loss_total = -jnp.sum(masked_log_probs)
+        return loss_total / B
+        
+    def predict(self, indices, mask, k=5):
+        query = self.encoder(indices, mask)
+        
+        W_vecs = self.classifier.kernel[...]
+        W_vecs = W_vecs.T
+        
+        scores = self.kernel_fn(query, W_vecs)
+        return jax.lax.top_k(scores, k)
+
 # --- METRICS ---
+# --- METRICS ---
+
+def get_propensity_scores(labels, num_labels, A=0.55, B=1.5):
+    """
+    Calculate propensity scores based on Jain et al. 2016.
+    p_l = 1 / (1 + C * (N_l + B)^-A)
+    C = (log N - 1) * (B + 1)^A
+    """
+    N = len(labels) # Number of samples
+    
+    freqs = np.zeros(num_labels)
+    for i in range(N):
+        freqs[labels[i]] += 1
+        
+    C = (np.log(N) - 1) * ((B + 1) ** A)
+    
+    p = 1.0 / (1.0 + C * ((freqs + B) ** (-A)))
+    p[freqs == 0] = 0.0 # Handle missing labels if any (though usually not an issue for prop calculation, just ensures no division by zero later if p used in denominator)
+    return p
+
 def precision_at_k(targets_list, pred_indices, k=5):
-    p_k_sum = 0
+    p_k_sum = np.zeros(k) # P@1...P@k
     n_samples = len(targets_list)
     pred_indices = np.array(pred_indices)
 
@@ -440,98 +622,186 @@ def precision_at_k(targets_list, pred_indices, k=5):
         true_labels = set(t_row[t_row != -1])
         
         if len(true_labels) == 0: continue
-        preds = pred_indices[i][:k]
-        hits = len(true_labels.intersection(set(preds)))
-        p_k_sum += hits / k
+        
+        preds = pred_indices[i]
+        hits = 0
+        for j in range(k):
+            if j < len(preds) and preds[j] in true_labels:
+                hits += 1
+            p_k_sum[j] += hits / (j + 1)
+            
     return p_k_sum / n_samples
 
-# --- RUNNER ---
-def run_benchmark(dataset_path: str = "."):
-    download_data()
-    X_train, Y_train, n_feat, n_lab = load_xml_data(TRAIN_FILE)
-    X_test, Y_test, _, _ = load_xml_data(TEST_FILE)
-    n_feat = max(n_feat, X_test.shape[1])
+def psp_at_k(targets_list, pred_indices, propensity_scores, k=5):
+    """
+    Propensity Scored Precision @ k
+    PSP@k = (1/k) * sum_{l in top_k} (y_l / p_l)
+    """
+    psp_sum = np.zeros(k)
+    n_samples = len(targets_list)
+    pred_indices = np.array(pred_indices)
     
-    # Config
-    BATCH_SIZE = 1024
-    EMBED_DIM = 256
-    LR = 1e-3
-    EPOCHS = 10
-    
-    train_ds = XMLDataset(X_train, Y_train, n_lab, BATCH_SIZE, shuffle=True)
-    test_ds = XMLDataset(X_test, Y_test, n_lab, BATCH_SIZE, shuffle=False)
-    
-    results = {}
-    
-    # Models to test
-    configs = [
-        ('FullSoftmax', {}),
-        ('Performer', {'attention_type': 'performer', 'attention_kwargs': {'kernel_size': 64}}),
-        ('Yat', {'attention_type': 'yat', 'attention_kwargs': {'num_features': 32, 'num_quadrature_nodes': 2}}),
-        ('YatSpherical', {'attention_type': 'yat-spherical', 'attention_kwargs': {'num_features': 32, 'num_quadrature_nodes': 2, 'epsilon': 1e-2}}),
-        ('SLAY', {'attention_type': 'slay', 'attention_kwargs': {'num_features': 32, 'num_quadrature_nodes': 2}}),
-    ]
-    
-    for name, args in configs:
-        print(f"\nTraining {name}...")
-        rngs = nnx.Rngs(0)
-        
-        if name == 'FullSoftmax':
-            model = FullSoftmaxXML(n_feat, n_lab, EMBED_DIM, rngs=rngs)
-        else:
-            try:
-                model = KernelXML(n_feat, n_lab, EMBED_DIM, **args, rngs=rngs)
-            except ValueError as e:
-                print(f"Skipping {name}: {e}")
-                continue
-            
-        optimizer = nnx.Optimizer(model, optax.adam(LR), wrt=nnx.Param)
-        
-        @nnx.jit
-        def train_step(model, optimizer, indices, mask, labels, label_mask):
-             def loss_fn(m):
-                 return m.loss(indices, mask, labels, label_mask)
-             
-             loss, grads = nnx.value_and_grad(loss_fn)(model)
-             optimizer.update(model, grads)
-             return loss
+    # Pre-compute 1/p to avoid division inside loop
+    inv_p = np.zeros_like(propensity_scores)
+    inv_p[propensity_scores > 0] = 1.0 / propensity_scores[propensity_scores > 0]
 
-        def train_epoch(model, optimizer):
-            total_loss = 0
-            count = 0
-            for batch in train_ds:
+    for i in range(n_samples):
+        t_row = np.array(targets_list[i])
+        true_labels = set(t_row[t_row != -1])
+        
+        if len(true_labels) == 0: continue
+        
+        preds = pred_indices[i]
+        score = 0.0
+        for j in range(k):
+            if j < len(preds) and preds[j] in true_labels:
+                score += inv_p[preds[j]]
+            psp_sum[j] += score / (j + 1)
+            
+    return psp_sum / n_samples
+
+# --- RUNNER ---
+# --- RUNNER ---
+# --- RUNNER ---
+def run_benchmark(dataset_name: str = "all", method_filter: str = "all"):
+    # JAX Device Check
+    print(f"JAX Devices: {jax.devices()}")
+
+    # Determine datasets to run
+    if dataset_name == "all":
+        datasets_to_run = list(DATASETS.keys())
+    elif dataset_name in DATASETS:
+        datasets_to_run = [dataset_name]
+    else:
+        print(f"Dataset {dataset_name} not found.")
+        return {}
+
+    final_results = {}
+
+    for ds_name in datasets_to_run:
+        print(f"\n=== Benchmarking on {ds_name} ===")
+        download_data(ds_name)
+        
+        info = DATASETS[ds_name]
+        try:
+            X_train, Y_train, n_feat, n_lab = load_xml_data(info['train'])
+            X_test, Y_test, _, _ = load_xml_data(info['test'])
+        except Exception as e:
+            print(f"Failed to load data for {ds_name}: {e}")
+            continue
+            
+        n_feat = max(n_feat, X_test.shape[1])
+        
+        # Calculate Propensity Scores
+        print("Calculating propensity scores...")
+        propensity = get_propensity_scores(Y_train, n_lab)
+        
+        # Config
+        BATCH_SIZE = 1024
+        # Adjust embedding dim based on dataset size if needed? 
+        # Keeping constant 256 for now.
+        EMBED_DIM = 256 
+        LR = 1e-3
+        EPOCHS = 3 # Keep low for speed as per user preference in previous turns
+        
+        train_ds = XMLDataset(X_train, Y_train, n_lab, BATCH_SIZE, shuffle=True)
+        test_ds = XMLDataset(X_test, Y_test, n_lab, BATCH_SIZE, shuffle=False)
+        
+        ds_results = {}
+        
+        # Models to test
+        all_configs = [
+            ('Yat (Exact)', {'exact': True, 'spherical': False}),
+            ('Yat (Spherical)', {'exact': True, 'spherical': True}),
+            ('FullSoftmax', {}),
+            #('Performer', {'attention_type': 'performer', 'attention_kwargs': {'kernel_size': 64}}),
+            ('SLAY (Approx)', {'attention_type': 'slay', 'attention_kwargs': {'num_features': 32, 'num_quadrature_nodes': 2}}),
+        ]
+        
+        if method_filter == "all":
+            configs = all_configs
+        else:
+            configs = [c for c in all_configs if method_filter.lower() in c[0].lower()]
+            if not configs:
+                print(f"No method matched filter '{method_filter}'. Available: {[c[0] for c in all_configs]}")
+                continue
+
+        for name, args in configs:
+            print(f"\nTraining {name} on {ds_name}...")
+            rngs = nnx.Rngs(0)
+            
+            if name == 'FullSoftmax':
+                model = FullSoftmaxXML(n_feat, n_lab, EMBED_DIM, rngs=rngs)
+            elif args.get('exact'):
+                 if args.get('spherical'):
+                     model = ExactSphericalYatXML(n_feat, n_lab, EMBED_DIM, rngs=rngs)
+                 else:
+                     model = ExactYatXML(n_feat, n_lab, EMBED_DIM, rngs=rngs)
+            else:
+                try:
+                    model = KernelXML(n_feat, n_lab, EMBED_DIM, **args, rngs=rngs)
+                except ValueError as e:
+                    print(f"Skipping {name}: {e}")
+                    continue
+                
+            optimizer = nnx.Optimizer(model, optax.adam(LR), wrt=nnx.Param)
+            
+            @nnx.jit
+            def train_step(model, optimizer, indices, mask, labels, label_mask):
+                 def loss_fn(m):
+                     return m.loss(indices, mask, labels, label_mask)
+                 
+                 loss, grads = nnx.value_and_grad(loss_fn)(model)
+                 optimizer.update(model, grads)
+                 return loss
+    
+            def train_epoch(model, optimizer):
+                total_loss = 0
+                count = 0
+                for batch in train_ds:
+                    indices = batch['features']
+                    mask = batch['masks']
+                    labels = batch['labels']
+                    label_mask = batch['label_masks']
+                    
+                    loss = train_step(model, optimizer, indices, mask, labels, label_mask)
+                    
+                    total_loss += loss
+                    count += 1
+                    
+                return total_loss / count
+    
+            for ep in range(EPOCHS):
+                t0 = time.time()
+                loss = train_epoch(model, optimizer)
+                print(f"Ep {ep+1} | Loss: {loss:.4f} | Time: {time.time()-t0:.2f}s")
+                
+            # Eval
+            all_preds = []
+            all_targets = []
+            for batch in test_ds:
                 indices = batch['features']
                 mask = batch['masks']
-                labels = batch['labels']
-                label_mask = batch['label_masks']
+                # Predict top 5
+                _, top_k = model.predict(indices, mask, k=5)
+                all_preds.extend(top_k)
+                all_targets.extend(batch['labels'])
                 
-                loss = train_step(model, optimizer, indices, mask, labels, label_mask)
-                
-                total_loss += loss
-                count += 1
-                
-            return total_loss / count
-
-        for ep in range(EPOCHS):
-            t0 = time.time()
-            loss = train_epoch(model, optimizer)
-            print(f"Ep {ep+1} | Loss: {loss:.4f} | Time: {time.time()-t0:.2f}s")
+            pk = precision_at_k(all_targets, all_preds, k=5)
+            pspk = psp_at_k(all_targets, all_preds, propensity, k=5)
             
-        # Eval
-        all_preds = []
-        all_targets = []
-        for batch in test_ds:
-            indices = batch['features']
-            mask = batch['masks']
-            _, top_k = model.predict(indices, mask, k=5)
-            all_preds.extend(top_k)
-            all_targets.extend(batch['labels'])
+            print(f"Results for {name}:")
+            print(f"  P@1: {pk[0]:.4f}, P@3: {pk[2]:.4f}, P@5: {pk[4]:.4f}")
+            print(f"  PSP@1: {pspk[0]:.4f}, PSP@3: {pspk[2]:.4f}, PSP@5: {pspk[4]:.4f}")
             
-        score = precision_at_k(all_targets, all_preds, k=5)
-        print(f"Final P@5: {score:.4f}")
-        results[name] = score
+            ds_results[name] = {
+                'P@1': pk[0], 'P@3': pk[2], 'P@5': pk[4],
+                'PSP@1': pspk[0], 'PSP@3': pspk[2], 'PSP@5': pspk[4]
+            }
+            
+        final_results[ds_name] = ds_results
         
-    return results
+    return final_results
 
 def generate_latex(results):
     print("\nGenerating LaTeX Table...")
@@ -539,19 +809,31 @@ def generate_latex(results):
     with open(path, "w") as f:
         f.write(r"\begin{table}[h]" + "\n")
         f.write(r"\centering" + "\n")
-        f.write(r"\begin{tabular}{lc}" + "\n")
+        f.write(r"\begin{tabular}{l l cccccc}" + "\n")
         f.write(r"\toprule" + "\n")
-        f.write(r"Method & P@5 \\" + "\n")
+        f.write(r"Dataset & Method & P@1 & P@3 & P@5 & PSP@1 & PSP@3 & PSP@5 \\" + "\n")
         f.write(r"\midrule" + "\n")
-        for method, score in results.items():
-            f.write(f"{method} & {score:.4f} \\\\" + "\n")
+        
+        for ds_name, methods in results.items():
+            first = True
+            for method, metrics in methods.items():
+                ds_label = ds_name if first else ""
+                f.write(f"{ds_label} & {method} & {metrics['P@1']:.4f} & {metrics['P@3']:.4f} & {metrics['P@5']:.4f} & {metrics['PSP@1']:.4f} & {metrics['PSP@3']:.4f} & {metrics['PSP@5']:.4f} \\\\" + "\n")
+                first = False
+            f.write(r"\midrule" + "\n")
+            
         f.write(r"\bottomrule" + "\n")
         f.write(r"\end{tabular}" + "\n")
-        f.write(r"\caption{Extreme Classification Results on Eurlex}" + "\n")
+        f.write(r"\caption{Extreme Classification Benchmark Results}" + "\n")
         f.write(r"\label{tab:extreme_results}" + "\n")
         f.write(r"\end{table}" + "\n")
     print(f"Table saved to {path}")
 
 if __name__ == "__main__":
-    results = run_benchmark()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", type=str, default="LF-AmazonTitles-131K", help="Dataset to run (or 'all')")
+    parser.add_argument("--method", type=str, default="all", help="Method to run (filter)")
+    args = parser.parse_args()
+    
+    results = run_benchmark(args.dataset, args.method)
     generate_latex(results)
