@@ -83,7 +83,7 @@ class _YatPerformerPolyBase(nn.Module):
 
     def _can_use_vectorized(self, B, T, dtype, device):
             # Conservative safety margin
-            SAFETY = 0.4
+            SAFETY = 0.3
         
             bytes_per_elem = torch.tensor(0, dtype=dtype).element_size()
         
