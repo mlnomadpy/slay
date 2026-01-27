@@ -120,10 +120,12 @@ class _YatPerformerPolyBase(nn.Module):
             k_cumsum = torch.cumsum(k_outer, dim=3)
             
             # Attention
-            context = torch.einsum("rbhtpm,rbhtpmd->bhtd", q_outer, kv_cumsum)            
-            norm = torch.linalg.norm(context, dim=-1, keepdim=True)
+            context = torch.einsum("rbhtpm,rbhtpmd->bhtd", q_outer, kv_cumsum)
+            norm = torch.einsum("rbhtpm,rbhtpm->bht", q_outer, k_cumsum)
+            
             norm = torch.clamp(norm, min=1e-6)
-            out = context / norm
+            
+            out = context / norm.unsqueeze(-1)
 
         else:
             # Chunked chunked causal linear attention
