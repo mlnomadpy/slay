@@ -132,13 +132,13 @@ class _YatPerformerPolyBase(nn.Module):
         R = self.num_quadrature_nodes
         M = self.num_prf_features
 
-        omega = self.omega.float()
+        omega = self.omega.to(dtype=x.dtype)
         # Shape: (B, H, T, D) @ (R, H, D, M) -> (R, B, H, T, M)
         proj = torch.einsum("bhtd,rhdm->rbhtm", x, omega)
 
         # sqrt(2s_r) scaling factor
-        sqrt_2s = torch.sqrt(2.0 * self.quad_nodes.clamp(min=0)).view(R, 1, 1, 1, 1)
-        s_vals = self.quad_nodes.view(R, 1, 1, 1, 1)
+        sqrt_2s = torch.sqrt(2.0 * self.quad_nodes.clamp(min=0)).view(R, 1, 1, 1, 1).to(dtype=x.dtype)
+        s_vals = self.quad_nodes.view(R, 1, 1, 1, 1).to(dtype=x.dtype)
 
         # exp(√(2s)·ω^T·u - s), with clamping for numerical stability
         exp_arg = torch.clamp(proj * sqrt_2s - s_vals, min=-20.0, max=20.0)
@@ -159,7 +159,7 @@ class _YatPerformerPolyBase(nn.Module):
             Weighted PRF features (R, B, H, T, M)
         """
         R = self.num_quadrature_nodes
-        sq_weights = torch.sqrt(self.quad_weights.clamp(min=0)).view(R, 1, 1, 1, 1)
+        sq_weights = torch.sqrt(self.quad_weights.clamp(min=0)).view(R, 1, 1, 1, 1).to(dtype=prf_features.dtype)
         return prf_features * sq_weights
 
     def _sketch_tensor_product(self, poly_feat, prf_feat):
@@ -192,7 +192,7 @@ class _YatPerformerPolyBase(nn.Module):
         sketched = torch.zeros(R, B, H, T, D_t, device=outer.device, dtype=outer.dtype)
         for i in range(P * M):
             bucket = self.sketch_hash[i]
-            sign = self.sketch_sign[i]
+            sign = self.sketch_sign[i].to(dtype=outer.dtype)
             sketched[..., bucket] += sign * outer_flat[..., i]
         
         return sketched
@@ -319,8 +319,9 @@ class _YatPerformerPolyBase(nn.Module):
             kv = torch.einsum("rbhtpm,bhtd->rbhtpmd", k_outer, v)
             
             # Causal cumsum along T (dim 3)
-            kv_cumsum = torch.cumsum(kv, dim=3)
-            k_cumsum = torch.cumsum(k_outer, dim=3)
+            # FORCE FLOAT32 for accumulation stability
+            kv_cumsum = torch.cumsum(kv.float(), dim=3).to(dtype=q.dtype)
+            k_cumsum = torch.cumsum(k_outer.float(), dim=3).to(dtype=q.dtype)
             
             # Attention: sum over quadrature nodes
             context = torch.einsum("rbhtpm,rbhtpmd->bhtd", q_outer, kv_cumsum)
@@ -380,12 +381,12 @@ class _YatPerformerPolyBase(nn.Module):
                 # Local cumsum and state updates
                 if self.use_sketching:
                     kv_chunk_prod = torch.einsum("rbhtd,bhtv->rbhtdv", k_outer, v_chunk)
-                    kv_local_cumsum = torch.cumsum(kv_chunk_prod, dim=3)
-                    k_local_cumsum = torch.cumsum(k_outer, dim=3)
+                    kv_local_cumsum = torch.cumsum(kv_chunk_prod.float(), dim=3).to(dtype=q.dtype)
+                    k_local_cumsum = torch.cumsum(k_outer.float(), dim=3).to(dtype=q.dtype)
                 else:
                     kv_chunk_prod = torch.einsum("rbhtpm,bhtd->rbhtpmd", k_outer, v_chunk)
-                    kv_local_cumsum = torch.cumsum(kv_chunk_prod, dim=3)
-                    k_local_cumsum = torch.cumsum(k_outer, dim=3)
+                    kv_local_cumsum = torch.cumsum(kv_chunk_prod.float(), dim=3).to(dtype=q.dtype)
+                    k_local_cumsum = torch.cumsum(k_outer.float(), dim=3).to(dtype=q.dtype)
     
                 kv_local_cumsum += kv_state.unsqueeze(3)
                 kv_current = kv_local_cumsum
@@ -1093,6 +1094,64 @@ def test_speed_benchmarking():
                         raise
 
 
+def test_float16_stability():
+    """
+    Test numerical stability with float16 inputs.
+    """
+    print("\n" + "="*80)
+    print("FLOAT16 STABILITY TEST")
+    print("="*80)
+    
+    if not torch.cuda.is_available():
+        print("CUDA not available, skipping float16 test")
+        return
+
+    device = torch.device("cuda")
+    dtype = torch.float16
+    
+    # Test parameters
+    B, T, embed_dim, n_heads = 1, 128, 64, 2
+    
+    try:
+        model = YatPerformerAnchorCausalAttention(
+            embed_dim=embed_dim,
+            n_heads=n_heads,
+            num_prf_features=8,
+            num_quadrature_nodes=1,
+            poly_dim=8,
+        ).to(device).half().eval()  # Weights cast to float16
+        
+        # Input in float16
+        x = torch.randn(B, T, embed_dim, device=device, dtype=dtype)
+        
+        print(f"Input dtype: {x.dtype}")
+        
+        # Forward pass
+        with torch.no_grad():
+            out = model(x)
+        
+        print(f"Output dtype: {out.dtype}")
+        print(f"Output finite elements: {torch.isfinite(out).sum()}/{out.numel()}")
+        
+        if torch.isnan(out).any() or torch.isinf(out).any():
+             print("✗ FAILED: Output contains NaNs or Infs")
+        elif out.dtype != dtype:
+             print(f"✗ FAILED: Output dtype mismatch (expected {dtype}, got {out.dtype})")
+        else:
+             print("✓ PASSED: Forward pass successful in float16")
+
+    except Exception as e:
+        print(f"✗ FAILED: Exception occurred: {e}")
+        # print full traceback if needed
+        import traceback
+        traceback.print_exc()
+    
+    print("\n" + "="*80)
+    print(" ALL TESTS COMPLETED")
+    print("="*80 + "\n")
+
+
+
 if __name__ == "__main__":
     print("\n" + "="*80)
     print(" SPHERICAL YAT-PERFORMER: COMPREHENSIVE TEST SUITE")
@@ -1103,8 +1162,5 @@ if __name__ == "__main__":
     test_feature_properties()
     test_consistency()
     test_memory_scaling()
+    test_float16_stability()
     test_speed_benchmarking()
-    
-    print("\n" + "="*80)
-    print(" ALL TESTS COMPLETED")
-    print("="*80 + "\n")
