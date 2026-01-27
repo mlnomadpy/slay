@@ -23,6 +23,9 @@
 \usepackage{pgfplots}
 \usepgfplotslibrary{groupplots}
 
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{natbib}
 
 \pgfplotsset{compat=1.18}
 
@@ -83,113 +86,114 @@ Spherical Linearized Attention with Yat-Kernel}
 % Abstract
 % ------------------------------------------------------------
 \begin{abstract}
-The Yat-product operator $\E(q,k)$ yields geometry-aware interactions but leads to quadratic $O(L^2)$ attention due to a non-factorizable denominator. We introduce \emph{SLAY} (\emph{Spherical Linearized Attention with YAT-Kernels}), which constrains queries and keys to the unit sphere so the kernel depends only on angular alignment. Using Bernstein’s theorem, we express the spherical YAT kernel as a nonnegative mixture of polynomial--exponential product kernels and derive a strictly positive random-feature approximation with linear-time $O(L)$ attention. We prove positive definiteness and boundedness on the sphere and show the estimator yields nonnegative scores with a positive denominator under mild conditions. Empirically, SLAY matches full spherical YAT attention and compares favorably to linearized baselines on language modeling and image classification while retaining linear scaling in $L$.
+We propose a new class of linear-time attention mechanisms, relying on the relaxed, computationally-efficient version of the recently introduced \emph{\E-Product}, often referred to as the Yat-kernel \citep{bouhsine2025no}, yielding geometry-aware interactions and inspired by the inverse-square interactions in Physics. Our introduced \emph{Spherical Linearized Attention with YAT-Kernels}, or \emph{SLAY}, constrains queries and keys to the unit sphere so the kernel depends only on the angular alignment. Using Bernstein’s Theorem, we express the spherical YAT-kernel as a nonnegative mixture of polynomial--exponential product kernels and derive a strictly positive random-feature approximation with linear-time $O(L)$ attention, where $L$ stands for the sequence length. We prove positive definiteness and boundedness on the sphere and show that the estimator yields nonnegative scores with a positive denominator under mild conditions. Empirically, SLAY matches full spherical YAT attention and compares favorably to linearized baselines on language and vision tasks, while retaining linear scaling in $L$.
 \end{abstract}
 
 % ============================================================
 % 1. Introduction
 % ============================================================
-\section{Introduction}
+\section{Introduction \& Related Work}
 \label{sec:intro}
 
-Transformer models owe much of their success to attention, which enables dynamic, content-dependent interactions between tokens. In standard Transformers, attention is implemented via softmax applied to pairwise query--key similarities. While expressive, this requires constructing an explicit $L \times L$ attention matrix for a sequence of length $L$, resulting in quadratic time and memory complexity. This cost rapidly becomes prohibitive as context lengths grow, fundamentally limiting long-context modeling.
+Transformer models \citep{transformers-base, vit, bert, brown, longt5, bigbird} owe much of their success to the \textit{attention mechanism}, which enables dynamic, content-dependent interactions between tokens. In standard Transformers, attention is implemented via softmax operation applied to pairwise query--key similarities. While expressive, it requires constructing explicit $L \times L$ attention matrices for $L$-length input sequences, resulting in quadratic in $L$ time and space complexity. This cost rapidly becomes prohibitive as context lengths grow, fundamentally limiting long-context modeling \citep{yaofu}.
 
-To overcome this bottleneck, \emph{linear attention} mechanisms reinterpret attention as kernel evaluation and exploit feature maps to reorder computation. Early examples include kernelized Transformers \citep{katharopoulos2020transformers} and random-feature approximations of the softmax kernel \citep{choromanski2021}. These works show that positive random features can yield stable and scalable attention for specific kernels.
+To overcome this bottleneck several so-called \textit{efficient-attention} mechanisms, characterized by time complexity sub-quadratic (often linear) in $L$ were proposed.
+They leverage a large spectrum of techniques ranging from clustering/hashing \citep{reformer, routing, lsh-transformer, clustr} to approaches casting attention matrix as a kernel matrix and applying techniques based on random features (RFs) \citep{performers, performer2, chefs, dense-exponential, luo, fft-t, arora}. Those mechanisms critically rely on \textbf{positive} RFs, since regular trigonometric mechanisms, that can be derived from the seminal papers on linearizing shift-invariant kernels \citep{random-features, sinks} lead to unstable training.
 
-Our approach linearizes the spherical \E-product kernel directly rather than applying a softmax to it, and uses positivity-preserving approximations to ensure stable kernel normalization.
+Despite these advances, softmax attention remains tied to a specific similarity: the exponential of an inner product. This choice conflates alignment and magnitude, and its unbounded growth requires careful normalization and stabilization. These limitations motivate alternative attention kernels that are geometrically grounded, self-regularizing, and compatible with efficient computation, as explored in activation-free architectures \citep{bouhsine2025no}.
 
-Despite these advances, softmax attention remains tied to a specific similarity: the exponential of an inner product. This choice conflates alignment and magnitude, and its unbounded growth requires careful normalization and stabilization. These limitations motivate alternative attention kernels that are geometrically grounded, self-regularizing, and compatible with efficient computation, as explored in activation-free architectures \citep{nmn2026}.
-
-Neural Matter Networks (NMNs) introduced the \emph{\E-Product} (also referred to as the Yat-product) \citep{nmn2026}, a kernel operator inspired by inverse-square interactions in physics:
+\textit{Neural Matter Networks (NMNs)} introduced the \emph{\E-Product}, also referred to as the Yat-kernel \citep{bouhsine2025no}, a kernel operator inspired by inverse-square interactions in physics:
 \begin{equation}
-\E(q,k) = \frac{(q^\top k)^2}{\|q-k\|^2 + \epsilon}
+\E(\mathbf{q},\mathbf{k}) \overset{\mathrm{def}}{=} \frac{(\mathbf{q}^\top \mathbf{k})^2}{\|\mathbf{q}-\mathbf{k}\|^2 + \epsilon}
 \label{eq:eproduct}
 \end{equation}
 where $\epsilon > 0$ ensures numerical stability. Unlike standard dot-product similarity, the \E-Product explicitly couples two geometric quantities: \emph{alignment} and \emph{proximity}. The squared inner product in the numerator yields an even (sign-symmetric) alignment score, while the inverse-distance denominator penalizes interactions between distant vectors. This ratio yields a self-regularizing response that can suppress irrelevant interactions without requiring explicit activation functions or normalization layers.
 
-From a theoretical perspective, the \E-Product can be viewed as a kernel-like similarity operator. NMNs constructed as linear combinations of \E-Product units are universal approximators on compact domains, despite being entirely activation-free \citep{nmn2026}. In this work, we focus on a unit-norm (spherical) setting where the resulting isotropic kernel admits a clean positive-definiteness proof and stable, bounded responses.
+From a theoretical perspective, the \E-Product can be viewed as a kernel-like similarity operator. The NMNs, constructed as linear combinations of \E-Product units, are universal approximators on compact domains, despite being entirely activation-free \citep{bouhsine2025no}. In the context of attention, the \E-Product offers a geometry-aware alternative to softmax similarity. It favors tokens that are both aligned and close in representation space. However, the same geometric coupling introduces a computational obstacle: the denominator $\|\mathbf{q}-\mathbf{k}\|_{2}^2 = \|\mathbf{q}\|_{2}^2 + \|\mathbf{k}\|_{2}^2 - 2\mathbf{q}^\top \mathbf{k}$ entangles query and key terms and prevents the factorization required for efficient linear attention. As a result, naive \E-Product attention still requires explicit pairwise interactions and reverts to quadratic complexity. This mirrors the general limitation for non-factorizable kernels that motivates linearization techniques such as those used in Performers and related models \citep{performers, hedgehog, insuhan}.
 
-In the context of attention, the \E-Product offers a geometry-aware alternative to softmax similarity. It favors tokens that are both aligned and close in representation space. However, the same geometric coupling introduces a computational obstacle: the denominator $\|q-k\|^2 = \|q\|^2 + \|k\|^2 - 2q^\top k$ entangles query and key terms and prevents the factorization required for efficient linear attention. As a result, naive \E-Product attention still requires explicit pairwise interactions and reverts to quadratic complexity. This mirrors the general limitation for non-factorizable kernels that motivates linearization techniques such as those used in Performer \citep{choromanski2021}.
-
-This paper addresses this limitation for \E-Attention. We show that by constraining queries and keys to lie on the unit sphere and reformulating the resulting kernel using Bernstein’s theorem, the \E-Product admits a nonnegative mixture representation that can be approximated by strictly positive random features. This yields a linear-time attention mechanism that preserves the core geometric and self-regulating properties of the \E-Product while enabling scalable long-context Transformers.
-
-\paragraph{Contributions.}
-We introduce SLAY (\textbf{Spherical YAT-Attention}), a geometry-aware attention mechanism, with the following characteristics:
+This paper addresses this limitation for \E-Attention. We show that by constraining queries and keys to lie on the unit sphere and reformulating the resulting kernel using Bernstein’s Theorem, the \E-Product admits a nonnegative mixture representation, involving polynomial--exponential product kernels, that can be approximated by strictly positive random features. This yields a linear-time attention mechanism that preserves the core geometric and self-regulating properties of the \E-Product while enabling scalable long-context Transformers. We refer to our proposed mechanism as: \emph{Spherical Linearized Attention with YAT-Kernels}, or \emph{SLAY}. Empirically, SLAY matches full spherical YAT attention and compares favorably to linearized baselines on regular Transformer tasks, while retaining $O(L)$-scaling. To summarize, SLAY:
+\vspace{-2mm}
 \begin{itemize}[leftmargin=1.4em]
 \item Enforces unit-norm constraints on queries and keys, decoupling alignment and distance.
-\item Linearizes the spherical \E-product via an integral representation based on Bernstein’s theorem.
+\vspace{-1mm}
+\item Linearizes the spherical \E-product via an integral representation based on Bernstein’s Theorem.
+\vspace{-1mm}
 \item Approximates the resulting kernel using strictly positive Tensor Product Random Features.
+\vspace{-1mm}
 \item Achieves linear-time $O(L)$ attention while preserving key theoretical properties of NMNs.
 \end{itemize}
+\vspace{-2mm}
+This paper is organized as follows: (1) in Section \ref{sec:method}, we present SLAY and provide detailed corresponding theoretical insight, (2) in Section \ref{sec:experiments} we test SLAY on various tasks, including language and vision, by comparing quality-wise with the brute-force mechanisms, as well as other efficient attention methods. We also present speed tests. We conclude in Section \ref{sec:conclusion} and provide additional results in the Appendix.
 
 % ============================================================
 % 2. Methodology
 % ============================================================
-\section{Methodology}
+\section{SLAY Mechanism}
 \label{sec:method}
 
-Our goal is to compute \E-attention with the spherical \E-product kernel from Eq.~\eqref{eq:spherical} without forming the $L\times L$ matrix of pairwise interactions.
-We first normalize queries/keys to the unit sphere so the kernel depends only on $x=\hat q^\top \hat k\in[-1,1]$. We then linearize the non-factorizable term $1/(C-2x)$ via a Laplace integral (Bernstein's theorem), discretize the resulting nonnegative mixture using Gauss--Laguerre quadrature, and approximate each product kernel with strictly positive random features. Finally, we apply the standard kernel-attention reordering using the resulting feature map $\widetilde{\Psi}(\cdot)$.
+\subsection{Preliminaries}
+\label{sec:preliminaries}
+Denote by $\mathbf{Q} \in \mathbb{R}^{L \times d_{QK}}, \mathbf{K} \in \mathbb{R}^{L \times d_{QK}}$ the query- and key-matrix respectively, with rows denoted as follows: $\mathbf{q}_{1},...,\mathbf{q}_{L} \in \mathbb{R}^{d_{QK}}$ and $\mathbf{k}_{1},...,\mathbf{k}_{L} \in \mathbf{R}^{d_{QK}}$. The attention matrix $\mathbf{A}_{\E} \in \mathbb{R}^{L \times L}$ considered in this paper is of the form: $\mathbf{A}_{\E}=[\E(\mathbf{\widehat{q}}_{i},\mathbf{\widehat{k}}_{j})]_{i=1,...,L}^{j=1,...,L}$, where $\widehat{\mathbf{x}}$ denotes the $L_{2}$-normalized version of $\mathbf{x}$. Our goal is to compute the attention action leveraging $\mathbf{A}_{\E}$, that we refer to as \E-attention, with the spherical constraints, without forming the $L\times L$ matrix $\mathbf{A}_{\E}$ of pairwise interactions. We proceed in several steps, summarized below:
+\begin{itemize}
+\item linearization of the non-factorizable terms induced by denominators in the YAT-kernel formula via a Laplace integral (Bernstein's Theorem),
+\item discretization of the resulting nonnegative mixture using Gauss--Laguerre quadrature,
+\item approximating resulting kernels with positive random features from \citep{performers},
+\item applying standard matrix multiplication re-ordering for the calculations involving obtained low-rank factorized attention matrix.
+\end{itemize}
 
-Throughout this work, we approximate the spherical \E-product (YAT) kernel itself; normalization is performed via kernel sums as in linear attention, not via a softmax nonlinearity.
+%Throughout this work, we approximate the spherical \E-product %(YAT) kernel itself; normalization is performed via kernel %sums as in linear attention, not via a softmax nonlinearity.
 
 \subsection{Spherical Constraint}
 
-We assume $d \ge 2$ throughout, where spherical isotropy theory applies. We normalize inputs to the unit sphere:
-\[
-\hat q = \frac{q}{\|q\|}, \qquad \hat k = \frac{k}{\|k\|}, \qquad \|\hat q\|=\|\hat k\|=1.
-\]
+We assume $d \ge 2$ throughout, where spherical isotropy theory applies. We normalize inputs as follows:
+\begin{equation}
+\widehat{\mathbf{q}} = \frac{\mathbf{q}}{\|\mathbf{q}\|_{2}},
+\widehat{\mathbf{k}} = \frac{\mathbf{q}}{\|\mathbf{k}\|_{2}},
+\|\widehat{\mathbf{q}}\|_{2}=\|\widehat{\mathbf{k}}\|_{2}=1
+\end{equation}
 Expanding the denominator of Eq.~\eqref{eq:eproduct} yields:
 \begin{align}
-\|\hat q-\hat k\|^2 + \epsilon
-&= \|\hat q\|^2 + \|\hat k\|^2 - 2\hat q^\top \hat k + \epsilon \\
-&= (2+\epsilon) - 2\hat q^\top \hat k.
+\|\widehat{\mathbf{q}}-\widehat{\mathbf{k}}\|_{2}^2 + \epsilon
+&= \|\widehat{\mathbf{q}}\|_{2}^2 + \|\widehat{\mathbf{k}}\|_{2}^2 - 2\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}} + \epsilon \\
+&= (2+\epsilon) - 2\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}}.
 \end{align}
-Let $x=\hat q^\top \hat k\in[-1,1]$ and $C=2+\epsilon$. The spherical \E-product becomes
+Let $x=\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}}\in[-1,1]$ and $C=2+\epsilon$. After input normalization, the spherical \E-product becomes:
 \begin{equation}
-\E_{\text{sph}}(\hat q,\hat k)
+\E_{\text{sph}}(\widehat{\mathbf{q}},\widehat{\mathbf{{k}}})
 = \frac{x^2}{C-2x}.
 \label{eq:spherical}
 \end{equation}
 Thus, the kernel depends only on angular alignment.
 
 \paragraph{Geometric intuition.}
-On the unit sphere $\Sph^{d-1}$, the squared \emph{chordal} distance is
+On the unit sphere $\Sph^{d-1}$, the squared \emph{chordal} distance is defined as follows:
 \[
-d_{\Sph^{d-1}}(\hat q, \hat k)^2 = 2(1 - \hat q^\top \hat k),
+d_{\Sph^{d-1}}(\widehat{\mathbf{q}}, \widehat{\mathbf{k}})^2 = 2(1 - \widehat{\mathbf{q}}^\top \widehat{\mathbf{k}}).
 \]
-so the spherical \E-product can be written as a distance-regularized alignment score:
+We conclude that the spherical \E-product can be written as a distance-regularized alignment score:
 \begin{equation}
-\E_{\mathrm{sph}}(\hat q, \hat k) = \frac{\langle \hat q, \hat k \rangle^2}{d_{\Sph^{d-1}}(\hat q, \hat k)^2 + \epsilon}.
+\E_{\mathrm{sph}}(\hat q, \hat k) = \frac{(\widehat{\mathbf{q}}^{\top}\widehat{\mathbf{k}})^{2}}{d_{\Sph^{d-1}}(\widehat{\mathbf{q}}, \widehat{\mathbf{k}})^2 + \epsilon}.
 \label{eq:geometric}
 \end{equation}
 Additional discussion (including invariances and the connection to isotropic spherical kernels \citep{schoenberg1942}) is deferred to Appendix~\ref{app:geom}.
 
 \subsection{Integral Linearization}
-The function $g(y) = 1/y$ is completely monotone on $(0,\infty)$, which by Bernstein's theorem implies the Laplace representation $1/y = \int_0^\infty e^{-sy}\,ds$ \citep{widder1941laplace,schilling2012}. To apply this identity to our kernel, we substitute $y = C - 2x$ and verify that $y > 0$ for all $x \in [-1,1]$.
+With spherical constraints in place, our next step is to linearize the factor $\frac{1}{C-2x}$ in the Eq. \ref{eq:spherical} for the spherical \E-product. We will use Bernstein's Theorem for that.
 
-Since $x \le 1$ and $C=2+\epsilon$, we have $y=C-2x \ge \epsilon > 0$, hence Bernstein's representation applies on the full domain (see Lemma~\ref{lem:complete-monotone} in Appendix~\ref{app:background}).
+The function $g(y) = 1/y$ is completely monotone on $(0,\infty)$, which by Bernstein's Theorem implies the Laplace representation $1/y = \int_0^\infty e^{-sy}\,ds$ \citep{widder1941laplace,schilling2012}. To apply this identity to our kernel, we substitute $y = C - 2x$ and verify that $y > 0$ for all $x \in [-1,1]$. Since $x \le 1$ and $C=2+\epsilon$, we have $y=C-2x \ge \epsilon > 0$, hence Bernstein's representation applies (see Lemma~\ref{lem:complete-monotone} in Appendix~\ref{app:background}).
 
-
-Using Bernstein’s theorem for completely monotone functions, a standard tool in kernel analysis previously used to construct positive random feature approximations for exponential kernels \citep{choromanski2021},
-\begin{equation}
-\frac{1}{y} = \int_0^\infty e^{-sy}\,ds,
-\end{equation}
-we obtain
+We conclude that by invoking the Laplce representation, the spherical \E-product can be re-written as:
 \begin{align}
-\E_{\text{sph}}(\hat q,\hat k)
+\E_{\text{sph}}(\widehat{\mathbf{q}},\widehat{\mathbf{k}})
 &= x^2 \int_0^\infty e^{-s(C-2x)}ds \\
 &= \int_0^\infty e^{-sC}\,\Big[x^2 e^{2s x}\Big]\,ds.
 \label{eq:integral}
 \end{align}
 This expresses the spherical \E-product as a positively weighted mixture of product kernels:
-namely, a degree-2 polynomial factor $(\hat q^\top \hat k)^2$ multiplied by an exponential dot-product kernel $e^{2s\,\hat q^\top \hat k}$.
-
+namely, a degree-2 polynomial factor $(\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})^2$ multiplied by an exponential dot-product kernel $e^{2s\,\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}}}$.
 Importantly, the factor $x^2$ cannot be absorbed into a \emph{nonnegative} Laplace weight over plain exponentials without introducing signed correction terms (see Appendix~\ref{app:features}).
 
-This representation is analogous to the Laplace-transform-based decompositions used to derive unbiased positive random feature estimators for softmax and Gaussian kernels \citep{choromanski2021}.
-
-\subsection{Kernel Approximation and Positive Features}
+\subsection{Quadratures and Positive Features}
 
 \subsubsection{Quadrature (Gauss--Laguerre)}
 
@@ -203,33 +207,28 @@ s_r=\frac{t_r}{C},\qquad w_r=\frac{\alpha_r}{C}.
 \]
 Thus, the $w_r$ already incorporate the $1/C$ factor induced by $t=Cs$. Since $|x| \le 1$, the integrand $h(s) = x^2 e^{2sx}$ is entire and uniformly bounded by $e^{2s}$, ensuring uniform exponential convergence over $x \in [-1,1]$. Such bounds follow from classical results on Gauss--Laguerre quadrature for entire functions of exponential type (see Theorem 3.6.24 in \citep{davis1984,gautschi2004}); for a shapes/implementation summary, see Appendix~\ref{app:impl}.
 
-\subsubsection{Random features (polynomial and exponential)}
+\subsubsection{Polynomial and Exponential RFs}
 
-\paragraph{Polynomial component and approximations.}
-For the exact polynomial kernel $(\hat q^\top \hat k)^2$, the explicit feature map $\phi_{\text{poly}}(u) = \mathrm{vec}(u u^\top) \in \R^{d^2}$ yields exact reconstruction:
+\paragraph{Tensor sketches \& beyond for polynomial kernels:}
+For the exact polynomial kernel $(\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})^2$, the explicit feature map $\phi_{\text{poly}}(\mathbf{u}) = \mathrm{vec}(\mathbf{u} \mathbf{u}^\top) \in \R^{d^2}$ yields exact reconstruction:
 \[
-\langle \phi_{\text{poly}}(\hat q), \phi_{\text{poly}}(\hat k) \rangle = (\hat q^\top \hat k)^2.
+\langle \phi_{\text{poly}}(\widehat{\mathbf{q}}), \phi_{\text{poly}}(\widehat{\mathbf{k}}) \rangle = (\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})^2.
 \]
-In practice, we reduce dimensionality via low-dimensional approximations. We consider TensorSketch \citep{pham2013} as well as three common approximations to the degree-2 polynomial kernel $k_{\text{poly}}(x,y)=(x^\top y)^2$, described formally in Appendix~\ref{app:prelim-poly}: (i) Random Maclaurin (RM) features \citep{karkarnick2012}, (ii) Nystr"om features using anchor points \citep{williams2001nystrom}, and (iii) anchor features using squared inner products to fixed anchors.
+Note that vectors produced by $\phi_{\mathrm{poly}}$ maps are $d^{2}$-dimensional. In practice, we reduce dimensionality via standard low-dimensional reduction techniques. We consider TensorSketch \citep{pham2013} as well as three common approximations to the degree-2 polynomial kernel $k_{\text{poly}}(x,y)=(x^\top y)^2$, described formally in Appendix~\ref{app:prelim-poly}: (i) Random Maclaurin (RM) features \citep{karkarnick2012}, (ii) Nystrom features using anchor points \citep{williams2001nystrom}, and (iii) anchor features using squared inner products to fixed anchors.
 
-\paragraph{Anchor features.}
-Let anchors $\{a_i\}_{i=1}^P\subset\R^d$ be fixed reference vectors. Anchor features define
+\paragraph{Anchor features \citep{scholkopf2002learning}.}
+Let anchors $\{\mathbf{a}_i\}_{i=1}^P\subset\R^d$ be fixed reference vectors. Anchor features define mapping $\phi$ as follows:
 \[
-\phi_{\mathrm{anc}}(x) = \frac{1}{\sqrt{P}}\bigl[(x^\top a_i)^2\bigr]_{i=1}^P,
+\phi_{\mathrm{anc}}(\mathbf{x}) = \frac{1}{\sqrt{P}}\bigl[(\mathbf{x}^\top \mathbf{a}_i)^2\bigr]_{i=1}^P,
 \]
-yielding a simple low-rank approximation whose induced inner products are nonnegative.
+yielding a simple low-rank approximation whose induced inner products are nonnegative. Unlike Nystrom approximations, anchor features do not require inversion/whitening of the anchor Gram matrix and therefore preserve non-negativity of approximate kernel evaluations. Furthermore, they are empirically stable at small feature budgets, and computationally simple ($O(dP)$ per token). Thus, unless stated otherwise, we use \emph{anchor features} as the default polynomial approximation method in SLAY. The multi-scale sweep in Table~\ref{tab:poly-sweep} (Appendix~\ref{app:poly-ablation}) supports this choice.
 
-Unlike Nystr"om approximations, anchor features do not require inversion/whitening of the anchor Gram matrix and therefore preserve non-negativity of approximate kernel evaluations.
-
-\paragraph{Default choice.}
-Unless stated otherwise, we use \emph{anchor features} as the default polynomial approximation because they (i) preserve non-negativity of the polynomial component (supporting the denominator-positivity guarantees), (ii) are empirically stable at small feature budgets, and (iii) are computationally simple ($O(dP)$ per token). The multi-scale sweep in Table~\ref{tab:poly-sweep} (Appendix~\ref{app:poly-ablation}) supports this choice.
-
-Table~\ref{tab:poly-approximations} summarizes the trade-offs between polynomial approximations, highlighting positivity preservation as a key distinction.
+Table~\ref{tab:poly-approximations} summarizes the trade-offs between various techniques for approximating squared dot-product kernels, highlighting positivity preservation as a key distinction, determining the robustness of the technique. 
 
 \begin{table*}[t]
 \centering
 \small
-\caption{Polynomial kernel approximation options for $(x^\top y)^2$. Here $D_p$ denotes the polynomial-feature dimension, and $P$ denotes the number of anchors (when applicable). \emph{Feature cost} is the asymptotic cost of computing the polynomial features for one vector and excludes quadrature/PRF computation, tensor-product fusion/sketching, and the linear-attention contractions; these additional costs drive end-to-end latency in Section~\ref{sec:experiments}.}
+\caption{Polynomial kernel approximation options for the kernel $(\mathbf{x}^\top \mathbf{y})^2$. Here $D_p$ denotes the polynomial-feature dimension, and $P$ denotes the number of anchors (when applicable). \emph{Feature cost} is the asymptotic cost of computing the polynomial features for one vector and excludes quadrature/PRF computation, tensor-product fusion/sketching, and the linear-attention contractions; these additional costs drive end-to-end latency in Section~\ref{sec:experiments}.}
 \label{tab:poly-approximations}
 \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lcccc}
 \toprule
@@ -238,128 +237,150 @@ Method & Dim. & Feature cost & Unbiased? & $\langle\phi(x),\phi(y)\rangle\ge 0$?
 Exact $\mathrm{vec}(uu^\top)$ & $d^2$ & $O(d^2)$ & Yes & Yes \\
 TensorSketch \citep{pham2013} & $D_p$ & $\approx O(d + D_p\log D_p)$ & Approx. & No (not guaranteed) \\
 Random Maclaurin \citep{karkarnick2012} & $D_p$ & $O(d\,D_p)$ & Yes & No (not guaranteed) \\
-Nystr\"om \citep{williams2001nystrom} & $P$ & $O(d\,P)$ & Approx. & No (not guaranteed) \\
+Nystrom \citep{williams2001nystrom} & $P$ & $O(d\,P)$ & Approx. & No (not guaranteed) \\
 Anchor features (low-rank) \citep{scholkopf2002learning} & $P$ & $O(d\,P)$ & No & Yes \\
 \bottomrule
 \end{tabular*}
 \end{table*}
 
-For the theoretical non-negativity and denominator-positivity guarantees stated later, we require a polynomial component whose induced score estimates are nonnegative (e.g., the exact map, or anchor features). Signed polynomial approximations (TensorSketch, Random Maclaurin) and Nystr"om features can yield negative approximate inner products and are therefore treated as accuracy/efficiency baselines rather than positivity-guaranteeing estimators.
+For the theoretical non-negativity and denominator-positivity guarantees stated later, we require a polynomial component whose induced score estimates are nonnegative (e.g., the exact map, or anchor features). Signed polynomial approximations (TensorSketch, Random Maclaurin) and Nystrom features can yield negative approximate inner products and are therefore treated as accuracy/efficiency baselines rather than positivity-guaranteeing estimators.
 
 \paragraph{Why the polynomial factor is needed for fidelity.}
-The $x^2$ factor in Eq.~\eqref{eq:integral} is part of the target kernel; removing it yields a different kernel (see Appendix~\ref{app:features}).
+The $x^2$ factor in Eq.~\eqref{eq:integral} is part of the target kernel; removing it yields a different kernel (see Appendix~\ref{app:features}). Retaining the polynomial factor is essential both for kernel fidelity and for positivity guarantees of the resulting attention scores.
 
-Retaining the polynomial factor is essential both for kernel fidelity and for positivity guarantees of the resulting attention scores.
-
-\paragraph{Positive Random Features.}
-For the exponential term $e^{2s\,\hat q^\top \hat k}$, we use Positive Random Features applied to the \emph{original normalized vectors}:
+\paragraph{Positive Random Features (PRFs).}
+To handle the exponential term $e^{2s\,\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}}}$ from Eq. \ref{eq:integral}, we use PRFs for the exponential kernel, proposed in \citep{performers}, applied to the \emph{original normalized vectors} (we refer to them simply as PRFs; note that this is a different mechanisms than features used to approximate squared dot-product kernels, discussed above):
 \begin{equation}
-\phi_{\text{PRF}}(u; s)
+\phi_{\text{PRF}}(\mathbf{u}; s)
 =
 \frac{1}{\sqrt{D}}
 \left[
-\exp\!\left(\sqrt{2s}\,\omega_i^\top u - s\right)
+\exp\!\left(\sqrt{2s}\,\omega_i^\top \mathbf{u} - s\right)
 \right]_{i=1}^D,
 \end{equation}
-where $\omega_i \sim \mathcal{N}(0, I_d)$ are drawn independently.
-This construction satisfies
+where $\omega_i \sim \mathcal{N}(0, \mathbf{I}_d)$ are drawn independently.
+This construction satisfies:
 \[
 \mathbb{E}\!\left[
-\langle \phi_{\text{PRF}}(\hat q; s),
-\phi_{\text{PRF}}(\hat k; s) \rangle
+\phi^{\top}_{\text{PRF}}(\hat q; s)
+\phi_{\text{PRF}}(\hat k; s) 
 \right]
 =
-e^{2s\,\hat q^\top \hat k}
+e^{2s\,\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}}}
 \]
-for unit-norm inputs (a standard positive random feature identity for exponential dot-product kernels; see \citep{choromanski2021} and Proposition~\ref{prop:prf-unbiased} in Appendix~\ref{app:background}).
+for unit-norm inputs (a standard unbiasedness result for positive random features; see \citep{performers} and Prop.~\ref{prop:prf-unbiased} in Appendix~\ref{app:background}).
 
-\subsubsection{Fusing polynomial and PRF features}
-
-\paragraph{Fusion.}
-Since the polynomial and PRF feature maps are applied to vectors (not scalars), we obtain for each scale $r$:
+\subsubsection{Fusing RFs for Polynomial \& Exponential Kernels}
+Since polynomial feature maps and PRFs are applied to vectors (not scalars), we obtain for each scale $r$:
 \begin{equation}
-\widetilde{\Psi}_r(u)
+\widetilde{\Psi}_r(\mathbf{u})
 =
-\sqrt{w_r}\,\mathcal{S}\Bigl(\phi_{\text{poly}}(u)\otimes \phi_{\text{PRF}}(u; s_r)\Bigr),
+\sqrt{w_r}\,\mathcal{S}\Bigl(\phi_{\text{poly}}(\mathbf{u})\otimes \phi_{\text{PRF}}(\mathbf{u}; s_r)\Bigr),
 \end{equation}
 where $\mathcal{S}:\R^{D_pD_r}\to\R^{D_t}$ is a (randomized) sketching operator that approximates the tensor-product feature map without explicitly materializing the $D_pD_r$-dimensional Kronecker vector.
-We then define $\widetilde{\Psi}(u)$ as the concatenation over $r=1,\dots,R$.
+We then define $\widetilde{\Psi}(\mathbf{u})$ as the concatenation over $r=1,\dots,R$ (where $R$ stands for the number of quadrature nodes). Conceptually, the target kernel at each quadrature node is the product kernel $(\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})^2\,e^{2s_r\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}}}$, whose RKHS is the tensor product $\mathcal{H}_{\text{poly}}\otimes\mathcal{H}_{\exp,s_r}$. The sketching operator $\mathcal{S}$ provides a computationally efficient approximation of this tensor-product feature map.
 
-Conceptually, the target kernel at each quadrature node is the product kernel $(\hat q^\top \hat k)^2\,e^{2s_r\hat q^\top \hat k}$, whose RKHS is the tensor product $\mathcal{H}_{\text{poly}}\otimes\mathcal{H}_{\exp,s_r}$. The sketching operator $\mathcal{S}$ provides a computationally efficient approximation of this tensor-product feature map.
-
-\begin{adjustwidth}{1.5em}{1.5em}
+%\begin{adjustwidth}{1.5em}{1.5em}
 \begin{remark}[Feature Map Target]
 \label{rem:feature-target}
 $\widetilde{\Psi}$ targets the \emph{integrand} $k_s(x)=x^2 e^{2sx}$; consequently,
+\vspace{-2mm}
 \[
 \mathbb{E}[\langle \widetilde{\Psi}(\hat q), \widetilde{\Psi}(\hat k) \rangle] \approx \sum_{r=1}^R w_r\,(\hat q^\top \hat k)^2 e^{2s_r\hat q^\top \hat k},
 \]
 which is a quadrature approximation to Eq.~\eqref{eq:integral}.
 \end{remark}
-\end{adjustwidth}
+%\end{adjustwidth}
 
-\begin{adjustwidth}{1.5em}{1.5em}
+%\begin{adjustwidth}{1.5em}{1.5em}
 \begin{remark}[Bias Decomposition]
 \label{rem:bias}
 $\langle \widetilde{\Psi}(\hat q), \widetilde{\Psi}(\hat k) \rangle$ is unbiased for the discretized (quadrature) kernel, but biased for the true kernel unless $R\to\infty$.
 \end{remark}
-\end{adjustwidth}
-
+%\end{adjustwidth}
+\vspace{-3.5mm}
 \subsection{Linear-Time Attention Computation}
 
-Given $Q,K,V\in\R^{L\times d}$, we compute normalized inputs, apply $\Psi$, and use the standard linear-attention reordering:
-\[
-\hat Y = \frac{\widetilde{\Psi}(Q)\big(\widetilde{\Psi}(K)^\top V\big)}
-{\widetilde{\Psi}(Q)\big(\widetilde{\Psi}(K)^\top \mathbf{1}\big)}.
-\]
+Given query/key tensors $\mathbf{Q},\mathbf{K} \in \R^{L\times d_{QK}}$ and value tensor $\mathbf{V} \in \mathbb{R}^{L \times d_{V}}$, we compute normalized inputs, apply $\Psi$, and use the standard linear-attention reordering of the computations to calculate attention:
+\vspace{-2.5mm}
+\begin{equation}
+\label{eq:lin-att}
+\widehat{\mathbf{Y}} = \frac{\widetilde{\Psi}(\mathbf{Q})\big(\widetilde{\Psi}(\mathbf{K})^\top \mathbf{V}\big)}
+{\widetilde{\Psi}(\mathbf{Q})\big(\widetilde{\Psi}(\mathbf{K})^\top \mathbf{1}\big)}.
+\end{equation}
 Note that this normalization is not a softmax; it corresponds to kernel normalization and preserves linear-time computation.
-Here the division is applied row-wise (broadcast across the value dimension); in practice we add a small stabilizer $\delta>0$ to the denominator for numerical stability \citep{higham2002}. Concretely, if $\Psi(Q),\Psi(K)\in\R^{L\times m}$ (feature dimension $m$) and $V\in\R^{L\times d_v}$, then $\Psi(K)^\top V\in\R^{m\times d_v}$, $\Psi(K)^\top\mathbf{1}\in\R^{m\times 1}$, and the denominator is an $L\times 1$ vector broadcast over $d_v$ (see Appendix~\ref{app:impl}).
+Here the division is applied row-wise (broadcast across the value dimension); in practice we add a small stabilizer $\delta>0$ to the denominator for numerical stability \citep{higham2002}. Concretely, if $\Psi(\mathbf{Q}),\Psi(\mathbf{K})\in\R^{L\times m}$ (feature dimension $m$) and $\mathbf{V}\in\R^{L\times d_{V}}$, then $\Psi(\mathbf{K})^\top \mathbf{V}\in\R^{m\times d_{V}}$, $\Psi(\mathbf{K})^\top\mathbf{1}\in\R^{m\times 1}$, and the denominator is an $L\times 1$ vector broadcast over $d_{V}$. 
+Thus attention matrix $\mathbf{A}_{\E}$ is never explicitly materialized and quadratic in $L$ computations are avoided.
+The pseudo-code summarizing the forward pass of the SLAY algorithm is presented in Algorithm 1 Box.
 
 \begin{algorithm}[t]
 \caption{Spherical \E-Attention Forward Pass}
 \begin{algorithmic}[1]
-\REQUIRE $Q,K,V\in\R^{L\times d}$
-\STATE Normalize $Q,K$ to unit norm
-\STATE Compute polynomial features $\phi_{\text{poly}}(Q),\phi_{\text{poly}}(K)$ (e.g., anchor features by default)
+\REQUIRE $\mathbf{Q},\mathbf{K}\in\R^{L\times d_{QK}}, \mathbf{V} \in \mathbb{R}^{L \times d_{V}}$
+\STATE Normalize $\mathbf{Q},\mathbf{K}$ to have unit-norm rows.
+\STATE Compute polynomial features $\phi_{\text{poly}}(\mathbf{Q}),\phi_{\text{poly}}(\mathbf{K})$ (e.g., anchor features by default).
 \FOR{$r=1$ to $R$}
 \STATE Compute PRF features $\phi_{\text{PRF}}(\cdot; s_r)$
 \STATE Fuse features via sketched tensor product $\widetilde{\Psi}_r$
 \ENDFOR
-\STATE Concatenate features $\widetilde{\Psi}(Q),\widetilde{\Psi}(K)$
-\STATE Compute numerator and denominator
-\RETURN $\hat Y$
+\STATE Concatenate features $\widetilde{\Psi}(\mathbf{Q}),\widetilde{\Psi}(\mathbf{K})$.
+\STATE Compute numerator/denominator as in Eq. \ref{eq:lin-att}.
+\RETURN $\widehat{\mathbf{Y}}$
 \end{algorithmic}
 \end{algorithm}
-
-\paragraph{Complexity.}
-Let $m$ denote the final feature dimension (after concatenating across $R$ quadrature nodes), which in our construction scales as $m=O(RD_t)$. The linear-attention contractions cost $O(L\,m\,d_v)$ time and $O(L\,m)$ space (the $L\times L$ attention matrix is never formed).
+\paragraph{Complexity Analysis.}
+Let $m$ denote the final number of features used in the attention linearization (after concatenating across $R$ quadrature nodes), which in our construction scales as $m=O(RD_t)$. The linear-attention contractions costs $O(L\,m\,d_{V})$ time and $O(L\,m)$ space (the $L\times L$ attention matrix is never formed).
 Feature construction depends on the polynomial approximation: exact degree-2 features cost $O(L\,d^2)$, anchor features cost $O(L\,dP)$, Random Maclaurin costs $O(L\,dD_p)$, and TensorSketch costs approximately $O(L\,(d + D_p\log D_p))$ per layer.
-The PRF exponential features contribute $O(L\,R\,dD)$ time. Appendix~\ref{app:impl} collects practical knob choices and shape details.
+The PRF features contribute $O(L\,R\,dD)$ time.
 See Appendix~\ref{app:impl} for explicit tensor-product scaling (without sketching) and causal-vs.-non-causal implementation notes.
-
-
-% ------------------------------------------------------------
-% 7. Experiments
-% ------------------------------------------------------------
+\vspace{-3mm}
 \section{Experiments}
 \label{sec:experiments}
-
-We evaluate SLAY along several axes. First, we analyze polynomial approximation options to identify optimal configurations. Second, we benchmark computational costs by measuring latency, memory, and throughput scaling with sequence length. Third, we evaluate SLAY on 22 synthetic tasks spanning core capabilities and higher-level behaviors. Fourth, we assess the linear approximation quality of SLAY against standard attention. Fifth, we conduct an extreme classification test to evaluate performance under challenging conditions. Finally, we train 2.5B parameter transformers to compare SLAY against both quadratic and linear complexity attention mechanisms.
-
-Unless stated otherwise, all variants share the same architecture and training settings; we change only the attention operator and its feature configuration.
-
-\subsection{Ablation: Polynomial and Attention Approximation}
+We evaluate SLAY along several axes:
+\vspace{-3mm}
+\begin{itemize}
+\item First, we analyze polynomial approximation options to identify optimal configurations.
+\vspace{-2mm}
+\item Second, we benchmark computational costs by measuring latency, memory, and throughput scaling with sequence length.
+\vspace{-2mm}
+\item  Third, we evaluate SLAY on \textbf{22} synthetic tasks spanning core capabilities and higher-level behaviors. 
+\vspace{-2mm}
+\item Fourth, we conduct extreme classification tests to evaluate performance of SLAY versus other attention mechanisms in large-scale classification tasks. 
+\vspace{-2mm}
+\item Finally, we test the SLAY mechanism at scale by training and evaluating a series of full-scale Transformer models, varying only the attention mechanism used. Unless stated otherwise, all variants share the same architecture and training settings; we change only the attention operator and its feature configuration.
+\end{itemize}
+\vspace{-3mm}
+\subsection{Polynomial and Attention Approximation}
 \label{subsec:poly-ablation}
 
 
 \paragraph{Polynomial Approximation}
-We isolate the polynomial factor $(\hat q^\top \hat k)^2$ and compare several approximations (anchor, Nystr\"om, TensorSketch, Random Maclaurin). We report (i) kernel-normalized attention output error relative to exact spherical \E-attention and (ii) forward-pass latency, under matched feature budgets; protocol details and the multi-scale sweep are in Appendix~\ref{app:experiments} and Table~\ref{tab:poly-sweep} (Appendix~\ref{app:poly-ablation}).
+We isolate the polynomial factor $(\hat q^\top \hat k)^2$ and compare several approximations (anchor, Nystrom, TensorSketch, Random Maclaurin). We report (i) kernel-normalized attention output error relative to exact spherical \E-attention and (ii) forward-pass latency, under matched feature budgets; protocol details and the multi-scale sweep are in Appendix~\ref{app:experiments} and Table~\ref{tab:poly-sweep} (Appendix~\ref{app:poly-ablation}).
 
 For reference, we also include Laplace-only and a Hadamard-fusion variant. These are not polynomial approximations of $(\hat q^\top \hat k)^2$: they change the estimator by removing or altering the polynomial factor. Under feature-budget matching, they can therefore require substantially larger PRF feature dimension to reach comparable overall feature counts, which can dominate runtime.
 
-At the large scale (Table~\ref{tab:poly-ablation-snapshot}), anchor and Laplace-only achieve the lowest errors, but anchor is markedly faster (\,$489$ ms vs.~$1906$ ms\,) and is our default choice in the remaining experiments. Nystr\"om is substantially less accurate at these budgets. Signed polynomial approximations (TensorSketch and Random Maclaurin) can yield negative approximate inner products, leading to denominator cancellation and severe instability; we include them as efficiency baselines rather than positivity-guaranteeing estimators.
+At the large scale (Table~\ref{tab:poly-ablation-snapshot}), anchor and Laplace-only achieve the lowest errors, but anchor is markedly faster (\,$489$ ms vs.~$1906$ ms\,) and is our default choice in the remaining experiments. Nystrom is substantially less accurate at these budgets. Signed polynomial approximations (TensorSketch and Random Maclaurin) can yield negative approximate inner products, leading to denominator cancellation and severe instability; we include them as efficiency baselines rather than positivity-guaranteeing estimators.
 
-\begin{table}[t]
+\begin{table}[htbp]
+\centering
+\small
+\caption{Kernel approximation quality. Rel.~$\ell_2$ is relative L2 error (lower is better), Cos is cosine similarity (higher is better).}
+\label{tab:kernel-quality}
+\begin{tabular}{lccc}
+\toprule
+Method & Rel.~$\ell_2\downarrow$ & Cos$\uparrow$ & MSE$\downarrow$\\
+\midrule
+yat-performer-anchor & 0.5275 & 0.8496 & 4.55e-03\\
+yat-performer-laplace & 0.5440 & 0.8391 & 4.84e-03\\
+yat-performer & 0.7894 & 0.7321 & 1.02e-02\\
+yat-performer-nystrom & 70.2908 & -0.0088 & 8.08e+01\\
+yat-performer-rm & 15826.8408 & 0.0043 & 4.10e+06\\
+yat-performer-tensor & 24823.6855 & 0.0024 & 1.01e+07\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
 \centering
 \small
 \caption{Polynomial-approximation ablation (large-scale snapshot; see the ``Large'' block in Table~\ref{tab:poly-sweep}). Lower Rel.~$\ell_2$ is better; latency is forward-pass time under the same feature-budget matching across methods (which can increase PRF dimensionality for Laplace-only/Hadamard). Very large errors indicate severe kernel mismatch/instability. Full multi-scale sweep is in Table~\ref{tab:poly-sweep} (Appendix~\ref{app:poly-ablation}).}
@@ -373,7 +394,7 @@ Exact (Spherical) & 0.0000 & 5.02 \\
 Laplace-only & 0.4850 & 1905.80 \\
 Anchor & 0.4939 & 489.42 \\
 Hadamard (shared $\omega$) & 0.6793 & 1932.07 \\
-Nystr\"om & 28.1970 & 569.64 \\
+Nystrom & 28.1970 & 569.64 \\
 TensorSketch & $4.62\times 10^5$ & 547.76 \\
 Random Maclaurin & $1.77\times 10^6$ & 551.43 \\
 \bottomrule
@@ -385,14 +406,7 @@ Random Maclaurin & $1.77\times 10^6$ & 551.43 \\
 \subsection{Computational Costs}
 \label{subsec:computational-costs}
 
-We compare the computational efficiency of \textbf{SLAY}, a linearized estimator of spherical YAT attention, against both quadratic and linear attention mechanisms. We report latency, peak memory usage, and throughput as functions of sequence length, focusing on regimes relevant to long-context modeling.
-
-\paragraph{Benchmark setup.}
-All attention mechanisms are benchmarked in isolation using a causal attention kernel with identical architectural settings (embedding dimension 256, 8 heads, batch size 1). Experiments are conducted on a single NVIDIA A100-SXM4 GPU (80\,GB). For each sequence length, we report mean latency over multiple timed runs after warm-up, peak GPU memory allocation, and effective throughput measured in tokens per second. Sequence lengths range from 128 tokens up to 131K tokens, or until out-of-memory (OOM) failure.
-
-\paragraph{Results overview.}
-Figures~\ref{fig:latency-scaling}--\ref{fig:throughput-scaling} summarize the scaling behavior. Quadratic attention mechanisms (standard softmax and exact YAT) exhibit rapidly increasing latency and memory usage, failing beyond 16K tokens. In contrast, linear attention methods scale approximately linearly and remain stable up to 128K tokens.
-
+We compare the computational efficiency of \textbf{SLAY} as a linearized estimator of spherical YAT attention, against alternative quadratic and linear attention mechanisms. We report latency, peak memory usage, and throughput as functions of sequence length, focusing on regimes relevant to long-context modeling.
 
 \begin{figure}[htbp]
 \centering
@@ -562,27 +576,17 @@ Figures~\ref{fig:latency-scaling}--\ref{fig:throughput-scaling} summarize the sc
 \end{groupplot}
 \end{tikzpicture}
 \end{figure}
+\vspace{-0.5em}
 
-SLAY closely follows the scaling behavior of other linear attention mechanisms while substantially reducing memory usage relative to exact spherical YAT attention. At long sequence lengths, SLAY sustains high throughput comparable to other linear baselines, demonstrating that its added geometric structure does not compromise scalability.
+\paragraph{Benchmark setup.}
+All attention mechanisms are benchmarked in isolation using a causal attention kernel with identical architectural settings (embedding dimension 256, 8 heads, batch size 1). Experiments are conducted on a single NVIDIA A100-SXM4 GPU (80\,GB). For each sequence length, we report mean latency over multiple timed runs after warm-up, peak GPU memory allocation, and effective throughput measured in tokens per second. Sequence lengths range from 128 tokens up to 131K tokens, or until out-of-memory (OOM) failure.
 
-\begin{table}[htbp]
-\centering
-\small
-\caption{Kernel approximation quality. Rel.~$\ell_2$ is relative L2 error (lower is better), Cos is cosine similarity (higher is better).}
-\label{tab:kernel-quality}
-\begin{tabular}{lccc}
-\toprule
-Method & Rel.~$\ell_2\downarrow$ & Cos$\uparrow$ & MSE$\downarrow$\\
-\midrule
-yat-performer-anchor & 0.5275 & 0.8496 & 4.55e-03\\
-yat-performer-laplace & 0.5440 & 0.8391 & 4.84e-03\\
-yat-performer & 0.7894 & 0.7321 & 1.02e-02\\
-yat-performer-nystrom & 70.2908 & -0.0088 & 8.08e+01\\
-yat-performer-rm & 15826.8408 & 0.0043 & 4.10e+06\\
-yat-performer-tensor & 24823.6855 & 0.0024 & 1.01e+07\\
-\bottomrule
-\end{tabular}
-\end{table}
+\paragraph{Results overview.}
+Figure~\ref{fig:scaling} summarizes the scaling behavior. Quadratic attention mechanisms (standard softmax and exact YAT) exhibit rapidly increasing latency and memory usage, failing beyond 16K tokens. In contrast, linear attention methods scale approximately linearly and remain stable up to 128K tokens.
+
+
+
+SLAY's scaling behavior closely follows and in some cases outperforms other linear attention mechanisms while substantially reducing memory usage relative to its quadratic counterparts. At long sequence lengths, SLAY sustains high throughput comparable to other linear baselines, demonstrating that its added geometric structure does not compromise scalability.
 
 \subsection{Synthetic Tasks Experimentation}
 \label{subsec:synthetic-experiments}
@@ -643,7 +647,7 @@ Overall, SLAY matches or exceeds the performance of existing linearized attentio
 
 \subsection{Extreme Classification Test}
 \label{subsec:extreme-classification}
-
+% TODO add results from MM-AmazonTitles-300K LF-AmazonTitles-131K
 We conducted the extreme classification test and found that the SLAY mechanism performs the best out of the tested attention mechanisms, even better than the non-linearized softmax and YAT.
 
 \begin{table}[htbp]
@@ -654,11 +658,11 @@ We conducted the extreme classification test and found that the SLAY mechanism p
 \hline
 \textbf{Method} & \textbf{P@5} \\
 \hline
-Full Softmax      & 0.1689 \\
-Performer         & 0.2048 \\
-Yat               & 0.3012 \\
-Yat (Spherical)   & 0.2976 \\
-\textbf{SLAY}     & \textbf{0.3029} \\
+Full Softmax      & 0.2638 \\
+Performer         & 0.2551 \\
+Yat               & 0.2612 \\
+Yat (Spherical)   & 0.2597 \\
+\textbf{SLAY}     & \textbf{0.2652} \\
 \hline
 \end{tabular}
 \end{table}
@@ -715,84 +719,15 @@ More broadly, this work also demonstrates that attention mechanisms need not be 
 % ============================================================
 % References
 % ============================================================
+\bibliography{references}
 \bibliographystyle{icml2026}
-\begin{thebibliography}{9}
 
-\bibitem{choromanski2021}
-K.~Choromanski et al.
-\newblock Rethinking attention with performers.
-\newblock In \emph{ICLR}, 2021.
 
-\bibitem{nmn2026}
-Taha Bouhsine
-\newblock No More DeLuLu: A Kernel-Based Activation-Free Neural Networks.
+%\begin{thebibliography}{9}
 
-\bibitem{schoenberg1942}
-I.~J.~Schoenberg.
-\newblock Positive definite functions on spheres.
-\newblock \emph{Duke Mathematical Journal}, 9(1):96--108, 1942.
 
-\bibitem{davis1984}
-P.~J.~Davis and P.~Rabinowitz.
-\newblock \emph{Methods of Numerical Integration}.
-\newblock Academic Press, 2nd edition, 1984.
 
-\bibitem{pham2013}
-N.~Pham and R.~Pagh.
-\newblock Fast and scalable polynomial kernels via explicit feature maps.
-\newblock In \emph{KDD}, 2013.
 
-\bibitem{widder1941laplace}
-D.~V.~Widder.
-\newblock \emph{The Laplace Transform}.
-\newblock Princeton University Press, 1941.
-
-\bibitem{schilling2012}
-R.~L.~Schilling, R.~Song, and Z.~Vondra\v{c}ek.
-\newblock \emph{Bernstein Functions: Theory and Applications}.
-\newblock De Gruyter, 2nd edition, 2012.
-
-\bibitem{aronszajn1950}
-N.~Aronszajn.
-\newblock Theory of reproducing kernels.
-\newblock \emph{Transactions of the American Mathematical Society}, 68(3):337--404, 1950.
-
-\bibitem{scholkopf2002learning}
-B.~Sch{\"o}lkopf and A.~J.~Smola.
-\newblock \emph{Learning with Kernels}.
-\newblock MIT Press, 2002.
-
-\bibitem{berlinet2004}
-A.~Berlinet and C.~Thomas-Agnan.
-\newblock \emph{Reproducing Kernel Hilbert Spaces in Probability and Statistics}.
-\newblock Kluwer Academic Publishers, 2004.
-
-\bibitem{katharopoulos2020transformers}
-S.~Katharopoulos, A.~Vyas, N.~Pappas, and F.~Fleuret.
-\newblock Transformers are {RNN}s: Fast autoregressive transformers with linear attention.
-\newblock In \emph{ICML}, 2020.
-
-\bibitem{gautschi2004}
-W.~Gautschi.
-\newblock \emph{Orthogonal Polynomials: Computation and Approximation}.
-\newblock Oxford University Press, 2004.
-
-\bibitem{higham2002}
-N.~J.~Higham.
-\newblock \emph{Accuracy and Stability of Numerical Algorithms}.
-\newblock SIAM, 2nd edition, 2002.
-
-\bibitem{karkarnick2012}
-A.~Kar and H.~Karnick.
-\newblock Random feature maps for dot product kernels.
-\newblock In \emph{AISTATS}, 2012.
-
-\bibitem{williams2001nystrom}
-C.~K.~I. Williams and M.~Seeger.
-\newblock Using the Nystr\"om method to speed up kernel machines.
-\newblock In \emph{NIPS}, 2001.
-
-\end{thebibliography}
 \clearpage
 \onecolumn
 
@@ -880,7 +815,7 @@ Draw Rademacher vectors $r_i, s_i\in\{\pm1\}^d$ and define
 Then $\mathbb{E}[\langle \phi_{\text{RM}}(x),\phi_{\text{RM}}(y)\rangle]=(x^\top y)^2$ \citep{karkarnick2012}.
 RM is unbiased but can have high variance for small $P$.
 
-\paragraph{Nystr"om features.}
+\paragraph{Nystrom features.}
 Let anchors $A=\{a_1,\dots,a_P\}\subset\R^d$ and define
 $K_{AA}\in\R^{P\times P}$ with $(K_{AA})_{ij}=(a_i^\top a_j)^2$.
 Given $K_{AA}+\lambda I$, define
@@ -897,7 +832,7 @@ Using the same anchors $A$, define
 This is a simple low-rank approximation; it is not unbiased in general but is often stable for small $P$.
 
 \paragraph{Comparison.}
-RM is unbiased but variance-dominated at small feature budgets; Nystr"om reduces variance if anchors are well-conditioned; anchor features are computationally simplest and empirically most stable at small $P$.
+RM is unbiased but variance-dominated at small feature budgets; Nystrom reduces variance if anchors are well-conditioned; anchor features are computationally simplest and empirically most stable at small $P$.
 
 \section{Ablation: Polynomial Approximation Sweep}
 \label{app:poly-ablation}
@@ -917,7 +852,7 @@ Small & Exact (Spherical) & 128 & 2 & 8 & 8 & 0.0000 & 3.12\\
  & Laplace-only &  &  &  &  & 0.5870 & 2.78\\
  & Anchor &  &  &  &  & 0.6626 & 3.82\\
  & Hadamard (shared $\omega$) &  &  &  &  & 0.8237 & 3.34\\
- & Nystr\"om &  &  &  &  & 22.9072 & 3.41\\
+ & Nystrom &  &  &  &  & 22.9072 & 3.41\\
  & TensorSketch &  &  &  &  & 474075.1562 & 5.17\\
  & Random Maclaurin &  &  &  &  & 2195912.7500 & 5.59\\
 \addlinespace
@@ -925,7 +860,7 @@ Medium & Exact (Spherical) & 256 & 2 & 16 & 16 & 0.0000 & 0.79\\
  & Laplace-only &  &  &  &  & 0.5417 & 16.10\\
  & Anchor &  &  &  &  & 0.5667 & 18.54\\
  & Hadamard (shared $\omega$) &  &  &  &  & 0.6609 & 17.44\\
- & Nystr\"om &  &  &  &  & 61.6529 & 18.46\\
+ & Nystrom &  &  &  &  & 61.6529 & 18.46\\
  & TensorSketch &  &  &  &  & 214115.9844 & 19.01\\
  & Random Maclaurin &  &  &  &  & 1715766.8750 & 18.80\\
 \addlinespace
@@ -933,7 +868,7 @@ Large & Exact (Spherical) & 512 & 2 & 32 & 32 & 0.0000 & 5.02\\
  & Laplace-only &  &  &  &  & 0.4850 & 1905.80\\
  & Anchor &  &  &  &  & 0.4939 & 489.42\\
  & Hadamard (shared $\omega$) &  &  &  &  & 0.6793 & 1932.07\\
- & Nystr\"om &  &  &  &  & 28.1970 & 569.64\\
+ & Nystrom &  &  &  &  & 28.1970 & 569.64\\
  & TensorSketch &  &  &  &  & 461739.0312 & 547.76\\
  & Random Maclaurin &  &  &  &  & 1772757.5000 & 551.43\\
 \addlinespace
@@ -1090,7 +1025,6 @@ $131072$ & ---        & OOM \\
 
 \paragraph{Detailed Synthetic Tests.}
 
-\vspace{-0.5em}
 \begin{table}[htbp]
 \centering
 \small
@@ -1140,7 +1074,7 @@ Compression     & 0.59$\pm$0.00 & 0.59$\pm$0.00 & 0.59$\pm$0.01 & 0.59$\pm$0.01 
 \end{table}
 
 \paragraph{Code availability.}
-An open-source implementation of Spherical \E-Attention, including training scripts and experimental configurations, is available at
+An open-source implementation of the SLAY mechanism, including training scripts and experimental configurations, is available at
 \url{https://github.com/jomilu93/Spherical-Yat-Performer.git}.
 
 
@@ -1148,7 +1082,7 @@ An open-source implementation of Spherical \E-Attention, including training scri
 \label{app:impl}
 
 \paragraph{Practical knobs and defaults.}
-In our implementation, $R$ controls the quadrature accuracy of the Laplace integral and $D$ controls the Monte Carlo variance of PRF. The polynomial approximation uses either a feature dimension $D_p$ (e.g., Random Maclaurin or TensorSketch) or an anchor count $P$ (anchor features or Nystr"om); by default we use anchor features because they preserve non-negativity of the polynomial component and are stable at small budgets.
+In our implementation, $R$ controls the quadrature accuracy of the Laplace integral and $D$ controls the Monte Carlo variance of PRF. The polynomial approximation uses either a feature dimension $D_p$ (e.g., Random Maclaurin or TensorSketch) or an anchor count $P$ (anchor features or Nystrom); by default we use anchor features because they preserve non-negativity of the polynomial component and are stable at small budgets.
 The tensor-product fusion uses a sketch dimension $D_t$, trading accuracy for compute/memory. We use small stabilizers $\epsilon$ (kernel) and $\delta$ (attention denominator) for numerical robustness.
 
 \paragraph{Remark (explicit tensor product).}
