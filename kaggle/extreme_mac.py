@@ -769,7 +769,8 @@ def run_benchmark(dataset_name: str = "all", method_filter: str = "all"):
                     continue
                 
             optimizer = nnx.Optimizer(model, optax.adam(LR), wrt=nnx.Param)
-            
+
+            @nnx.jit
             def train_step(model, optimizer, indices, mask, labels, label_mask):
                  def loss_fn(m):
                      return m.loss(indices, mask, labels, label_mask)
