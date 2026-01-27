@@ -329,8 +329,9 @@ class XMLDataset:
         for i, idx in enumerate(batch_indices):
             lbls = self.Y[idx]
             if len(lbls) > 0:
-                padded_labels[i, :len(lbls)] = lbls
-                label_masks[i, :len(lbls)] = 1.0
+                n = min(len(lbls), max_labels)
+                padded_labels[i, :n] = lbls[:n]
+                label_masks[i, :n] = 1.0
         
         return {
             'features': jnp.array(padded_feats),
@@ -726,7 +727,7 @@ def run_benchmark(dataset_name: str = "all", method_filter: str = "all"):
         # Keeping constant 256 for now.
         EMBED_DIM = 256 
         LR = 1e-3
-        EPOCHS = 3 # Keep low for speed as per user preference in previous turns
+        EPOCHS = 10 # Keep low for speed as per user preference in previous turns
         
         train_ds = XMLDataset(X_train, Y_train, n_lab, BATCH_SIZE, shuffle=True)
         test_ds = XMLDataset(X_test, Y_test, n_lab, BATCH_SIZE, shuffle=False)
@@ -769,7 +770,7 @@ def run_benchmark(dataset_name: str = "all", method_filter: str = "all"):
                     continue
                 
             optimizer = nnx.Optimizer(model, optax.adam(LR), wrt=nnx.Param)
-            
+
             @nnx.jit
             def train_step(model, optimizer, indices, mask, labels, label_mask):
                  def loss_fn(m):

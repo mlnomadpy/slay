@@ -50,7 +50,7 @@ class _YatPerformerPolyBase(nn.Module):
         num_quadrature_nodes=1,
         poly_dim=64,
         epsilon=1e-6,
-        chunk_size=256,
+        chunk_size=128,
         nystrom_reg=1e-3,
         denominator_stabilizer=1e-6,
         use_sketching=False,
@@ -236,6 +236,27 @@ class _YatPerformerPolyBase(nn.Module):
         """
         raise NotImplementedError
 
+    def _can_use_vectorized(self, B, T, dtype, device):
+            # Conservative safety margin
+            SAFETY = 0.3
+        
+            bytes_per_elem = torch.tensor(0, dtype=dtype).element_size()
+        
+            R = self.num_quadrature_nodes
+            H = self.n_heads
+            P = self.poly_dim
+            M = self.num_prf_features
+            D = self.head_dim
+        
+            # Size of the largest tensor: kv
+            estimated_bytes = (
+                R * B * H * T * P * M * D * bytes_per_elem
+            )
+        
+            total_mem = torch.cuda.get_device_properties(device).total_memory
+        
+            return estimated_bytes < SAFETY * total_mem
+
     def forward(self, x):
         """
         Forward pass implementing linearized spherical ε-attention.
@@ -257,12 +278,16 @@ class _YatPerformerPolyBase(nn.Module):
         v = v.view(B, T, self.n_heads, self.head_dim).transpose(1, 2)
 
         input_dtype = q.dtype
-        q, k, v = q.float(), k.float(), v.float()
+        
+        if q.dtype in (torch.float16, torch.bfloat16):
+            q, k, v = q, k, v
+        else:
+            q, k, v = q.float(), k.float(), v.float()
 
         R = self.num_quadrature_nodes
         P = self.poly_dim
         M = self.num_prf_features
-        
+            
         # --- Vectorized vs Chunked Causal Linear Attention ---
         # For sequence lengths where the full state fits in memory (e.g. T=8192 on A100), 
         # vectorized execution is much faster than chunking.
@@ -362,8 +387,11 @@ class _YatPerformerPolyBase(nn.Module):
                     kv_local_cumsum = torch.cumsum(kv_chunk_prod, dim=3)
                     k_local_cumsum = torch.cumsum(k_outer, dim=3)
     
-                kv_current = kv_local_cumsum + kv_state.unsqueeze(3)
-                k_current = k_local_cumsum + k_state.unsqueeze(3)
+                kv_local_cumsum += kv_state.unsqueeze(3)
+                kv_current = kv_local_cumsum
+                
+                k_local_cumsum += k_state.unsqueeze(3)
+                k_current = k_local_cumsum
     
                 # Compute attention for this chunk
                 if self.use_sketching:
