@@ -23,4 +23,5 @@ DEFAULT_CONFIG = {
     'num_poly_features': 8,
     'num_quadrature_nodes': 2,
     'epsilon': 0.01,
+    'use_triton': False,  # Use Triton-accelerated CUDA kernels for linear attention
 }

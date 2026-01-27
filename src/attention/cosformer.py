@@ -71,3 +71,59 @@ class CosformerCausalAttention(nn.Module):
         # Reshape back
         out = out.transpose(1, 2).contiguous().view(B, T, C)
         return self.out(out)
+    
+    def forward_triton(self, x):
+        """
+        Forward pass using Triton-accelerated linear attention.
+        
+        Processes cos and sin streams using Triton kernel and sums results.
+        Falls back to regular forward() if Triton is not available.
+        """
+        try:
+            from .yat_attention_kernel import HAS_TRITON, triton_linear_attention
+        except ImportError:
+            try:
+                from yat_attention_kernel import HAS_TRITON, triton_linear_attention
+            except ImportError:
+                return self.forward(x)
+        
+        if not HAS_TRITON or not torch.cuda.is_available():
+            return self.forward(x)
+        
+        B, T, C = x.shape
+        qkv = self.qkv(x)
+        q, k, v = qkv.chunk(3, dim=-1)
+        
+        q = q.view(B, T, self.n_heads, self.head_dim).transpose(1, 2)
+        k = k.view(B, T, self.n_heads, self.head_dim).transpose(1, 2)
+        v = v.view(B, T, self.n_heads, self.head_dim).transpose(1, 2)
+        
+        input_dtype = q.dtype
+        q, k, v = q.float(), k.float(), v.float()
+        
+        # Position weighting
+        positions = torch.arange(T, device=x.device, dtype=torch.float32)
+        cos_w = torch.cos(math.pi / 2 * positions / T).view(1, 1, -1, 1)
+        sin_w = torch.sin(math.pi / 2 * positions / T).view(1, 1, -1, 1)
+        
+        # ReLU features with cos/sin weighting
+        q_prime = F.relu(q)
+        k_prime = F.relu(k)
+        
+        q_cos = (q_prime * cos_w).contiguous()
+        q_sin = (q_prime * sin_w).contiguous()
+        k_cos = (k_prime * cos_w).contiguous()
+        k_sin = (k_prime * sin_w).contiguous()
+        
+        # Triton kernel for cos stream
+        out_cos = triton_linear_attention(q_cos, k_cos, v, delta=self.eps)
+        
+        # Triton kernel for sin stream
+        out_sin = triton_linear_attention(q_sin, k_sin, v, delta=self.eps)
+        
+        # Combine streams
+        out = out_cos + out_sin
+        
+        out = out.to(input_dtype)
+        out = out.transpose(1, 2).contiguous().view(B, T, C)
+        return self.out(out)
