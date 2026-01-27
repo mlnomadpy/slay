@@ -27,7 +27,7 @@ class _YatPerformerPolyBase(nn.Module):
         num_quadrature_nodes=1,
         poly_dim=64,
         epsilon=1e-6,
-        chunk_size=256,
+        chunk_size=128,
         nystrom_reg=1e-3,
     ):
         super().__init__()
