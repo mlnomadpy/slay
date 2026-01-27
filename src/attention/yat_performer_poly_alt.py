@@ -62,7 +62,7 @@ class _YatPerformerPolyBase(nn.Module):
         R = self.num_quadrature_nodes
         M = self.num_prf_features
 
-        omega = self.omega.float()
+        omega = self.omega.to(dtype=x.dtype, device=x.device)
         proj = torch.einsum("bhtd,rhdm->rbhtm", x, omega)
 
         sqrt_2s = torch.sqrt(2.0 * self.quad_nodes.clamp(min=0)).view(R, 1, 1, 1, 1)
@@ -324,7 +324,7 @@ class YatPerformerAnchorCausalAttention(_YatPerformerPolyBase):
 
     def _poly_features(self, x_norm):
         # x_norm: (B, H, T, D) - normalized to unit sphere
-        anchors = self.anchor_vectors.to(x_norm.dtype)
+        anchors = self.anchor_vectors.to(dtype=x_norm.dtype, device=x_norm.device)
         
         # Feature: (a_p · x)^2 for each anchor
         return (torch.einsum("bhtd,pd->bhtp", x_norm, anchors) ** 2) / math.sqrt(
