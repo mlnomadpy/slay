@@ -727,7 +727,7 @@ def run_benchmark(dataset_name: str = "all", method_filter: str = "all"):
         # Keeping constant 256 for now.
         EMBED_DIM = 256 
         LR = 1e-3
-        EPOCHS = 3 # Keep low for speed as per user preference in previous turns
+        EPOCHS = 10 # Keep low for speed as per user preference in previous turns
         
         train_ds = XMLDataset(X_train, Y_train, n_lab, BATCH_SIZE, shuffle=True)
         test_ds = XMLDataset(X_test, Y_test, n_lab, BATCH_SIZE, shuffle=False)
