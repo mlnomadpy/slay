@@ -329,8 +329,9 @@ class XMLDataset:
         for i, idx in enumerate(batch_indices):
             lbls = self.Y[idx]
             if len(lbls) > 0:
-                padded_labels[i, :len(lbls)] = lbls
-                label_masks[i, :len(lbls)] = 1.0
+                n = min(len(lbls), max_labels)
+                padded_labels[i, :n] = lbls[:n]
+                label_masks[i, :n] = 1.0
         
         return {
             'features': jnp.array(padded_feats),
