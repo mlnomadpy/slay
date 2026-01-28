@@ -57,20 +57,9 @@ ATTENTION_CLASSES = {
 # Attention types that use novel activation in the MLP
 NOVEL_ACTIVATION_TYPES = {
     'yat',
-    'yat-performer',
-    'yat-performer-tensor',
-    'yat-performer-laplace',
-    'yat-performer-rm',
-    'yat-performer-nystrom',
-    'yat-performer-anchors',
     'yat-spherical',
 
     # Aliases
-    'yat-performer-hadamard',
-    'yat-performer-anchor',
-    'yat-performer-laplace-only',
-    'yat-performer-tensorsketch',
-    'yat-performer-random-maclaurin',
     'yat-exact-spherical',
 }
 

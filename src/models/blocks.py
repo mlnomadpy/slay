@@ -46,8 +46,11 @@ class NovelBlock(nn.Module):
         super().__init__()
         self.use_triton = use_triton
         self.attn = attention_class(embed_dim, n_heads)
-        self.fc1 = nn.Linear(embed_dim, 4 * embed_dim)
-        self.fc2 = nn.Linear(4 * embed_dim, embed_dim)
+        self.mlp = nn.Sequential(
+            YatNMN(embed_dim, 4 * embed_dim, bias=False),
+            nn.Dropout(dropout),
+            nn.Linear(4 * embed_dim, embed_dim, bias=False),
+        )
         self.attn_dropout = nn.Dropout(dropout)
         self.mlp_dropout = nn.Dropout(dropout)
         
@@ -59,9 +62,6 @@ class NovelBlock(nn.Module):
             x = x + self.attn_dropout(self.attn(x))
         
         # MLP with novel activation
-        h_proj = self.fc1(x)
-        # Novel activation: (x·w)² / (||x - w||² + eps)
-        activated = novel_activation(x, h_proj)
-        x = x + self.mlp_dropout(self.fc2(activated))
+        x = x + self.mlp_dropout(self.mlp(x))
         return x
 
