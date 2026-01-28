@@ -244,9 +244,53 @@ out = attn(x)  # (2, 128, 64)
 
 ### Training a Model
 
+Train a GPT-style model with configurable attention:
+
 ```bash
-python main.py --attention yat-performer-anchor --epochs 10
+# Basic training with DeepSpeed
+deepspeed main.py --attention standard --context-len 1024
+
+# Train with Yat-Performer (linear complexity)
+deepspeed main.py --attention yat-performer-anchor --context-len 2048
+
+# Full configuration example
+deepspeed main.py \
+    --attention cosformer \
+    --context-len 1024 \
+    --embed-dim 768 \
+    --n-layers 12 \
+    --n-heads 12 \
+    --lr 3e-4 \
+    --warmup-steps 2000 \
+    --total-steps 20000 \
+    --dropout 0.1 \
+    --batch-size 64 \
+    --gradient-accumulation-steps 1
 ```
+
+**Key Training Arguments:**
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--attention` | `performer` | Attention type (see table above) |
+| `--context-len` | 1024 | Context window length |
+| `--embed-dim` | 768 | Embedding dimension |
+| `--n-layers` | 12 | Number of transformer layers |
+| `--n-heads` | 12 | Number of attention heads |
+| `--lr` | 3e-4 | Learning rate |
+| `--warmup-steps` | 2000 | LR warmup steps (linear ramp) |
+| `--total-steps` | 20000 | Total training steps |
+| `--dropout` | 0.1 | Dropout rate (attention + MLP + embeddings) |
+| `--batch-size` | 64 | Micro batch size per GPU |
+| `--use-triton` | False | Use Triton-accelerated CUDA kernels |
+
+**Training Features:**
+- LR warmup with cosine decay (WarmupDecayLR)
+- Dropout on attention, MLP, and embeddings
+- Gradient checkpointing for memory efficiency
+- FP16 mixed precision with dynamic loss scaling
+- ZeRO-2 optimizer for distributed training
+- Gradient clipping (1.0)
 
 ## Results
 

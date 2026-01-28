@@ -317,9 +317,12 @@ def main():
         
         # Log training loss with both step and tokens as x-axes
         if rank == 0 and config['use_wandb']:
+            # Get current learning rate from DeepSpeed scheduler
+            current_lr = model_engine.get_lr()[0] if hasattr(model_engine, 'get_lr') else config['lr']
             wandb.log({
                 "train_loss_step": loss.item(),  # Use step as x-axis
                 "train_loss_tokens": loss.item(),  # Use tokens as x-axis
+                "learning_rate": current_lr,
                 "step": step,
                 "tokens_processed": total_tokens,
             })
