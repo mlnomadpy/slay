@@ -29,6 +29,6 @@ DEFAULT_CONFIG = {
     'batch_rampup': False,  # Enable batch size ramp-up
     'batch_rampup_start': 8,  # Starting batch size per GPU
     'batch_rampup_step': 1000,  # Steps over which to ramp up
-    'num_workers': 16,  # Optimized for 8x H100 (2-4 per GPU)
+    'num_workers': 4,  # Reduced from 16 to prevent excessive thread spawn (4*8=32 total)
     'prefetch_factor': 4,  # Prefetch batches to avoid GPU starvation
 }
