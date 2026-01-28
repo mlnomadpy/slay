@@ -1,0 +1,15 @@
+# SLAY Visualization Data Log
+# Generated: 2026-01-28T05:46:15.220600
+# Description: Attention pattern heatmaps for different mechanisms
+#============================================================
+
+## sequence_length
+# Value: 64
+
+## embed_dim
+# Value: 32
+
+## methods
+# Length: 4
+# Values: ['Softmax', 'ⵟ (YAT)', 'ⵟ$_{sph}$ (Sph. YAT)', 'SLAY']
+

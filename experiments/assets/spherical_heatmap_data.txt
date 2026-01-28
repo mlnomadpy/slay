@@ -1,0 +1,16 @@
+# SLAY Visualization Data Log
+# Generated: 2026-01-28T05:46:03.903317
+# Description: 3D spherical heatmap of attention weights on S^2
+#============================================================
+
+## grid_resolution
+#   n_theta: 40
+#   n_phi: 80
+
+## query_position
+# Value: north pole [0, 0, 1]
+
+## kernels_compared
+# Length: 4
+# Values: ['Softmax', 'YAT', 'Spherical YAT', 'SLAY (Anchor)']
+

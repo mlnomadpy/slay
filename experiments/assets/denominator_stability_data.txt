@@ -1,0 +1,20 @@
+# SLAY Visualization Data Log
+# Generated: 2026-01-28T05:46:13.649742
+# Description: Stability summary: fraction of negative denominators by method
+#============================================================
+
+## methods
+# Length: 5
+# Values: ['ⵟ', 'ⵟ$_{sph}$', 'SLAY\n(Anchor)', 'Tensor\nSketch', 'Random\nMaclaurin']
+
+## negative_pct_means
+# Shape: (5,), dtype: float64
+# Values: [0.0, 0.0, 0.0, 19.248046875, 16.7822265625]
+
+## negative_pct_stds
+# Shape: (5,), dtype: float64
+# Values: [0.0, 0.0, 0.0, 1.209972366143564, 0.7949542664622925]
+
+## num_seeds_tested
+# Value: 5
+

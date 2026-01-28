@@ -1,0 +1,53 @@
+# SLAY Visualization Data Log
+# Generated: 2026-01-28T05:46:23.622355
+# Description: Scaling comparison with exact spherical YAT overlay until OOM
+#============================================================
+
+## seq_lengths
+# Length: 11
+# Values: [128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072]
+
+## seq_lengths_exact
+# Length: 8
+# Values: [128, 256, 512, 1024, 2048, 4096, 8192, 16384]
+
+## latency_standard
+# Length: 8
+# Values: [0.41, 0.43, 0.45, 0.67, 2.08, 7.04, 22.84, 85.6]
+
+## latency_yat_exact
+# Length: 8
+# Values: [0.57, 0.56, 0.63, 0.9, 2.79, 9.79, 37.38, 141.43]
+
+## latency_slay
+# Length: 11
+# Values: [1.46, 1.45, 1.71, 2.17, 3.26, 5.47, 9.78, 19.02, 37.69, 75.05, 149.63]
+
+## latency_favor
+# Length: 11
+# Values: [0.63, 0.64, 0.99, 1.55, 2.69, 4.99, 9.73, 19.38, 38.77, 77.48, 155.06]
+
+## memory_standard
+# Length: 8
+# Values: [11.9, 15.7, 29.4, 81.1, 282.1, 1074.1, 4218.1, 16746.1]
+
+## memory_yat_exact
+# Length: 8
+# Values: [13.4, 21.7, 53.4, 177.2, 666.3, 2610.4, 10362.6, 41323.1]
+
+## memory_slay
+# Length: 11
+# Values: [36.2, 62.2, 114.2, 151.7, 160.7, 178.7, 214.7, 314.2, 618.2, 1226.2, 2442.2]
+
+## throughput_standard
+# Length: 8
+# Values: [309605, 601515, 1140190, 1535463, 984540, 581929, 358680, 191393]
+
+## throughput_yat_exact
+# Length: 8
+# Values: [223026, 457217, 812948, 1132992, 733302, 418302, 219174, 115845]
+
+## throughput_slay
+# Length: 11
+# Values: [87397, 176813, 299006, 472417, 628732, 748980, 837345, 861529, 869331, 873279, 875953]
+

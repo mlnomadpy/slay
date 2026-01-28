@@ -1,0 +1,15 @@
+# SLAY Visualization Data Log
+# Generated: 2026-01-28T05:46:21.177727
+# Description: Quadrature node contributions at different x values
+#============================================================
+
+## x_samples
+# Shape: (3,), dtype: float64
+# Values: [0.2, 0.5, 0.8]
+
+## num_nodes_R
+# Value: 5
+
+## epsilon
+# Value: 0.01
+

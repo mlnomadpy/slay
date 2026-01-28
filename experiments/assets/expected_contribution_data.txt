@@ -1,0 +1,23 @@
+# SLAY Visualization Data Log
+# Generated: 2026-01-28T05:46:22.382260
+# Description: Expected quadrature contributions E[w_r * x^2 * exp(2s_r x)]
+#============================================================
+
+## num_nodes_R
+# Value: 5
+
+## s_values
+# Shape: (5,), dtype: float64
+# Values: [0.13112453717320444, 0.7031856015455308, 1.7892665527565783, 3.525278609880019, 6.2889556439183005]
+
+## w_values
+# Shape: (5,), dtype: float64
+# Values: [0.2595799057625913, 0.19834169705630647, 0.03778231327448144, 0.0017968948656328632, 1.1626851933222015e-05]
+
+## expected_contribution_pct
+# Shape: (5,), dtype: float64
+# Values: [24.43401947523794, 27.60403289349089, 22.606213437417207, 15.92502935595254, 9.430704837901429]
+
+## first_2_nodes_pct
+# Value: 52.03805236872883
+

@@ -1,0 +1,15 @@
+# SLAY Visualization Data Log
+# Generated: 2026-01-28T05:46:21.491312
+# Description: Gauss-Laguerre node locations for different R values
+#============================================================
+
+## R_values_tested
+# Length: 5
+# Values: [1, 2, 3, 5, 8]
+
+## epsilon
+# Value: 0.01
+
+## C
+# Value: 2.01
+
