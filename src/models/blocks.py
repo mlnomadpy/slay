@@ -33,7 +33,7 @@ class GPT2Block(nn.Module):
             x = x + self.attn_dropout(self.attn.forward_triton(self.ln1(x)))
         else:
             x = x + self.attn_dropout(self.attn(self.ln1(x)))
-        x = x + self.mlp_dropout(self.mlp(self.ln2(x)))
+        # x = x + self.mlp_dropout(self.mlp(self.ln2(x)))
         return x
 
 
