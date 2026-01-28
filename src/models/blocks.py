@@ -47,7 +47,7 @@ class NovelBlock(nn.Module):
         self.use_triton = use_triton
         self.attn = attention_class(embed_dim, n_heads)
         self.mlp = nn.Sequential(
-            YatNMN(embed_dim, 4 * embed_dim, bias=False),
+            YatNMN(embed_dim, 4 * embed_dim, bias=False, alpha=False),
             nn.Dropout(dropout),
             nn.Linear(4 * embed_dim, embed_dim, bias=False),
         )
@@ -61,7 +61,8 @@ class NovelBlock(nn.Module):
         else:
             x = x + self.attn_dropout(self.attn(x))
         
-        # MLP with novel activation
-        x = x + self.mlp_dropout(self.mlp(x))
+        # Ensure input dtype matches the first layer's weight dtype (for DeepSpeed FP16)
+        dtype = self.mlp[0].weight.dtype if hasattr(self.mlp[0], 'weight') else x.dtype
+        x = x + self.mlp_dropout(self.mlp(x.to(dtype)))
         return x
 
