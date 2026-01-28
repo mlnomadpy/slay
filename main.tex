@@ -1010,34 +1010,69 @@ See Appendix~\ref{app:additional-proofs}.
 \section{Geometric Interpretation and Invariances}
 \label{app:geom}
 
-This appendix expands on the geometric view of the spherical \E-product discussed in Section~\ref{sec:method}. On $\Sph^{d-1}$, the squared chordal distance satisfies $d_{\Sph^{d-1}}(\hat q,\hat k)^2=2(1-\hat q^\top \hat k)$, so the spherical kernel can be interpreted as an $\epsilon$-regularized chordal-distance interaction.
+This appendix expands on the geometric view of the spherical \E-product discussed in Section~\ref{sec:method}. On $\Sph^{d-1}$, the squared chordal distance satisfies
+$d_{\Sph^{d-1}}(\widehat{\mathbf{q}},\widehat{\mathbf{k}})^2
+= 2\bigl(1-\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}}\bigr)$,
+so the spherical kernel can be interpreted as an $\epsilon$-regularized chordal-distance interaction.
 
 \begin{adjustwidth}{1.5em}{1.5em}
 \begin{proposition}[Geometric Origin]
 \label{prop:geometric}
 The spherical \E-product is an $\epsilon$-regularized chordal-distance interaction on $\Sph^{d-1}$:
 \[
-\E_{\mathrm{sph}}(\hat q, \hat k) = \frac{\langle \hat q, \hat k \rangle^2}{d_{\Sph^{d-1}}(\hat q, \hat k)^2 + \epsilon},
+\E_{\mathrm{sph}}(\widehat{\mathbf{q}}, \widehat{\mathbf{k}})
+=
+\frac{\langle \widehat{\mathbf{q}}, \widehat{\mathbf{k}} \rangle^2}
+     {d_{\Sph^{d-1}}(\widehat{\mathbf{q}}, \widehat{\mathbf{k}})^2 + \epsilon},
 \]
 where the numerator captures directional alignment and the denominator enforces locality via chordal proximity.
 \end{proposition}
 \end{adjustwidth}
 
-Since the kernel depends only on $\hat q^\top \hat k$, it belongs to the class of isotropic kernels on the sphere. All spherical positive-definiteness claims in the main text assume $d\ge 2$, where Schoenberg's characterization applies \citep{schoenberg1942}.
+Since the kernel depends only on
+$\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}}$,
+it belongs to the class of isotropic kernels on the sphere.
+All spherical positive-definiteness claims in the main text assume $d\ge 2$,
+where Schoenberg's characterization applies \citep{schoenberg1942}.
 
 \begin{adjustwidth}{1.5em}{1.5em}
 \begin{remark}[Geometric Invariances]
 \label{rem:invariances}
-The spherical $\E$-product is invariant under (i) rotations: $\E_{\mathrm{sph}}(R\hat q, R\hat k) = \E_{\mathrm{sph}}(\hat q, \hat k)$ for all $R \in SO(d)$, and (ii) uniform scaling prior to normalization. Note that while $(\hat q^\top \hat k)^2$ is even under sign flips, the full kernel $\E_{\mathrm{sph}}(\hat q,\hat k)=\frac{(\hat q^\top \hat k)^2}{(2+\epsilon)-2\hat q^\top\hat k}$ is not invariant under $\hat q \mapsto -\hat q$ in general.
+The spherical $\E$-product is invariant under
+(i) rotations:
+$\E_{\mathrm{sph}}(\mathbf{R}\widehat{\mathbf{q}}, \mathbf{R}\widehat{\mathbf{k}})
+= \E_{\mathrm{sph}}(\widehat{\mathbf{q}}, \widehat{\mathbf{k}})$
+for all $\mathbf{R} \in SO(d)$,
+and (ii) uniform scaling prior to normalization.
+Note that while
+$(\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})^2$
+is even under sign flips, the full kernel
+\[
+\E_{\mathrm{sph}}(\widehat{\mathbf{q}},\widehat{\mathbf{k}})
+=
+\frac{(\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})^2}
+     {(2+\epsilon)-2\widehat{\mathbf{q}}^\top\widehat{\mathbf{k}}}
+\]
+is not invariant under $\widehat{\mathbf{q}} \mapsto -\widehat{\mathbf{q}}$
+in general.
 \end{remark}
 \end{adjustwidth}
 
 \begin{adjustwidth}{1.5em}{1.5em}
 \begin{proposition}[PRF Unbiasedness]
 \label{prop:prf-unbiased}
-For $\hat q, \hat k \in \Sph^{d-1}$ and $\{\omega_i\}_{i=1}^D \stackrel{\mathrm{iid}}{\sim} \mathcal{N}(0, I_d)$:
+For $\widehat{\mathbf{q}}, \widehat{\mathbf{k}} \in \Sph^{d-1}$ and
+$\{\boldsymbol{\omega}_i\}_{i=1}^D
+\stackrel{\mathrm{iid}}{\sim} \mathcal{N}(\mathbf{0}, \mathbf{I}_d)$:
 \[
-\mathbb{E}\left[\left\langle \phi_{\text{PRF}}(\hat q; s), \phi_{\text{PRF}}(\hat k; s)\right\rangle\right] = e^{2s \hat q^\top \hat k}.
+\mathbb{E}\!\left[
+\left\langle
+\phi_{\text{PRF}}(\widehat{\mathbf{q}}; s),
+\phi_{\text{PRF}}(\widehat{\mathbf{k}}; s)
+\right\rangle
+\right]
+=
+e^{2s\,\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}}}.
 \]
 \end{proposition}
 \begin{proof}
@@ -1048,14 +1083,24 @@ See Appendix~\ref{app:additional-proofs}.
 \begin{adjustwidth}{1.5em}{1.5em}
 \begin{lemma}[Positive Mixture Closure]
 \label{lem:mixture-pd}
-If $\{k_s\}_{s \geq 0}$ is a family of positive-definite kernels on $\mathcal{X}$ and $w(s) \geq 0$ is a nonnegative measure, then $k(x,y) = \int_0^\infty w(s) k_s(x,y) \, ds$ is PD on $\mathcal{X}$ (a standard closure property of PD kernels; see, e.g., \citep{aronszajn1950,scholkopf2002learning}).
+If $\{k_s\}_{s \geq 0}$ is a family of positive-definite kernels on $\mathcal{X}$
+and $w(s) \geq 0$ is a nonnegative measure, then
+$k(x,y) = \int_0^\infty w(s)\,k_s(x,y)\,ds$
+is PD on $\mathcal{X}$ (a standard closure property of PD kernels;
+see, e.g., \citep{aronszajn1950,scholkopf2002learning}).
 \end{lemma}
 \end{adjustwidth}
 
 \begin{adjustwidth}{1.5em}{1.5em}
 \begin{theorem}[Tensor Kernel Decomposition]
 \label{thm:tensor-rkhs}
-Let $k_1, k_2$ be positive-definite kernels on $\mathcal{X}$ with RKHSs $\mathcal{H}_1, \mathcal{H}_2$. Then the product kernel $k(x,y) = k_1(x,y) \cdot k_2(x,y)$ is positive definite with RKHS $\mathcal{H} = \mathcal{H}_1 \otimes \mathcal{H}_2$ (see, e.g., \citep{aronszajn1950,berlinet2004}).
+Let $k_1, k_2$ be positive-definite kernels on $\mathcal{X}$
+with RKHSs $\mathcal{H}_1, \mathcal{H}_2$.
+Then the product kernel
+$k(x,y) = k_1(x,y) \cdot k_2(x,y)$
+is positive definite with RKHS
+$\mathcal{H} = \mathcal{H}_1 \otimes \mathcal{H}_2$
+(see, e.g., \citep{aronszajn1950,berlinet2004}).
 \end{theorem}
 \end{adjustwidth}
 
@@ -1261,27 +1306,6 @@ Optimizer settings, learning rates, batch sizes, and training schedules are kept
 \paragraph{Ablation protocol (polynomial approximations).}
 The kernel-fidelity ablation in Section~\ref{subsec:poly-ablation} is implemented in \texttt{tests/ablation\_poly\_approx.py}. Running the script with \texttt{--sweep} produces a LaTeX table in \texttt{tables/poly\_ablation\_sweep.tex}. All variants tie the $\mathrm{QKV}$ and output projection weights and compare outputs against exact kernel-normalized spherical \E-attention.
 
-\paragraph{Maximum context under fixed memory.}
-Table~\ref{tab:max-seqlen} reports the raw values used to produce Fig.~\ref{fig:max-seqlen}.
-
-\begin{table}[t]
-\centering
-\caption{Maximum sequence length for GPT-\E under 80 GB GPU memory (inference).}
-\label{tab:max-seqlen}
-\begin{tabular}{rcc}
-\toprule
-Sequence Length & Peak Memory (MB) & Status \\
-\midrule
-$4096$   & $11{,}043$ & ok \\
-$8192$   & $12{,}225$ & ok \\
-$16384$  & $14{,}496$ & ok \\
-$32768$  & $20{,}855$ & ok \\
-$65536$  & $47{,}626$ & ok \\
-$131072$ & ---        & OOM \\
-\bottomrule
-\end{tabular}
-\end{table}
-
 \paragraph{Detailed Synthetic Test Results.}
 
 Below is a summary of the categories of and specific synthetic tests ran. 
@@ -1292,7 +1316,7 @@ Below is a summary of the categories of and specific synthetic tests ran.
 \caption{\small{
 Overview of benchmark task categories used in our evaluation.
 Each category groups tasks designed to probe specific capabilities of sequence models.
-See \texttt{docs/BENCHMARK\_TASKS.md} for detailed task descriptions.
+See \texttt{docs/BENCHMARK\_TASKS.md} in the project code repository for detailed task descriptions.
 }}
 \label{tab:task-categories}
 \resizebox{1\columnwidth}{!}{%
@@ -1336,7 +1360,7 @@ Multi-class counting \\
 }
 \end{table}
 
-Below are fully detailed results of said tests.
+Below (Table \ref{tab:tasks-all}) provides a fully detailed results of said synthetic tests.
 
 \setlength{\textfloatsep}{8pt}
 \vspace{-0.5em}
@@ -1545,7 +1569,7 @@ This difference becomes even more pronounced when we examine angular discriminat
 \begin{figure}[ht]
 \centering
 \includegraphics[width=.4\linewidth]{assets/kernel_derivatives.pdf}
-\caption{Gradient magnitudes.}
+\caption{TODO: Gradient magnitudes.}
 \label{fig:kernel-derivatives}
 \end{figure}
 A natural concern is whether this sharper response leads to gradient instability. Figure~\ref{fig:kernel-derivatives} addresses this by comparing gradient magnitudes. While spherical YAT does exhibit larger gradients near perfect alignment ($x \approx 1$), these remain bounded and concentrated in a small region. For the vast majority of token pairs, gradients are well-behaved, enabling stable training.
@@ -1568,7 +1592,7 @@ Figure~\ref{fig:denominator-histogram} shows the distribution of denominator val
 \centering
 
 \includegraphics[width=.4\linewidth]{assets/denominator_stability.pdf}
-\caption{Stability across seeds.}
+\caption{TODO: Stability across seeds.}
 \label{fig:denominator-stability}
 
 \end{figure}
@@ -1617,7 +1641,7 @@ This concentration persists across different values of the alignment variable $x
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=.8\textwidth]{assets/quadrature_contributions.pdf}
-\caption{Node contributions at different $x$ values. First nodes dominate across all alignments.}
+\caption{Node contributions at different $x$ values. TODO: First nodes dominate across all alignments.}
 \label{fig:quadrature-contributions}
 \end{figure}
 
@@ -1626,7 +1650,7 @@ Figure~\ref{fig:approximation-quality} shows the end-to-end kernel reconstructio
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=.8\textwidth]{assets/approximation_quality.pdf}
-\caption{Kernel reconstruction quality. SLAY closely matches pure quadrature.}
+\caption{TODO: Kernel reconstruction quality. SLAY closely matches pure quadrature.}
 \label{fig:approximation-quality}
 \end{figure}
 
@@ -1634,7 +1658,7 @@ Figure~\ref{fig:approximation-quality} shows the end-to-end kernel reconstructio
 \centering
 
 \includegraphics[width=.4\linewidth]{assets/error_vs_features.pdf}
-\caption{Error vs.\ features.}
+\caption{TODO: Error vs.\ features.}
 \label{fig:error-features}
 
 \end{figure}
@@ -1649,7 +1673,7 @@ The kernel-level differences documented above translate into measurable differen
 \begin{figure}[ht]
 \centering
 \includegraphics[width=.4\linewidth]{assets/entropy_vs_similarity.pdf}
-\caption{Entropy vs.\ similarity.}
+\caption{TODO: Entropy vs.\ similarity.}
 \label{fig:entropy-similarity}
 \end{figure}
 Figure~\ref{fig:entropy-similarity} plots attention entropy---a measure of how diffuse or concentrated the attention distribution is---as a function of token similarity. At low similarity (random embeddings), YAT mechanisms exhibit dramatically lower entropy than softmax, indicating highly selective attention that focuses on the few genuinely relevant tokens rather than spreading weight broadly. As similarity increases, all methods converge, as expected when most tokens become relevant.
@@ -1667,7 +1691,7 @@ Figure~\ref{fig:attention-entropy} provides another view of the same phenomenon,
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=.8\textwidth]{assets/attention_patterns.pdf}
-\caption{Attention pattern visualization. YAT and SLAY show more concentrated patterns; softmax is more diffuse.}
+\caption{TODO: Attention pattern visualization. YAT and SLAY show more concentrated patterns; softmax is more diffuse.}
 \label{fig:attention-patterns}
 \end{figure}
 
@@ -1690,14 +1714,14 @@ Figure~\ref{fig:spherical-heatmap} shows 3D heatmaps of attention weight. YAT an
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=.8\textwidth]{assets/spherical_heatmap.pdf}
-\caption{3D spherical attention heatmap. YAT and SLAY concentrate weight around the query; softmax is more diffuse.}
+\caption{TODO: 3D spherical attention heatmap. YAT and SLAY concentrate weight around the query; softmax is more diffuse.}
 \label{fig:spherical-heatmap}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=.8\textwidth]{assets/spherical_polar.pdf}
-\caption{Polar attention profile. Sharper drop-off indicates more geometry-aware attention.}
+\caption{TODO: Polar attention profile. Sharper drop-off indicates more geometry-aware attention.}
 \label{fig:spherical-polar}
 \end{figure}
 
@@ -1717,6 +1741,41 @@ Finally, we verify that SLAY achieves the promised linear scaling. Figure~\ref{f
 Together, these experiments validate the core claims: the spherical $\E$-kernel provides sharper, more selective attention than softmax; SLAY's construction guarantees positive denominators; the quadrature approximation converges rapidly; and the resulting mechanism scales linearly in sequence length.
 
 
+
+\subsection*{Experimental Setup}
+
+\textbf{Hardware \& Environment}. All models were trained on a cluster of 8 NVIDIA H100 GPUs using DeepSpeed for distributed training.
+
+\textbf{Model Architecture}. We use a standard GPT-2 Small architecture (124M parameters) with 12 layers, 12 attention heads, and an embedding dimension of $d_{model}=768$. The MLP block is the standard GPT-2 MLP (LayerNorm + GELU).
+
+\textbf{Hyperparameters}. All models use the same training hyperparameters:
+\begin{itemize}[leftmargin=*]
+    \setlength\itemsep{0em}
+    \item \textbf{Optimizer}: AdamW, LR $1 \times 10^{-4}$, Weight Decay $0.01$.
+    \item \textbf{Batch Size}: 32 per GPU (Ramp-up: 8$\to$32 over 500 steps).
+    \item \textbf{Dropout}: $0.1$ (embeddings and attention).
+\end{itemize}
+
+\textbf{Attention Mechanisms}. We compare the following mechanisms (Table \ref{tab:attention_params}). Note that $\epsilon$ values ensure numerical stability and vary by mechanism.
+
+\begin{table}[H]
+\centering
+\caption{Attention mechanisms and their configurations.}
+\label{tab:attention_params}
+\small
+\begin{tabular}{llcl}
+\toprule
+\textbf{Method} & \textbf{Type} & $\bm{\epsilon}$ & \textbf{Parameters / Notes} \\
+\midrule
+Standard & Softmax & - & Exact, quadratic cost. \\
+Linear & ELU+1 & $10^{-6}$ & Feature map $\phi(x) = \text{elu}(x)+1$. \\
+Performer & FAVOR+ & - & $M=64$ random features (ReLU). \\
+Yat & Exact & $10^{-3}$ & Exact Yat-kernel. \\
+Yat Spherical & Exact & $10^{-3}$ & Exact Spherical Yat-kernel. \\
+\textbf{SLAY} & Linear & $10^{-3}$ & $M_{\text{RFF}}=64, M_{\text{PRF}}=16, M_{\text{Poly}}=8$. \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \end{document}
 
