@@ -19,16 +19,17 @@ class FineWebStream(IterableDataset):
             streaming=True
         )
 
-        # Load tokenizer ONCE to read vocab size
-        tok = AutoTokenizer.from_pretrained("gpt2")
-        self.vocab_size = tok.vocab_size
-        del tok
+        # Load tokenizer ONCE to read vocab size and store for workers
+        self.tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        self.vocab_size = self.tokenizer.vocab_size
+        
+        # Configure tokenizer settings once
+        self.tokenizer.model_max_length = self.context_len
+        self.tokenizer.truncation_side = "right"
 
     def __iter__(self):
-        # ✅ tokenizer must be local to the worker/process
-        tokenizer = AutoTokenizer.from_pretrained("gpt2")
-        tokenizer.model_max_length = self.context_len
-        tokenizer.truncation_side = "right"
+        # ✅ Reuse pre-loaded tokenizer (avoids re-downloading in every worker)
+        tokenizer = self.tokenizer
 
         try:
             import deepspeed

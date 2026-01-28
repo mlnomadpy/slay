@@ -16,6 +16,11 @@ import optax
 from sklearn.datasets import load_svmlight_file
 from scipy.sparse import csr_matrix
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+import threading
+import queue
+
+# Enable TensorFloat32 for Ampere+ GPUs
+jax.config.update("jax_default_matmul_precision", "tensorfloat32")
 
 # --- Helpers ---
 
@@ -247,6 +252,37 @@ def load_xml_data(file_path):
     print("-----------------------------------------")
 
     return data[0], labels, num_features, num_labels
+
+class BackgroundGenerator(threading.Thread):
+    """
+    Prefetches data from a generator in a background thread.
+    Useful for hiding data loading latency (CPU) while GPU is working.
+    """
+    def __init__(self, generator, max_prefetch=2):
+        threading.Thread.__init__(self)
+        self.queue = queue.Queue(max_prefetch)
+        self.generator = generator
+        self.daemon = True
+        self.start()
+
+    def run(self):
+        try:
+            for item in self.generator:
+                self.queue.put(item)
+            self.queue.put(None)
+        except Exception as e:
+            # Propagate exception? For now just stop.
+            print(f"BackgroundGenerator Error: {e}")
+            self.queue.put(None)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        next_item = self.queue.get()
+        if next_item is None:
+            raise StopIteration
+        return next_item
 
 class XMLDataset:
     def __init__(self, X: csr_matrix, Y: List[np.ndarray], num_labels: int, batch_size: int, shuffle: bool = True):
@@ -661,6 +697,10 @@ def run_benchmark(args):
                     optimizer.update(grads)
                     return loss
     
+             @nnx.jit
+             def predict_step(model, indices, mask):
+                 return model.predict(indices, mask, k=5)
+
              def train_epoch(model, optimizer):
                 total_loss = 0
                 count = 0
@@ -668,7 +708,10 @@ def run_benchmark(args):
                 # Data Sharding Spec
                 data_sharding = NamedSharding(mesh, P('data', None))
                 
-                for batch in train_ds:
+                # Use BackgroundGenerator for prefetching
+                pbar = BackgroundGenerator(train_ds, max_prefetch=3)
+                
+                for batch in pbar:
                     # Shard batch explicitly
                     indices = jax.device_put(batch['features'], data_sharding)
                     mask = jax.device_put(batch['masks'], data_sharding)
@@ -690,11 +733,15 @@ def run_benchmark(args):
                 # Eval
                 all_preds = []
                 all_targets = []
-                for batch in test_ds:
+                
+                # Prefetch test data too
+                test_pbar = BackgroundGenerator(test_ds, max_prefetch=3)
+                
+                for batch in test_pbar:
                     indices = batch['features']
                     mask = batch['masks']
-                    # Predict top 5
-                    _, top_k = model.predict(indices, mask, k=5)
+                    # Predict top 5 (JIT Compiled)
+                    _, top_k = predict_step(model, indices, mask)
                     all_preds.extend(top_k)
                     all_targets.extend(batch['labels'])
                     
