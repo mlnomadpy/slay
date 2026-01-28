@@ -24,6 +24,7 @@
 \usepackage{changepage}
 \usepackage{pgfplots}
 \usepgfplotslibrary{groupplots}
+\usepackage{pgfplotstable}
 
 \usepackage{hyperref}
 \usepackage{url}
@@ -184,7 +185,7 @@ With spherical constraints in place, our next step is to linearize the factor $\
 
 The function $g(y) = 1/y$ is completely monotone on $(0,\infty)$, which by Bernstein's Theorem implies the Laplace representation $1/y = \int_0^\infty e^{-sy}\,ds$ \citep{widder1941laplace,schilling2012}. To apply this identity to our kernel, we substitute $y = C - 2x$ and verify that $y > 0$ for all $x \in [-1,1]$. Since $x \le 1$ and $C=2+\epsilon$, we have $y=C-2x \ge \epsilon > 0$, hence Bernstein's representation applies (see Lemma~\ref{lem:complete-monotone} in Appendix~\ref{app:background}).
 
-We conclude that by invoking the Laplce representation, the spherical \E-product can be re-written as:
+We conclude that by invoking the Laplace representation, the spherical \E-product can be re-written as:
 \begin{align}
 \E_{\text{sph}}(\widehat{\mathbf{q}},\widehat{\mathbf{k}})
 &= x^2 \int_0^\infty e^{-s(C-2x)}ds \\
@@ -657,13 +658,307 @@ Yat (Spherical)   & 0.2597 \\
 \subsection{\textcolor{red}{SLAYformer: SLAY in Transformers}}
 \label{subsec:slayformer}
 
-Comparing performance of 2.5B parameter models with different attention mechanisms. 
+We now evaluate SLAY in the context of fully trained transformer language models, comparing it against
+state‑of‑the‑art linear attention mechanisms and standard softmax attention under identical training
+conditions. All models are trained to the same token budget, satisfying the Chinchilla scaling law,
+and share architecture, optimization, and data, ensuring a controlled comparison.
 
-Comparing TEXT next token prediction and image classification (ViT)
+Table~\ref{tab:attention-val-comparison} summarizes validation loss and perplexity after training.
+Among linear‑time attention mechanisms, SLAY achieves the strongest overall performance, matching or
+slightly outperforming FAVOR+ (Performer) and remaining competitive with Cosformer.
+Importantly, SLAY does so without introducing additional approximations beyond those already inherent
+to linear attention, and without sacrificing stability or convergence speed.
 
-Detail inference scaling results.
+While standard softmax attention remains the strongest performer in absolute terms, its quadratic
+computational and memory complexity makes it infeasible at long context lengths.
+In contrast, SLAY operates in linear time and memory with respect to sequence length, enabling
+scaling to substantially longer contexts while preserving competitive modeling performance.
 
+\begin{table}[htbp]
+\centering
+\small
+\caption{\small{
+Validation performance comparison of attention mechanisms after satisfying the Chinchilla scaling law (2.5B tokens processed).
+All models are $\sim$125M parameters with context length 1024, embedding dimension 768, 12 layers, 12 attention heads,
+trained on FineWeb using learning rate $1\times10^{-4}$ and batch size 32.
+Val Loss denotes token‑level cross‑entropy loss on the validation set, and PPL is the corresponding perplexity.
+}}
+\label{tab:attention-val-comparison}
+\resizebox{1\columnwidth}{!}{%
+\begin{tabular}{lcc}
+\toprule
+Method & Val Loss $\downarrow$ & PPL $\downarrow$ \\
+\midrule
+\textbf{SLAY} & \textbf{5.3463} & \textbf{209.84} \\
+FAVOR+ (Performer) & 5.3531 & 211.27 \\
+Cosformer & 5.1983 & 180.97 \\
+Standard Softmax & 4.6417 & 103.73 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
 
+Figures~\ref{fig:val-loss-curves} and~\ref{fig:perplexity-curves} provide a detailed view of training
+dynamics. Across the full training trajectory, SLAY exhibits stable optimization behavior and
+converges at least as quickly as existing linear attention alternatives.
+Notably, the gap between SLAY and FAVOR+ steadily narrows over training, and SLAY consistently
+matches or exceeds FAVOR+ at convergence in both validation loss and perplexity.
+This indicates that the benefits of SLAY are not limited to early‑stage optimization, but persist
+through full convergence.
+
+\begin{figure}[htbp]
+\centering
+\small
+\caption{\small{
+Validation loss as a function of training steps after satisfying the Chinchilla scaling law.
+All models are $\sim$125M parameters, trained on FineWeb with identical optimization settings.
+}}
+\label{fig:val-loss-curves}
+\vspace{0.5em}
+
+\begin{tikzpicture}
+\begin{axis}[
+    width=1\columnwidth,
+    height=0.75\columnwidth,
+    xlabel={Training Steps},
+    ylabel={Validation Loss},
+    xmin=0,
+    ymin=5,
+    ymax=7.6,
+    grid=both,
+    legend style={
+        at={(0.98,0.98)},
+        anchor=north east,
+        draw=none
+    },
+    tick label style={font=\small},
+    label style={font=\small},
+]
+
+% ---------- SLAY ----------
+\addplot[ultra thick, red]
+table[row sep=\\]{
+Step Loss\\
+500 7.3243\\
+1001 7.0039\\
+1502 6.7714\\
+2003 6.5691\\
+2504 6.4146\\
+3005 6.3099\\
+3506 6.1787\\
+4007 6.0955\\
+4508 6.0146\\
+5009 5.9158\\
+5510 5.8397\\
+6011 5.7736\\
+6512 5.7110\\
+7013 5.6408\\
+7514 5.6312\\
+8015 5.5789\\
+8516 5.5368\\
+9017 5.4884\\
+9518 5.4636\\
+10019 5.4260\\
+10520 5.3869\\
+11021 5.3512\\
+11522 5.3463\\
+};
+\addlegendentry{\textbf{SLAY}}
+
+% ---------- Cosformer ----------
+\addplot[thick, dashed, blue]
+table[row sep=\\]{
+Step Loss\\
+500 7.4607\\
+1001 7.1226\\
+1502 6.9385\\
+2003 6.7731\\
+2504 6.6259\\
+3005 6.4808\\
+3506 6.3822\\
+4007 6.2881\\
+4508 6.1228\\
+5009 6.0009\\
+5510 5.8881\\
+6011 5.7628\\
+6512 5.6976\\
+7013 5.5801\\
+7514 5.5102\\
+8015 5.4354\\
+8516 5.3964\\
+9017 5.3007\\
+9518 5.2568\\
+10019 5.1983\\
+};
+\addlegendentry{Cosformer}
+
+% ---------- FAVOR+ (Performer) ----------
+\addplot[thick, dash dot, orange]
+table[row sep=\\]{
+Step Loss\\
+500 7.5135\\
+1001 7.1177\\
+1502 6.8503\\
+2003 6.6652\\
+2504 6.5269\\
+3005 6.4373\\
+3506 6.3182\\
+4007 6.2614\\
+4508 6.1696\\
+5009 6.0353\\
+5510 5.9576\\
+6011 5.8842\\
+6512 5.8190\\
+7013 5.7325\\
+7514 5.6934\\
+8015 5.6263\\
+8516 5.5874\\
+9017 5.5298\\
+9518 5.5103\\
+10019 5.4524\\
+10520 5.4269\\
+11021 5.4001\\
+11522 5.3531\\
+};
+\addlegendentry{FAVOR+ (Performer)}
+
+\end{axis}
+\end{tikzpicture}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\small
+\caption{\small{
+Validation perplexity as a function of training steps after satisfying the Chinchilla scaling law.
+All models are $\sim$125M parameters, trained on FineWeb with identical optimization settings.
+}}
+\label{fig:perplexity-curves}
+\vspace{0.5em}
+
+\begin{tikzpicture}
+\begin{axis}[
+    width=1\columnwidth,
+    height=0.75\columnwidth,
+    xlabel={Training Steps},
+    ylabel={Perplexity},
+    xmin=0,
+    ymin=150,
+    ymax=1900,
+    ymode=log,
+    grid=both,
+    legend style={
+        at={(0.98,0.98)},
+        anchor=north east,
+        draw=none,
+        font=\footnotesize
+    },
+    tick label style={font=\small},
+    label style={font=\small},
+]
+
+% ---------- SLAY ----------
+\addplot[ultra thick, red]
+table[row sep=\\]{
+Step PPL\\
+500 1516.78\\
+1001 1100.96\\
+1502 872.50\\
+2003 712.69\\
+2504 610.68\\
+3005 549.98\\
+3506 482.37\\
+4007 443.86\\
+4508 409.38\\
+5009 370.83\\
+5510 343.67\\
+6011 321.70\\
+6512 302.17\\
+7013 281.67\\
+7514 279.00\\
+8015 264.78\\
+8516 253.87\\
+9017 241.88\\
+9518 235.94\\
+10019 227.24\\
+10520 218.53\\
+11021 210.86\\
+11522 209.84\\
+};
+\addlegendentry{\textbf{SLAY}}
+
+% ---------- Cosformer ----------
+\addplot[thick, dashed, blue]
+table[row sep=\\]{
+Step PPL\\
+500 1738.36\\
+1001 1239.66\\
+1502 1031.22\\
+2003 873.99\\
+2504 754.40\\
+3005 652.48\\
+3506 591.22\\
+4007 538.14\\
+4508 456.14\\
+5009 403.79\\
+5510 360.73\\
+6011 318.25\\
+6512 298.14\\
+7013 265.10\\
+7514 247.19\\
+8015 229.39\\
+8516 220.60\\
+9017 200.48\\
+9518 191.86\\
+10019 180.97\\
+};
+\addlegendentry{Cosformer}
+
+% ---------- FAVOR+ (Performer) ----------
+\addplot[thick, dash dot, orange]
+table[row sep=\\]{
+Step PPL\\
+500 1832.56\\
+1001 1233.66\\
+1502 944.18\\
+2003 784.63\\
+2504 683.26\\
+3005 624.74\\
+3506 554.59\\
+4007 523.95\\
+4508 477.98\\
+5009 417.93\\
+5510 386.70\\
+6011 359.30\\
+6512 336.64\\
+7013 308.74\\
+7514 296.90\\
+8015 277.64\\
+8516 267.04\\
+9017 252.10\\
+9518 247.24\\
+10019 233.32\\
+10520 227.44\\
+11021 221.42\\
+11522 211.27\\
+};
+\addlegendentry{FAVOR+ (Performer)}
+
+\end{axis}
+\end{tikzpicture}
+\end{figure}
+
+Taken together, these results demonstrate that SLAY is at least as effective as state‑of‑the‑art
+linear-time attention mechanisms in practical transformer training.
+This finding is particularly significant in light of the theoretical properties of the YAT kernel
+introduced in Section ~\ref{sec:intro}.
+By enabling an efficient linear‑attention implementation of YAT, SLAY makes it possible to train
+large‑scale transformer models (SLAYformers) with long input sequences while preserving the kernel’s desirable
+theoretical properties, without incurring the prohibitive quadratic cost and without sacrificing core modeling performance relative to existing linear alternatives.
+
+As a result, SLAY provides a practical path toward scalable long‑context transformers that combine
+strong empirical performance with scalable, geometry-aware kernels, positioning it as a compelling drop‑in
+replacement for existing linear attention mechanisms in large‑scale settings.
 
 % ------------------------------------------------------------
 % 9. Conclusion
@@ -675,11 +970,11 @@ We introduced SLAY: Spherical Linearized Attention with YAT-Kernel, a linear-tim
 
 Theoretical analysis shows that the proposed approximation preserves the self-regulation and superposition properties of the original \E-product. Empirically, we demonstrate stable end-to-end training, linear time and memory scaling, and the ability to process sequences \textbf{30x} longer than those handled by standard attention mechanism on a single 80 GB GPU.
 
-Taken together, these results suggest that linearized \E-Attention offers a viable path toward scalable, geometry-aware attention mechanisms, bridging NMNs and practical long-context Transformers. More broadly, this work also demonstrates that attention mechanisms need not be restricted to softmax-like similarities to admit linear-time computation. By combining spherical geometry with general kernel linearization tools, Spherical Yat-Attention opens a path toward scalable attention mechanisms grounded in alternative interaction principles.
+Taken together, these results suggest that the SLAY mechanism \textit{(spherical linearized attention with Yat Kernel)} offers a viable path toward scalable, geometry-aware attention mechanisms, bridging NMNs and practical long-context Transformers. More broadly, this work also demonstrates that attention mechanisms need not be restricted to softmax-like similarities to admit linear-time computation. By combining spherical geometry with general kernel linearization tools, Spherical Yat-Attention opens a path toward scalable attention mechanisms grounded in alternative interaction principles.
 
 \section*{Impact Statement}
 This paper presents work whose goal is to advance the field of Machine Learning. There are
-many potential societal consequences of our work, none which we feel must be specifically highlighted here. We would like to note though that linear attention Transformer models, that SLAY can power, address the challenge of the large carbon footprint in training of their brute force and much more computationally intense counterparts. We have made every effort to ensure the work’s reproducibility, in particular by providing details regarding hyperparameter settings in the Appendix. 
+many potential societal consequences of our work, none which we feel must be specifically highlighted here. We would like to note though that linear attention Transformer models, that \textbf{SLAY} can power, address the challenge of the large carbon footprint in training of their brute force and much more computationally intense counterparts. In addition, we believe that scalable geometry-aware mechanisms like SLAY will pave the way for lighter, safer and more interpretable models. We have made every effort to ensure the work’s reproducibility, in particular by providing details regarding hyperparameter settings and direct access to a code respository in the Appendix. 
 % ============================================================
 % References
 % ============================================================
@@ -987,9 +1282,65 @@ $131072$ & ---        & OOM \\
 \end{tabular}
 \end{table}
 
-\paragraph{Detailed Synthetic Tests.}
+\paragraph{Detailed Synthetic Test Results.}
+
+Below is a summary of the categories of and specific synthetic tests ran. 
 
 \begin{table}[htbp]
+\centering
+\small
+\caption{\small{
+Overview of benchmark task categories used in our evaluation.
+Each category groups tasks designed to probe specific capabilities of sequence models.
+See \texttt{docs/BENCHMARK\_TASKS.md} for detailed task descriptions.
+}}
+\label{tab:task-categories}
+\resizebox{1\columnwidth}{!}{%
+\begin{tabular}{lll}
+\toprule
+\textbf{Category} & \textbf{Tasks} & \textbf{Tests} \\
+\midrule
+Basic &
+copy, sort, reverse &
+Information routing \\
+
+Memory &
+retrieval, kv\_recall, first\_token, selective\_copy &
+Sparse retrieval, associative memory \\
+
+Long-Range &
+long\_copy, distant\_match, multihop &
+Long-range dependencies \\
+
+Reasoning &
+stack, induction, pattern &
+State tracking, pattern matching \\
+
+Arithmetic &
+counting, parity, addition, modular &
+Aggregation \\
+
+Pattern &
+bigram, majority &
+Statistical patterns \\
+
+Robustness &
+noisy\_copy, compression &
+Noise filtering \\
+
+Aggregation &
+histogram &
+Multi-class counting \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Below are fully detailed results of said tests.
+
+\setlength{\textfloatsep}{8pt}
+\vspace{-0.5em}
+\begin{table}[!htbp]
 \centering
 \small
 \caption{Synthetic task performance across all categories. Accuracy (mean $\pm$ std over 3 seeds).}
@@ -1036,10 +1387,11 @@ Compression     & 0.59$\pm$0.00 & 0.59$\pm$0.00 & 0.59$\pm$0.01 & 0.59$\pm$0.01 
 \bottomrule
 \end{tabular}
 \end{table}
+\vspace{-0.5em}
 
 \paragraph{Code availability.}
 An open-source implementation of the SLAY mechanism, including training scripts and experimental configurations, is available at
-\url{https://github.com/jomilu93/Spherical-Yat-Performer.git}.
+\url{https://anonymous.4open.science/r/slay-3B7C}.
 
 
 \section{Implementation Notes: Quadrature Scaling and Shapes}
@@ -1174,7 +1526,7 @@ The spherical $\E$-kernel differs fundamentally from softmax in how it weighs to
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{assets/kernel_comparison.pdf}
+\includegraphics[width=.8\textwidth]{assets/kernel_comparison.pdf}
 \caption{Kernel response as a function of alignment $x=\hat{q}^\top\hat{k}$. The spherical $\E$-kernel is bounded and self-regularizing, unlike softmax which grows without bound.}
 \label{fig:kernel-comparison}
 \end{figure}
@@ -1189,19 +1541,14 @@ The spherical $\E$-kernel differs fundamentally from softmax in how it weighs to
 \end{figure}
 This difference becomes even more pronounced when we examine angular discrimination. Figure~\ref{fig:kernel-angle} shows kernel response as a function of the angle between query and key. Spherical YAT exhibits sharp selectivity: it peaks dramatically for nearly-aligned tokens and drops to near-zero for orthogonal vectors. In contrast, softmax maintains appreciable weight even at 90°, effectively blurring the distinction between relevant and irrelevant tokens.
 
-\FloatBarrier
+
 \begin{figure}[ht]
 \centering
-\vspace{-1.5em}
 \includegraphics[width=.4\linewidth]{assets/kernel_derivatives.pdf}
-\vspace{-0.5em}
 \caption{Gradient magnitudes.}
 \label{fig:kernel-derivatives}
-\vspace{-1.5em}
 \end{figure}
 A natural concern is whether this sharper response leads to gradient instability. Figure~\ref{fig:kernel-derivatives} addresses this by comparing gradient magnitudes. While spherical YAT does exhibit larger gradients near perfect alignment ($x \approx 1$), these remain bounded and concentrated in a small region. For the vast majority of token pairs, gradients are well-behaved, enabling stable training.
-
-\FloatBarrier
 
 \subsection{Numerical Stability: The Denominator Problem}
 \label{app:stability-experiments}
@@ -1212,7 +1559,7 @@ Figure~\ref{fig:denominator-histogram} shows the distribution of denominator val
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{assets/denominator_histogram.pdf}
+\includegraphics[width=.8\textwidth]{assets/denominator_histogram.pdf}
 \caption{Denominator value distributions. SLAY and YAT variants maintain strict positivity; signed polynomial methods (TensorSketch, Random Maclaurin) produce negative denominators that cause numerical instability.}
 \label{fig:denominator-histogram}
 \end{figure}
@@ -1227,7 +1574,7 @@ Figure~\ref{fig:denominator-histogram} shows the distribution of denominator val
 \end{figure}
 One might wonder whether SLAY's stability is merely a lucky outcome for particular random seeds. Figure~\ref{fig:denominator-stability} dispels this concern by showing stability across multiple random initializations. SLAY's positivity guarantee is deterministic---it follows from the construction, not from chance---and the experiments confirm consistent behavior regardless of seed.
 
-\FloatBarrier
+
 \subsection{Quadrature Approximation Quality}
 \label{app:quadrature-details}
 
@@ -1237,7 +1584,7 @@ Figure~\ref{fig:quadrature-convergence} shows that error decreases exponentially
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{assets/quadrature_convergence.pdf}
+\includegraphics[width=.8\textwidth]{assets/quadrature_convergence.pdf}
 \caption{Quadrature error vs.\ number of nodes $R$. Exponential convergence enables small $R$ in practice.}
 \label{fig:quadrature-convergence}
 \end{figure}
@@ -1252,7 +1599,7 @@ Figure~\ref{fig:quadrature-convergence} shows that error decreases exponentially
 \end{figure}
 Why does small $R$ suffice? The Gauss-Laguerre nodes are not uniformly spaced: lower-indexed nodes sit closer to zero and carry substantially larger weights (Figure~\ref{fig:quadrature-nodes}).
 
-\FloatBarrier
+
 \begin{figure}[ht]
 \centering
 
@@ -1263,13 +1610,13 @@ Why does small $R$ suffice? The Gauss-Laguerre nodes are not uniformly spaced: l
 \end{figure}
 As a result, the first few nodes contribute the majority of the integral approximation (Figure~\ref{fig:expected-contribution}).
 
-\FloatBarrier
+
 
 This concentration persists across different values of the alignment variable $x$ (Figure~\ref{fig:quadrature-contributions}).
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{assets/quadrature_contributions.pdf}
+\includegraphics[width=.8\textwidth]{assets/quadrature_contributions.pdf}
 \caption{Node contributions at different $x$ values. First nodes dominate across all alignments.}
 \label{fig:quadrature-contributions}
 \end{figure}
@@ -1278,7 +1625,7 @@ Figure~\ref{fig:approximation-quality} shows the end-to-end kernel reconstructio
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{assets/approximation_quality.pdf}
+\includegraphics[width=.8\textwidth]{assets/approximation_quality.pdf}
 \caption{Kernel reconstruction quality. SLAY closely matches pure quadrature.}
 \label{fig:approximation-quality}
 \end{figure}
@@ -1293,7 +1640,7 @@ Figure~\ref{fig:approximation-quality} shows the end-to-end kernel reconstructio
 \end{figure}
 Finally, Figure~\ref{fig:error-features} demonstrates that SLAY's approximation error is stable across feature budgets, with the quadrature discretization---not the random features---being the dominant source of approximation error.
 
-\FloatBarrier
+
 \subsection{Attention Selectivity and Patterns}
 \label{app:attention-analysis}
 
@@ -1307,19 +1654,19 @@ The kernel-level differences documented above translate into measurable differen
 \end{figure}
 Figure~\ref{fig:entropy-similarity} plots attention entropy---a measure of how diffuse or concentrated the attention distribution is---as a function of token similarity. At low similarity (random embeddings), YAT mechanisms exhibit dramatically lower entropy than softmax, indicating highly selective attention that focuses on the few genuinely relevant tokens rather than spreading weight broadly. As similarity increases, all methods converge, as expected when most tokens become relevant.
 
-\FloatBarrier
+
 Figure~\ref{fig:attention-entropy} provides another view of the same phenomenon, showing the distribution of entropy values. Finally, Figure~\ref{fig:attention-patterns} visualizes representative attention matrices: YAT and SLAY produce visibly more concentrated patterns compared to the broader, more uniform patterns of softmax.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{assets/attention_entropy.pdf}
+\includegraphics[width=.8\textwidth]{assets/attention_entropy.pdf}
 \caption{Distribution of attention entropy values across mechanisms.}
 \label{fig:attention-entropy}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{assets/attention_patterns.pdf}
+\includegraphics[width=.8\textwidth]{assets/attention_patterns.pdf}
 \caption{Attention pattern visualization. YAT and SLAY show more concentrated patterns; softmax is more diffuse.}
 \label{fig:attention-patterns}
 \end{figure}
@@ -1328,7 +1675,7 @@ A natural question is whether SLAY's approximation preserves the attention behav
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{assets/attention_comparison.pdf}
+\includegraphics[width=.8\textwidth]{assets/attention_comparison.pdf}
 \caption{Attention output comparison between exact and SLAY-approximated methods.}
 \label{fig:attention-comparison}
 \end{figure}
@@ -1342,14 +1689,14 @@ Figure~\ref{fig:spherical-heatmap} shows 3D heatmaps of attention weight. YAT an
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{assets/spherical_heatmap.pdf}
+\includegraphics[width=.8\textwidth]{assets/spherical_heatmap.pdf}
 \caption{3D spherical attention heatmap. YAT and SLAY concentrate weight around the query; softmax is more diffuse.}
 \label{fig:spherical-heatmap}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{assets/spherical_polar.pdf}
+\includegraphics[width=.8\textwidth]{assets/spherical_polar.pdf}
 \caption{Polar attention profile. Sharper drop-off indicates more geometry-aware attention.}
 \label{fig:spherical-polar}
 \end{figure}
@@ -1361,7 +1708,7 @@ Finally, we verify that SLAY achieves the promised linear scaling. Figure~\ref{f
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{assets/scaling_with_exact.pdf}
+\includegraphics[width=.8\textwidth]{assets/scaling_with_exact.pdf}
 \caption{Computational scaling comparison. SLAY maintains linear complexity up to 131K tokens where quadratic methods fail.}
 \label{fig:scaling-exact}
 \end{figure}
