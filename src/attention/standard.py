@@ -17,8 +17,8 @@ class StandardCausalAttention(nn.Module):
         self.n_heads = n_heads
         self.head_dim = embed_dim // n_heads
         
-        self.qkv = nn.Linear(embed_dim, 3 * embed_dim)
-        self.out = nn.Linear(embed_dim, embed_dim)
+        self.qkv = nn.Linear(embed_dim, 3 * embed_dim, bias=False)
+        self.out = nn.Linear(embed_dim, embed_dim, bias=False)
         
     def forward(self, x):
         B, T, C = x.shape

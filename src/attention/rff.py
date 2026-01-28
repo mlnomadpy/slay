@@ -18,8 +18,8 @@ class RFFCausalAttention(nn.Module):
         self.num_features = num_features
         self.eps = 1e-6
         
-        self.qkv = nn.Linear(embed_dim, 3 * embed_dim)
-        self.out = nn.Linear(embed_dim, embed_dim)
+        self.qkv = nn.Linear(embed_dim, 3 * embed_dim, bias=False)
+        self.out = nn.Linear(embed_dim, embed_dim, bias=False)
         
         # Random Fourier Features
         self.register_buffer('omega', torch.randn(n_heads, self.head_dim, num_features))

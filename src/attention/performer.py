@@ -47,8 +47,8 @@ class FastAttention(nn.Module):
         self.chunk_size = chunk_size
         self.delta = denominator_stabilizer
         
-        self.qkv = nn.Linear(embed_dim, 3 * embed_dim)
-        self.out = nn.Linear(embed_dim, embed_dim)
+        self.qkv = nn.Linear(embed_dim, 3 * embed_dim, bias=False)
+        self.out = nn.Linear(embed_dim, embed_dim, bias=False)
         
         # Frozen Random Projection Matrix (Gaussian)
         self.register_buffer(

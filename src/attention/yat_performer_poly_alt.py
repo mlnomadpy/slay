@@ -85,8 +85,8 @@ class _YatPerformerPolyBase(nn.Module):
         self.use_sketching = use_sketching
         self.sketch_dim = sketch_dim if sketch_dim is not None else poly_dim * num_prf_features
 
-        self.qkv = nn.Linear(embed_dim, 3 * embed_dim)
-        self.out = nn.Linear(embed_dim, embed_dim)
+        self.qkv = nn.Linear(embed_dim, 3 * embed_dim, bias=False)
+        self.out = nn.Linear(embed_dim, embed_dim, bias=False)
 
         # Gauss-Laguerre quadrature nodes and weights
         # Paper: After change of variables t = Cs, we get s_r = t_r/C and w_r = α_r/C

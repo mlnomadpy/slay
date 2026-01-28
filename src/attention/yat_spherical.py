@@ -40,8 +40,8 @@ class YatSphericalCausalAttention(nn.Module):
         else:
             self.register_buffer('score_scale', torch.tensor(float(score_scale)))
         
-        self.qkv = nn.Linear(embed_dim, 3 * embed_dim)
-        self.out = nn.Linear(embed_dim, embed_dim)
+        self.qkv = nn.Linear(embed_dim, 3 * embed_dim, bias=False)
+        self.out = nn.Linear(embed_dim, embed_dim, bias=False)
         
     def forward(self, x):
         B, T, C_dim = x.shape

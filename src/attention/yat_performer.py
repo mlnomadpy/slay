@@ -33,8 +33,8 @@ class YatPerformerCausalAttention(nn.Module):
         self.epsilon = epsilon
         self.C = 2.0 + epsilon
         
-        self.qkv = nn.Linear(embed_dim, 3 * embed_dim)
-        self.out = nn.Linear(embed_dim, embed_dim)
+        self.qkv = nn.Linear(embed_dim, 3 * embed_dim, bias=False)
+        self.out = nn.Linear(embed_dim, embed_dim, bias=False)
         
         # Gauss-Laguerre quadrature nodes and weights
         nodes, weights = np.polynomial.laguerre.laggauss(num_quadrature_nodes)

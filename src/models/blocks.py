@@ -18,10 +18,10 @@ class GPT2Block(nn.Module):
         self.attn = attention_class(embed_dim, n_heads)
         self.ln2 = nn.LayerNorm(embed_dim)
         self.mlp = nn.Sequential(
-            nn.Linear(embed_dim, 4 * embed_dim),
+            nn.Linear(embed_dim, 4 * embed_dim, bias=False),
             nn.GELU(),
             nn.Dropout(dropout),
-            nn.Linear(4 * embed_dim, embed_dim),
+            nn.Linear(4 * embed_dim, embed_dim, bias=False),
         )
         self.attn_dropout = nn.Dropout(dropout)
         self.mlp_dropout = nn.Dropout(dropout)
