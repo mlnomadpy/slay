@@ -9,9 +9,11 @@
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage{graphicx}
+\usepackage{wrapfig}
 \usepackage{subcaption}
 \usepackage{booktabs}
 \usepackage{float}
+\usepackage{placeins}
 \usepackage{natbib}
 \usepackage{enumitem}
 \usepackage{mathtools}
@@ -205,7 +207,7 @@ where $\{t_r,\alpha_r\}_{r=1}^R$ are the standard Gauss--Laguerre nodes and weig
 \[
 s_r=\frac{t_r}{C},\qquad w_r=\frac{\alpha_r}{C}.
 \]
-Thus, the $w_r$ already incorporate the $1/C$ factor induced by $t=Cs$. Since $|x| \le 1$, the integrand $h(s) = x^2 e^{2sx}$ is entire and uniformly bounded by $e^{2s}$, ensuring uniform exponential convergence over $x \in [-1,1]$. Such bounds follow from classical results on Gauss--Laguerre quadrature for entire functions of exponential type (see Theorem 3.6.24 in \citep{davis1984,gautschi2004}); for a shapes/implementation summary, see Appendix~\ref{app:impl}.
+Thus, the $w_r$ already incorporate the $1/C$ factor induced by $t=Cs$. Since $|x| \le 1$, the integrand $h(s) = x^2 e^{2sx}$ is entire and uniformly bounded by $e^{2s}$, ensuring uniform exponential convergence over $x \in [-1,1]$. Such bounds follow from classical results on Gauss--Laguerre quadrature for entire functions of exponential type (see Theorem 3.6.24 in \citep{davis1984,gautschi2004}); for a shapes/implementation summary, see Appendix~\ref{app:impl} and Appendix~\ref{app:quadrature-details}.
 
 \subsubsection{Polynomial and Exponential RFs}
 \label{sec:poly-exp-rfs}
@@ -244,10 +246,10 @@ Anchor features (low-rank) \citep{scholkopf2002learning} & $P$ & $O(d\,P)$ & No 
 \end{tabular*}
 \end{table*}
 
-For the theoretical non-negativity and denominator-positivity guarantees stated later, we require a polynomial component whose induced score estimates are nonnegative (e.g., the exact map, or anchor features). Signed polynomial approximations (TensorSketch, Random Maclaurin) and Nystrom features can yield negative approximate inner products and are therefore treated as accuracy/efficiency baselines rather than positivity-guaranteeing estimators.
+For the theoretical non-negativity and denominator-positivity guarantees stated later, we require a polynomial component whose induced score estimates are nonnegative (e.g., the exact map, or anchor features). Signed polynomial approximations (TensorSketch, Random Maclaurin) and Nystrom features can yield negative approximate inner products (see Appendix~\ref{app:stability-experiments}) and are therefore treated as accuracy/efficiency baselines rather than positivity-guaranteeing estimators.
 
-\paragraph{Why the polynomial factor is needed for fidelity.}
-The $x^2$ factor in Eq.~\eqref{eq:integral} is part of the target kernel; removing it yields a different kernel (see Appendix~\ref{app:features}). Retaining the polynomial factor is essential both for kernel fidelity and for positivity guarantees of the resulting attention scores.
+% \paragraph{Why the polynomial factor is needed for fidelity.}
+% The $x^2$ factor in Eq.~\eqref{eq:integral} is part of the target kernel; removing it yields a different kernel (see Appendix~\ref{app:features}). Retaining the polynomial factor is essential both for kernel fidelity and for positivity guarantees of the resulting attention scores.
 
 \paragraph{Positive Random Features (PRFs).}
 To handle the exponential term $e^{2s\,\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}}}$ from Eq. \ref{eq:integral}, we use PRFs for the exponential kernel, proposed in \citep{performers}, applied to the \emph{original normalized vectors} (we refer to them simply as PRFs; note that this is a different mechanisms than features used to approximate squared dot-product kernels, discussed above):
@@ -348,7 +350,7 @@ We evaluate SLAY along several axes:
 \vspace{-2mm}
 \item Fourth, we conduct extreme classification tests to evaluate performance of SLAY versus other attention mechanisms in large-scale classification tasks (see: Sec. \ref{subsec:extreme-classification}). 
 \vspace{-2mm}
-\item Finally, we test the SLAY mechanism at scale by training and evaluating a series of full-scale Transformer models, varying only the attention mechanism used. Unless stated otherwise, all variants share the same architecture and training settings; we change only the attention operator and its feature configuration (see: Sec. \ref{subsec:slayformer}).
+\item Finally, we test the SLAY mechanism at scale by training and evaluating a series of full-scale Transformer models, varying only the attention mechanism used, leaving every other hyperparameter constant. (see: Sec. \ref{subsec:slayformer}).
 \end{itemize}
 \vspace{-3mm}
 \subsection{Polynomial Factor Approximation}
@@ -360,7 +362,7 @@ For reference, we also include Laplace-only and a Hadamard-fusion variant. These
 \begin{table}[htbp]
 \centering
 \small
-\caption{\small{Kernel approximation quality and latency comparison. Rel.~$\ell_2$ is relative L2 error (lower is better), Cos is cosine similarity (higher is better), MSE is mean squared error (lower is better), and Latency is forward-pass time in milliseconds (lower is better). For large-scale snapshot, see the ``Large'' block in Table~\ref{tab:poly-sweep}).}}
+\caption{\small{Kernel approximation quality and latency comparison. Rel.~$\ell_2$ is relative L2 error, Cos is cosine similarity, MSE is mean squared error, and Latency is forward-pass time in milliseconds. For large-scale snapshot, see the ``Large'' block in Table~\ref{tab:poly-sweep}).}}
 \label{tab:kernel-combined}
 \resizebox{1.05\columnwidth}{!}{%
 \begin{tabular}{lcccc}
@@ -379,7 +381,9 @@ Random Maclaurin & 15826.841 & 0.004 & 4.10e+06 & 551.43 \\
 }
 \end{table}
 
-As shown in (Table~\ref{tab:poly-sweep}), anchor and Laplace-only achieve the lowest errors, but anchor is markedly faster (\,$\mathbf{489}$ ms vs.~$\mathbf{1906}$ ms\,) and thus becomes our default choice in the remaining experiments. Nystrom is substantially less accurate at these budgets. Signed polynomial approximations (TensorSketch and Random Maclaurin) can yield negative approximate inner products, leading to denominator cancellation and severe instability; we include them as efficiency baselines rather than positivity-guaranteeing estimators.
+As shown in (Table~\ref{tab:kernel-combined}), anchor and Laplace-only achieve the lowest errors, but anchor is markedly faster (\,$\mathbf{489}$ms vs.~$\mathbf{1906}$ms\,) and thus becomes our default choice in the remaining experiments. Nystrom is substantially less accurate at these budgets. Signed polynomial approximations (TensorSketch and Random Maclaurin) can yield negative approximate inner products, leading to denominator cancellation and severe instability; we include them as efficiency baselines rather than positivity-guaranteeing estimators.
+
+Finally, figure \ref{fig:decision-boundaries} demonstrates the approximation quality of the SLAY anchor kernel, where we observe that SLAY approximates the behavior of the YAT and Spherical YAT kernels remarkably well and at least as well if not better than alternative kernels and their linearized counterparts.
 
 \begin{figure}[htbp]
 \centering
@@ -398,7 +402,7 @@ All attention mechanisms are benchmarked in isolation, using a causal attention 
 
 \begin{figure}[htbp]
 \centering
-\caption{Attention mechanisms scaling behaviors. Several variants are compared: brute-force regular attention (\textrm{Standard}), YAT-attention (YAT), \textcolor{red}{linear attention} (\textrm{Linear}), Cosformer attention from \citep{cosformer} , Performer's attention from \citep{performers} (FAVOR+),  and SLAY's attention.}
+\caption{Attention mechanisms scaling behaviors. Several variants are compared: brute-force regular attention (\textrm{Standard}), YAT-attention (YAT), {linear attention} (\textrm{ELU+1}), Cosformer attention from \citep{cosformer} , Performer's attention from \citep{performers} (FAVOR+),  and SLAY's attention.}
 \label{fig:scaling}
 \vspace{0.3em}
 
@@ -427,7 +431,7 @@ All attention mechanisms are benchmarked in isolation, using a causal attention 
 \addlegendimage{black, dashed, thick, mark=square*, mark size=1.5pt}
 \addlegendentry{YAT}
 \addlegendimage{blue, mark=triangle*, mark size=1.5pt}
-\addlegendentry{Linear}
+\addlegendentry{Linear(ELU+1)}
 \addlegendimage{orange, mark=triangle*, mark size=1.5pt}
 \addlegendentry{Cosformer}
 \addlegendimage{purple, mark=x, mark size=2pt}
@@ -564,12 +568,12 @@ All attention mechanisms are benchmarked in isolation, using a causal attention 
 \end{groupplot}
 \end{tikzpicture}
 \end{figure}
-\vspace{-0.5em}
+% \vspace{-0.5em}
 
 \paragraph{Results overview.}
 Figure~\ref{fig:scaling} summarizes the scaling behavior. Quadratic attention mechanisms (standard softmax and exact YAT) exhibit rapidly increasing latency and memory usage, failing beyond \textbf{16K} tokens. In contrast, linear attention methods scale approximately linearly and remain stable up to \textbf{128K} tokens.
 
-SLAY's scaling behavior closely follows and in some cases outperforms other linear attention mechanisms while substantially reducing memory usage relative to its quadratic counterparts. At long sequence lengths, SLAY sustains high throughput comparable to other linear baselines, demonstrating that its added geometric structure does not compromise scalability.
+SLAY's scaling behavior closely follows and in some cases outperforms other linear attention mechanisms while substantially reducing memory usage relative to its quadratic counterparts. At long sequence lengths, SLAY uses orders of magnitude less memory than exact methods, enabling sequences well beyond where quadratic methods encounter out-of-memory failures. SLAY sustains high throughput comparable to other linear baselines, demonstrating that its added geometric structure does not compromise scalability (see Appendix~\ref{app:scaling-analysis} for detailed comparisons).
 
 \subsection{SLAY on Synthetic Tasks}
 \label{subsec:synthetic-experiments}
@@ -586,7 +590,6 @@ covering basic operations, arithmetic, long-range dependencies, memory, and reas
 % ---------- Core capabilities ----------
 \textbf{(a) Core capabilities}
 
-\vspace{0.3em}
 
 \makebox[\columnwidth][c]{%
 \setlength{\tabcolsep}{3pt}%
@@ -607,8 +610,6 @@ Linear          & 0.44 & 0.60 & 0.67 & 0.72 \\
 
 % ---------- Higher-level behavior ----------
 \textbf{(b) Higher-level behavior}
-
-\vspace{0.3em}
 
 \makebox[\columnwidth][c]{%
 \begin{tabular}{lccc}
@@ -943,7 +944,7 @@ Consequently, under this condition the approximate attention scores produced by 
 
 \paragraph{Numerical stability.}
 The boundedness of the spherical \E-product on $\Sph^{d-1}$ (Proposition~\ref{prop:bounded}) implies that attention scores remain uniformly bounded. Combined with positivity, this prevents the numerical instabilities associated with oscillatory random features and negative attention weights. This behavior mirrors stability properties previously observed in positive random
-feature–based linear attention mechanisms \citep{choromanski2021}.
+feature–based linear attention mechanisms \citep{performers}.
 
 \section{Experimental and Implementation Details}
 \label{app:experiments}
@@ -1057,7 +1058,7 @@ The linearization applies to both causal and non-causal attention. In experiment
 \section{Mathematical Tools Used (High Level)}
 \label{app:tools}
 
-Our linearization relies on (i) the Laplace/Bernstein representation of $1/y$ for completely monotone functions \citep{widder1941laplace,schilling2012}, (ii) closure properties of positive-definite (PD) kernels under products and nonnegative mixtures \citep{aronszajn1950,scholkopf2002learning}, (iii) the Gaussian moment generating function to obtain unbiased positive random features for exponential dot-product kernels \citep{choromanski2021}, and (iv) Gauss--Laguerre quadrature to discretize $\int_0^\infty e^{-t}f(t)\,dt$ \citep{davis1984,gautschi2004}. Numerical stabilization follows standard practice \citep{higham2002}.
+Our linearization relies on (i) the Laplace/Bernstein representation of $1/y$ for completely monotone functions \citep{widder1941laplace,schilling2012}, (ii) closure properties of positive-definite (PD) kernels under products and nonnegative mixtures \citep{aronszajn1950,scholkopf2002learning}, (iii) the Gaussian moment generating function to obtain unbiased positive random features for exponential dot-product kernels \citep{performers}, and (iv) Gauss--Laguerre quadrature to discretize $\int_0^\infty e^{-t}f(t)\,dt$ \citep{davis1984,gautschi2004}. Numerical stabilization follows standard practice \citep{higham2002}.
 
 \paragraph{Gauss--Laguerre scaling.}
 Let $\{t_r,\alpha_r\}_{r=1}^R$ be the Gauss--Laguerre nodes and weights for $\int_0^\infty e^{-t}f(t)\,dt$. With $t=Cs$ and $C=2+\epsilon$, we use
@@ -1159,6 +1160,215 @@ e^{2s(\hat q^\top \hat k)}=\sum_{n=0}^\infty \frac{(2s)^n}{n!}(\hat q^\top \hat 
 \]
 is a nonnegative linear combination of PD polynomial kernels, hence PD, and (iii) products of PD kernels are PD. Since the weight $e^{-sC}\ge 0$, the nonnegative mixture over $s$ is PD by Lemma~\ref{lem:mixture-pd}.
 \end{proof}
+
+
+\section{Empirical Analysis of SLAY Properties}
+\label{app:empirical-analysis}
+
+This appendix provides empirical grounding for the theoretical claims in the main text. We present a unified analysis organized around three questions: (1)~Why does the spherical $\E$-kernel behave differently from softmax? (2)~Why is SLAY numerically stable when other polynomial approximations fail? (3)~How well does the quadrature approximation work in practice?
+
+\subsection{Understanding the Spherical $\E$-Kernel}
+\label{app:kernel-properties}
+
+The spherical $\E$-kernel differs fundamentally from softmax in how it weighs token interactions. Figure~\ref{fig:kernel-comparison} compares the response curves: while softmax grows unboundedly as alignment approaches $x=1$, the spherical $\E$-kernel remains bounded by $1/\epsilon$. This self-regularization is a direct consequence of the inverse-distance denominator---highly aligned tokens are also close in representation space, and the two effects partially cancel.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{assets/kernel_comparison.pdf}
+\caption{Kernel response as a function of alignment $x=\hat{q}^\top\hat{k}$. The spherical $\E$-kernel is bounded and self-regularizing, unlike softmax which grows without bound.}
+\label{fig:kernel-comparison}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+
+\includegraphics[width=.4\linewidth]{assets/kernel_angle.pdf}
+\caption{Kernel response vs.\ angular distance.}
+\label{fig:kernel-angle}
+
+\end{figure}
+This difference becomes even more pronounced when we examine angular discrimination. Figure~\ref{fig:kernel-angle} shows kernel response as a function of the angle between query and key. Spherical YAT exhibits sharp selectivity: it peaks dramatically for nearly-aligned tokens and drops to near-zero for orthogonal vectors. In contrast, softmax maintains appreciable weight even at 90°, effectively blurring the distinction between relevant and irrelevant tokens.
+
+\FloatBarrier
+\begin{figure}[ht]
+\centering
+\vspace{-1.5em}
+\includegraphics[width=.4\linewidth]{assets/kernel_derivatives.pdf}
+\vspace{-0.5em}
+\caption{Gradient magnitudes.}
+\label{fig:kernel-derivatives}
+\vspace{-1.5em}
+\end{figure}
+A natural concern is whether this sharper response leads to gradient instability. Figure~\ref{fig:kernel-derivatives} addresses this by comparing gradient magnitudes. While spherical YAT does exhibit larger gradients near perfect alignment ($x \approx 1$), these remain bounded and concentrated in a small region. For the vast majority of token pairs, gradients are well-behaved, enabling stable training.
+
+\FloatBarrier
+
+\subsection{Numerical Stability: The Denominator Problem}
+\label{app:stability-experiments}
+
+A key claim of SLAY is that its random feature construction guarantees positive denominators, avoiding the catastrophic failures that plague signed polynomial approximations. This subsection provides direct empirical evidence for this claim.
+
+Figure~\ref{fig:denominator-histogram} shows the distribution of denominator values (the sum $\sum_j \langle\phi(q_i), \phi(k_j)\rangle$ that normalizes attention) across different methods. The contrast is stark: SLAY and YAT variants produce strictly positive denominators in all samples, while TensorSketch and Random Maclaurin generate substantial fractions of negative values. When the denominator crosses zero, attention weights become undefined or flip sign, causing NaN gradients and training collapse.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{assets/denominator_histogram.pdf}
+\caption{Denominator value distributions. SLAY and YAT variants maintain strict positivity; signed polynomial methods (TensorSketch, Random Maclaurin) produce negative denominators that cause numerical instability.}
+\label{fig:denominator-histogram}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+
+\includegraphics[width=.4\linewidth]{assets/denominator_stability.pdf}
+\caption{Stability across seeds.}
+\label{fig:denominator-stability}
+
+\end{figure}
+One might wonder whether SLAY's stability is merely a lucky outcome for particular random seeds. Figure~\ref{fig:denominator-stability} dispels this concern by showing stability across multiple random initializations. SLAY's positivity guarantee is deterministic---it follows from the construction, not from chance---and the experiments confirm consistent behavior regardless of seed.
+
+\FloatBarrier
+\subsection{Quadrature Approximation Quality}
+\label{app:quadrature-details}
+
+The integral representation of the spherical $\E$-kernel (Eq.~\ref{eq:integral}) is discretized via Gauss-Laguerre quadrature. A central practical question is: how many nodes $R$ are needed for acceptable accuracy?
+
+Figure~\ref{fig:quadrature-convergence} shows that error decreases exponentially with $R$---the hallmark of Gaussian quadrature for smooth integrands. This rapid convergence justifies our default choice of $R=3$, which achieves low error while contributing negligible overhead to total compute.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{assets/quadrature_convergence.pdf}
+\caption{Quadrature error vs.\ number of nodes $R$. Exponential convergence enables small $R$ in practice.}
+\label{fig:quadrature-convergence}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+
+\includegraphics[width=0.4\linewidth]{assets/quadrature_nodes.pdf}
+\caption{Gauss-Laguerre nodes.}
+\label{fig:quadrature-nodes}
+
+\end{figure}
+Why does small $R$ suffice? The Gauss-Laguerre nodes are not uniformly spaced: lower-indexed nodes sit closer to zero and carry substantially larger weights (Figure~\ref{fig:quadrature-nodes}).
+
+\FloatBarrier
+\begin{figure}[ht]
+\centering
+
+\includegraphics[width=.4\linewidth]{assets/expected_contribution.pdf}
+\caption{Expected contribution.}
+\label{fig:expected-contribution}
+
+\end{figure}
+As a result, the first few nodes contribute the majority of the integral approximation (Figure~\ref{fig:expected-contribution}).
+
+\FloatBarrier
+
+This concentration persists across different values of the alignment variable $x$ (Figure~\ref{fig:quadrature-contributions}).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{assets/quadrature_contributions.pdf}
+\caption{Node contributions at different $x$ values. First nodes dominate across all alignments.}
+\label{fig:quadrature-contributions}
+\end{figure}
+
+Figure~\ref{fig:approximation-quality} shows the end-to-end kernel reconstruction: SLAY closely matches the quadrature-only baseline, confirming that the random feature component adds minimal additional error. Finally, Figure~\ref{fig:error-features} demonstrates that SLAY's approximation error is stable across feature budgets, with the quadrature discretization---not the random features---being the dominant source of approximation error.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{assets/approximation_quality.pdf}
+\caption{Kernel reconstruction quality. SLAY closely matches pure quadrature.}
+\label{fig:approximation-quality}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+
+\includegraphics[width=.4\linewidth]{assets/error_vs_features.pdf}
+\caption{Error vs.\ features.}
+\label{fig:error-features}
+
+\end{figure}
+Finally, Figure~\ref{fig:error-features} demonstrates that SLAY's approximation error is stable across feature budgets, with the quadrature discretization---not the random features---being the dominant source of approximation error.
+
+\FloatBarrier
+\subsection{Attention Selectivity and Patterns}
+\label{app:attention-analysis}
+
+The kernel-level differences documented above translate into measurable differences in attention behavior. This subsection examines how attention weight is distributed across tokens.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=.4\linewidth]{assets/entropy_vs_similarity.pdf}
+\caption{Entropy vs.\ similarity.}
+\label{fig:entropy-similarity}
+\end{figure}
+Figure~\ref{fig:entropy-similarity} plots attention entropy---a measure of how diffuse or concentrated the attention distribution is---as a function of token similarity. At low similarity (random embeddings), YAT mechanisms exhibit dramatically lower entropy than softmax, indicating highly selective attention that focuses on the few genuinely relevant tokens rather than spreading weight broadly. As similarity increases, all methods converge, as expected when most tokens become relevant.
+
+\FloatBarrier
+Figure~\ref{fig:attention-entropy} provides another view of the same phenomenon, showing the distribution of entropy values. Finally, Figure~\ref{fig:attention-patterns} visualizes representative attention matrices: YAT and SLAY produce visibly more concentrated patterns compared to the broader, more uniform patterns of softmax.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{assets/attention_entropy.pdf}
+\caption{Distribution of attention entropy values across mechanisms.}
+\label{fig:attention-entropy}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{assets/attention_patterns.pdf}
+\caption{Attention pattern visualization. YAT and SLAY show more concentrated patterns; softmax is more diffuse.}
+\label{fig:attention-patterns}
+\end{figure}
+
+A natural question is whether SLAY's approximation preserves the attention behavior of exact spherical YAT. Figure~\ref{fig:attention-comparison} compares attention outputs directly, showing high correlation between the exact and approximate methods.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{assets/attention_comparison.pdf}
+\caption{Attention output comparison between exact and SLAY-approximated methods.}
+\label{fig:attention-comparison}
+\end{figure}
+
+\subsection{Spherical Geometry Visualization}
+\label{app:spherical-viz}
+
+The spherical constraint enables direct visualization of attention behavior on the unit sphere $\Sph^{d-1}$. With a query fixed at the north pole, we can examine how different kernels weight keys distributed across the sphere.
+
+Figure~\ref{fig:spherical-heatmap} shows 3D heatmaps of attention weight. YAT and SLAY concentrate attention strongly around the query direction; softmax distributes weight more uniformly, assigning appreciable weight even to keys far from the query. Figure~\ref{fig:spherical-polar} presents the same data as 2D polar profiles, making the difference in sharpness immediately apparent.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{assets/spherical_heatmap.pdf}
+\caption{3D spherical attention heatmap. YAT and SLAY concentrate weight around the query; softmax is more diffuse.}
+\label{fig:spherical-heatmap}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{assets/spherical_polar.pdf}
+\caption{Polar attention profile. Sharper drop-off indicates more geometry-aware attention.}
+\label{fig:spherical-polar}
+\end{figure}
+
+\subsection{Computational Scaling}
+\label{app:scaling-analysis}
+
+Finally, we verify that SLAY achieves the promised linear scaling. Figure~\ref{fig:scaling-exact} compares latency, memory, and throughput as a function of sequence length. Quadratic methods (standard attention, exact YAT) scale poorly and run out of memory beyond 16K tokens. SLAY, along with other linear attention methods, scales to 131K tokens and beyond while maintaining high throughput.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{assets/scaling_with_exact.pdf}
+\caption{Computational scaling comparison. SLAY maintains linear complexity up to 131K tokens where quadratic methods fail.}
+\label{fig:scaling-exact}
+\end{figure}
+
+\paragraph{Summary.}
+Together, these experiments validate the core claims: the spherical $\E$-kernel provides sharper, more selective attention than softmax; SLAY's construction guarantees positive denominators; the quadrature approximation converges rapidly; and the resulting mechanism scales linearly in sequence length.
+
 
 
 \end{document}

@@ -31,11 +31,11 @@ class TinyGPT(nn.Module):
         # Get attention class from registry
         attention_class = ATTENTION_CLASSES.get(attention_type, FastAttention)
         
-        # Use NovelBlock for Yat variants, GPT2Block for others
-        if attention_type in NOVEL_ACTIVATION_TYPES:
-            block_class = NovelBlock
-        else:
-            block_class = GPT2Block
+        # # Use NovelBlock for Yat variants, GPT2Block for others
+        # if attention_type in NOVEL_ACTIVATION_TYPES:
+        #     block_class = NovelBlock
+        # else:
+        block_class = GPT2Block
         
         dropout = config.get('dropout', 0.1)
         
