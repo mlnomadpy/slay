@@ -208,6 +208,7 @@ s_r=\frac{t_r}{C},\qquad w_r=\frac{\alpha_r}{C}.
 Thus, the $w_r$ already incorporate the $1/C$ factor induced by $t=Cs$. Since $|x| \le 1$, the integrand $h(s) = x^2 e^{2sx}$ is entire and uniformly bounded by $e^{2s}$, ensuring uniform exponential convergence over $x \in [-1,1]$. Such bounds follow from classical results on Gauss--Laguerre quadrature for entire functions of exponential type (see Theorem 3.6.24 in \citep{davis1984,gautschi2004}); for a shapes/implementation summary, see Appendix~\ref{app:impl}.
 
 \subsubsection{Polynomial and Exponential RFs}
+\label{sec:poly-exp-rfs}
 
 \paragraph{Tensor sketches \& beyond for polynomial kernels:}
 For the exact polynomial kernel $(\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})^2$, the explicit feature map $\phi_{\text{poly}}(\mathbf{u}) = \mathrm{vec}(\mathbf{u} \mathbf{u}^\top) \in \R^{d^2}$ yields exact reconstruction:
@@ -339,38 +340,35 @@ See Appendix~\ref{app:impl} for explicit tensor-product scaling (without sketchi
 We evaluate SLAY along several axes:
 \vspace{-3mm}
 \begin{itemize}
-\item First, we analyze polynomial approximation options to identify optimal configurations.
+\item First, we analyze polynomial approximation options to identify optimal configurations for SLAY (see: Sec. \ref{subsec:poly-ablation} for detailed studies).
 \vspace{-2mm}
-\item Second, we benchmark computational costs by measuring latency, memory, and throughput scaling with sequence length.
+\item Second, we benchmark computational costs by measuring latency, memory, and throughput scaling with sequence length (see: Sec. \ref{subsec:computational-costs}).
 \vspace{-2mm}
-\item  Third, we evaluate SLAY on \textbf{22} synthetic tasks spanning core capabilities and higher-level behaviors. 
+\item  Third, we evaluate SLAY on \textbf{22} synthetic tasks spanning core capabilities, as well as higher-level behaviors (see: Sec. \ref{subsec:synthetic-experiments}). 
 \vspace{-2mm}
-\item Fourth, we conduct extreme classification tests to evaluate performance of SLAY versus other attention mechanisms in large-scale classification tasks. 
+\item Fourth, we conduct extreme classification tests to evaluate performance of SLAY versus other attention mechanisms in large-scale classification tasks (see: Sec. \ref{subsec:extreme-classification}). 
 \vspace{-2mm}
-\item Finally, we test the SLAY mechanism at scale by training and evaluating a series of full-scale Transformer models, varying only the attention mechanism used. Unless stated otherwise, all variants share the same architecture and training settings; we change only the attention operator and its feature configuration.
+\item Finally, we test the SLAY mechanism at scale by training and evaluating a series of full-scale Transformer models, varying only the attention mechanism used. Unless stated otherwise, all variants share the same architecture and training settings; we change only the attention operator and its feature configuration (see: Sec. \ref{subsec:slayformer}).
 \end{itemize}
 \vspace{-3mm}
-\subsection{Polynomial and Attention Approximation}
+\subsection{Polynomial Factor Approximation}
 \label{subsec:poly-ablation}
+We isolate the polynomial factor $(\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})^2$ from the formula of the spherical \E-product (see: Sec. \ref{sec:poly-exp-rfs}) and compare several approximations (anchor, Nystrom, TensorSketch, Random Maclaurin). We report (i) kernel-normalized attention output error relative to exact spherical \E-attention and (ii) forward-pass latency, under matched feature budgets; protocol details and the multi-scale sweep are in Appendix~\ref{app:experiments} and Table~\ref{tab:poly-sweep} (Appendix~\ref{app:poly-ablation}).
 
+For reference, we also include Laplace-only and a Hadamard-fusion variant. These are not polynomial approximations of $(\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})^2$: they change the estimator by removing or altering the polynomial factor. Under feature-budget matching, they might require substantially larger number of RFs to reach comparable overall feature counts, which can dominate runtime.
 
-\paragraph{Polynomial Approximation}
-We isolate the polynomial factor $(\hat q^\top \hat k)^2$ and compare several approximations (anchor, Nystrom, TensorSketch, Random Maclaurin). We report (i) kernel-normalized attention output error relative to exact spherical \E-attention and (ii) forward-pass latency, under matched feature budgets; protocol details and the multi-scale sweep are in Appendix~\ref{app:experiments} and Table~\ref{tab:poly-sweep} (Appendix~\ref{app:poly-ablation}).
-
-For reference, we also include Laplace-only and a Hadamard-fusion variant. These are not polynomial approximations of $(\hat q^\top \hat k)^2$: they change the estimator by removing or altering the polynomial factor. Under feature-budget matching, they can therefore require substantially larger PRF feature dimension to reach comparable overall feature counts, which can dominate runtime.
-
-At the large scale (Table~\ref{tab:poly-ablation-snapshot}), anchor and Laplace-only achieve the lowest errors, but anchor is markedly faster (\,$489$ ms vs.~$1906$ ms\,) and is our default choice in the remaining experiments. Nystrom is substantially less accurate at these budgets. Signed polynomial approximations (TensorSketch and Random Maclaurin) can yield negative approximate inner products, leading to denominator cancellation and severe instability; we include them as efficiency baselines rather than positivity-guaranteeing estimators.
+At the large scale (Table~\ref{tab:poly-ablation-snapshot}), anchor and Laplace-only achieve the lowest errors, but anchor is markedly faster (\,$\mathbf{489}$ ms vs.~$\mathbf{1906}$ ms\,) and thus becomes our default choice in the remaining experiments. Nystrom is substantially less accurate at these budgets. Signed polynomial approximations (TensorSketch and Random Maclaurin) can yield negative approximate inner products, leading to denominator cancellation and severe instability; we include them as efficiency baselines rather than positivity-guaranteeing estimators.
 
 \begin{table}[htbp]
 \centering
 \small
-\caption{Kernel approximation quality. Rel.~$\ell_2$ is relative L2 error (lower is better), Cos is cosine similarity (higher is better).}
+\caption{\small{Kernel approximation quality. Rel.~$\ell_2$ is a relative L2 error (lower is better), Cos is cosine similarity (higher is better). The anchor features method delivers best performance in terms of both metrics.}}
 \label{tab:kernel-quality}
 \begin{tabular}{lccc}
 \toprule
 Method & Rel.~$\ell_2\downarrow$ & Cos$\uparrow$ & MSE$\downarrow$\\
 \midrule
-yat-performer-anchor & 0.5275 & 0.8496 & 4.55e-03\\
+yat-performer-anchor & 0.5275 & \textbf{0.8496} & \textbf{4.55e-03}\\
 yat-performer-laplace & 0.5440 & 0.8391 & 4.84e-03\\
 yat-performer & 0.7894 & 0.7321 & 1.02e-02\\
 yat-performer-nystrom & 70.2908 & -0.0088 & 8.08e+01\\
@@ -383,7 +381,7 @@ yat-performer-tensor & 24823.6855 & 0.0024 & 1.01e+07\\
 \begin{table}[htbp]
 \centering
 \small
-\caption{Polynomial-approximation ablation (large-scale snapshot; see the ``Large'' block in Table~\ref{tab:poly-sweep}). Lower Rel.~$\ell_2$ is better; latency is forward-pass time under the same feature-budget matching across methods (which can increase PRF dimensionality for Laplace-only/Hadamard). Very large errors indicate severe kernel mismatch/instability. Full multi-scale sweep is in Table~\ref{tab:poly-sweep} (Appendix~\ref{app:poly-ablation}).}
+\caption{\textcolor{red}{Polynomial-approximation ablation} (large-scale snapshot; see the ``Large'' block in Table~\ref{tab:poly-sweep}). Lower Rel.~$\ell_2$ is better; latency is forward-pass time under the same feature-budget matching across methods (which can increase PRF dimensionality for Laplace-only/Hadamard). Large errors indicate severe kernel mismatch/instability. Full multi-scale sweep is in Table~\ref{tab:poly-sweep} (Appendix~\ref{app:poly-ablation}).}
 % Note: these latencies include the full attention pipeline (PRF/quadrature, fusion/sketching, and contractions), not just polynomial feature construction.
 \label{tab:poly-ablation-snapshot}
 \begin{tabular}{lcc}
@@ -401,16 +399,20 @@ Random Maclaurin & $1.77\times 10^6$ & 551.43 \\
 \end{tabular}
 \end{table}
 
-\paragraph{Attention Approximation Errors}
+\subsection{\textcolor{red}{Attention Approximation}}
+\label{subsec:attention-approximation}
 
 \subsection{Computational Costs}
 \label{subsec:computational-costs}
 
-We compare the computational efficiency of \textbf{SLAY} as a linearized estimator of spherical YAT attention, against alternative quadratic and linear attention mechanisms. We report latency, peak memory usage, and throughput as functions of sequence length, focusing on regimes relevant to long-context modeling.
+We compare the computational efficiency of \textbf{SLAY} as a linearized estimator of spherical YAT attention, against alternative quadratic and linear attention mechanisms. We report latency, peak memory usage, and throughput as functions of sequence length $L$, focusing on regimes relevant to long-context modeling.
+
+\paragraph{Benchmark setup.}
+All attention mechanisms are benchmarked in isolation, using a causal attention kernel with identical architectural settings (embedding dimension $256$, $8$ heads, batch size $1$). Experiments are conducted on a single NVIDIA A100-SXM4 GPU (80\,GB). For each sequence length, we report mean latency over multiple timed runs after warm-up, peak GPU memory allocation, and effective throughput measured in tokens per second. Sequence lengths range from 128 tokens up to 131K tokens, or until out-of-memory (OOM) failure.
 
 \begin{figure}[htbp]
 \centering
-\caption{Attention mechanisms scaling behaviors.}
+\caption{Attention mechanisms scaling behaviors. Several variants are compared: brute-force regular attention (\textrm{Standard}), YAT-attention (YAT), \textcolor{red}{linear attention} (\textrm{Linear}), Cosformer attention from \citep{cosformer} , Performer's attention from \citep{performers} (FAVOR+),  and SLAY's attention.}
 \label{fig:scaling}
 \vspace{0.3em}
 
@@ -578,17 +580,12 @@ We compare the computational efficiency of \textbf{SLAY} as a linearized estimat
 \end{figure}
 \vspace{-0.5em}
 
-\paragraph{Benchmark setup.}
-All attention mechanisms are benchmarked in isolation using a causal attention kernel with identical architectural settings (embedding dimension 256, 8 heads, batch size 1). Experiments are conducted on a single NVIDIA A100-SXM4 GPU (80\,GB). For each sequence length, we report mean latency over multiple timed runs after warm-up, peak GPU memory allocation, and effective throughput measured in tokens per second. Sequence lengths range from 128 tokens up to 131K tokens, or until out-of-memory (OOM) failure.
-
 \paragraph{Results overview.}
-Figure~\ref{fig:scaling} summarizes the scaling behavior. Quadratic attention mechanisms (standard softmax and exact YAT) exhibit rapidly increasing latency and memory usage, failing beyond 16K tokens. In contrast, linear attention methods scale approximately linearly and remain stable up to 128K tokens.
-
-
+Figure~\ref{fig:scaling} summarizes the scaling behavior. Quadratic attention mechanisms (standard softmax and exact YAT) exhibit rapidly increasing latency and memory usage, failing beyond \textbf{16K} tokens. In contrast, linear attention methods scale approximately linearly and remain stable up to \textbf{128K} tokens.
 
 SLAY's scaling behavior closely follows and in some cases outperforms other linear attention mechanisms while substantially reducing memory usage relative to its quadratic counterparts. At long sequence lengths, SLAY sustains high throughput comparable to other linear baselines, demonstrating that its added geometric structure does not compromise scalability.
 
-\subsection{Synthetic Tasks Experimentation}
+\subsection{SLAY on Synthetic Tasks}
 \label{subsec:synthetic-experiments}
 
 We evaluate all attention mechanisms on a suite of synthetic sequence modeling tasks
@@ -597,7 +594,7 @@ covering basic operations, arithmetic, long-range dependencies, memory, and reas
 \begin{table}[htbp]
 \centering
 \small
-\caption{Average accuracy by task category.}
+\caption{Average accuracy by task category. The name of different methods is the same as in Fig. \ref{fig:scaling}.}
 \label{tab:summary}
 
 % ---------- Core capabilities ----------
@@ -611,8 +608,8 @@ covering basic operations, arithmetic, long-range dependencies, memory, and reas
 \toprule
 Method & Basic & Arithmetic & Long-Range & Memory \\
 \midrule
-Softmax        & 0.60 & 0.54 & 0.68 & 0.73 \\
-Standard YAT  & 0.52 & 0.53 & 0.68 & 0.73 \\
+Standard        & 0.60 & 0.54 & 0.68 & 0.73 \\
+YAT  & 0.52 & 0.53 & 0.68 & 0.73 \\
 FAVOR+       & 0.45 & 0.57 & 0.68 & 0.73 \\
 Linear          & 0.44 & 0.60 & 0.67 & 0.72 \\
 \textbf{SLAY}   & \textbf{0.57} & \textbf{0.57} & \textbf{0.68} & \textbf{0.73} \\
@@ -632,8 +629,8 @@ Linear          & 0.44 & 0.60 & 0.67 & 0.72 \\
 \toprule
 Method & Patterns & Reasoning & Robustness \\
 \midrule
-Softmax        & 0.83 & 0.56 & 0.80 \\
-Standard YAT  & 0.81 & 0.56 & 0.80 \\
+Standard        & 0.83 & 0.56 & 0.80 \\
+YAT  & 0.81 & 0.56 & 0.80 \\
 FAVOR+       & 0.85 & 0.56 & 0.80 \\
 Linear          & 0.85 & 0.56 & 0.80 \\
 \textbf{SLAY}   & \textbf{0.86} & \textbf{0.57} & \textbf{0.80} \\
@@ -643,12 +640,13 @@ Linear          & 0.85 & 0.56 & 0.80 \\
 
 \end{table}
 
-Overall, SLAY matches or exceeds the performance of existing linearized attention mechanisms across the full spectrum of evaluated tasks. As shown in Table~\ref{tab:summary}, SLAY consistently performs on par with the strongest linear baselines on core capabilities such as long‑range dependency modeling and memory, while closing much of the gap to standard attention on basic operations. Notably, SLAY demonstrates competitive or superior accuracy in arithmetic and pattern‑based tasks, and achieves the highest average performance on higher‑level behaviors including patterns and reasoning. These results indicate that SLAY preserves the representational strengths of linear attention while, in many settings, providing measurable gains over comparable linearized approaches.
+Overall, SLAY matches or exceeds the performance of existing linearized attention mechanisms across the full spectrum of evaluated tasks. As shown in Table~\ref{tab:summary}, SLAY consistently performs on par with the strongest linear baselines on core capabilities such as long‑range dependency modeling and memory, while closing much of the gap to standard attention on basic operations. Notably, SLAY demonstrates competitive or superior accuracy in arithmetic and pattern‑based tasks, and achieves the highest average performance on higher‑level behaviors, including patterns and reasoning. These results indicate that SLAY preserves the representational strengths of linear attention while, in many settings, providing measurable gains over comparable linearized approaches.
 
 \subsection{Extreme Classification Test}
 \label{subsec:extreme-classification}
 % TODO add results from MM-AmazonTitles-300K LF-AmazonTitles-131K
-We conducted the extreme classification test and found that the SLAY mechanism performs the best out of the tested attention mechanisms, even better than the non-linearized softmax and YAT.
+\textcolor{red}{We have also conducted the extreme classification tests on the Eurlex dataset} and found that the SLAY mechanism provides the best performance across five tested attention methods. Interestingly, it also outperformed
+the brute-force softmax attention and regular YAT. The results are summarized in Table \ref{table:extreme_class_tests}.
 
 \begin{table}[htbp]
 \centering
@@ -664,11 +662,12 @@ Yat               & 0.2612 \\
 Yat (Spherical)   & 0.2597 \\
 \textbf{SLAY}     & \textbf{0.2652} \\
 \hline
+\label{table:extreme_class_tests}
 \end{tabular}
 \end{table}
 
 % ------------------------------------------------------------
-\subsection{SLAYformer: Testing SLAY on Transformer Architectures}
+\subsection{\textcolor{red}{SLAYformer: SLAY in Transformers}}
 \label{subsec:slayformer}
 
 Comparing performance of 2.5B parameter models with different attention mechanisms. 
@@ -677,30 +676,7 @@ Comparing TEXT next token prediction and image classification (ViT)
 
 Detail inference scaling results.
 
-% ------------------------------------------------------------
-% 8. Discussion and Limitations
-% ------------------------------------------------------------
-\section{Discussion and Limitations}
-\label{sec:discussion}
 
-This work provides a directional but concrete demonstration that the \E-product attention mechanism from Neural Matter Networks can be scaled to long contexts without sacrificing its core theoretical properties.
-
-\paragraph{Scale of experiments.}
-Our experiments are intentionally conservative, focusing on single-epoch training and base-sized models. Larger-scale experiments---including longer training runs, larger models, and multi-node setups---are necessary to fully assess downstream task performance and convergence behavior at scale.
-
-\paragraph{Constant-factor overhead.}
-Spherical \E-Attention introduces higher constant latency than softmax attention at short sequence lengths due to random-feature computation. As a result, it is not intended to replace softmax universally, but rather to enable regimes where quadratic attention is infeasible.
-
-\paragraph{Architectural generality.}
-While we focus on Transformer-based language models, the underlying linearization applies to any architecture using \E-product interactions. Promising future directions include applying \E-Attention to:
-\begin{itemize}[leftmargin=1.4em]
-    \item Reinforcement learning models with long-horizon credit assignment,
-    \item Memory-augmented agents and world models,
-    \item Physics-inspired neural architectures beyond Transformers.
-\end{itemize}
-
-\paragraph{Approximation error.}
-The TP-PRF approximation introduces bias controlled by feature dimension and quadrature resolution. Understanding how this bias interacts with optimization dynamics remains an open research question.
 
 % ------------------------------------------------------------
 % 9. Conclusion
@@ -708,14 +684,15 @@ The TP-PRF approximation introduces bias controlled by feature dimension and qua
 \section{Conclusion}
 \label{sec:conclusion}
 
-We introduced the \emph{Spherical \E-Attention}, a linear-time attention mechanism that makes the \E-product operator from Neural Matter Networks practical for long-context sequence modeling. By enforcing unit-norm constraints, applying Bernstein’s theorem, and approximating the resulting kernel with strictly positive Tensor Product Random Features, we obtain a factorizable and bounded attention kernel compatible with FAVOR$^+$-style computation.
+We introduced SLAY: Spherical Linearized Attention with YAT-Kernel, a linear-time attention mechanism that makes the \E-product operator from Neural Matter Networks (NMNs) practical for long-context sequence modeling. By enforcing unit-norm constraints, applying Bernstein’s Theorem, and approximating the resulting kernel with strictly positive Tensor Product Random Features, we obtain a factorizable and bounded attention kernel compatible with previous low-rank factorized attention techniques, extensively used before \citep{performers}.
 
-Theoretical analysis shows that the proposed approximation preserves the self-regulation and superposition properties of the original \E-product. Empirically, we demonstrate stable end-to-end training, linear time and memory scaling, and the ability to process sequences 30X longer than standard attention on a single 80 GB GPU.
+Theoretical analysis shows that the proposed approximation preserves the self-regulation and superposition properties of the original \E-product. Empirically, we demonstrate stable end-to-end training, linear time and memory scaling, and the ability to process sequences \textbf{30x} longer than those handled by standard attention mechanism on a single 80 GB GPU.
 
-Taken together, these results suggest that linearized \E-Attention offers a viable path toward scalable, geometry-aware attention mechanisms, bridging Neural Matter Networks and practical long-context Transformers.
+Taken together, these results suggest that linearized \E-Attention offers a viable path toward scalable, geometry-aware attention mechanisms, bridging NMNs and practical long-context Transformers. More broadly, this work also demonstrates that attention mechanisms need not be restricted to softmax-like similarities to admit linear-time computation. By combining spherical geometry with general kernel linearization tools, Spherical Yat-Attention opens a path toward scalable attention mechanisms grounded in alternative interaction principles.
 
-More broadly, this work also demonstrates that attention mechanisms need not be restricted to softmax-like similarities to admit linear-time computation. By combining spherical geometry with general kernel linearization tools, Spherical Yat-Attention opens a path toward scalable attention mechanisms grounded in alternative interaction principles.
-
+\section*{Impact Statement}
+This paper presents work whose goal is to advance the field of Machine Learning. There are
+many potential societal consequences of our work, none which we feel must be specifically highlighted here. We would like to note though that linear attention Transformer models, that SLAY can power, address the challenge of the large carbon footprint in training of their brute force and much more computationally intense counterparts. We have made every effort to ensure the work’s reproducibility, in particular by providing details regarding hyperparameter settings in the Appendix. 
 % ============================================================
 % References
 % ============================================================

@@ -143,6 +143,10 @@ def parse_args():
     parser.add_argument('--local_rank', type=int, default=-1,
                         help='Local rank for distributed training (DeepSpeed)')
     
+    # Performance optimizations
+    parser.add_argument('--use-triton', action='store_true',
+                        help='Use Triton-accelerated CUDA kernels for linear attention (36x faster)')
+    
     args, _ = parser.parse_known_args()
     return args
 
@@ -174,6 +178,7 @@ def args_to_config(args):
         'freeze_embeddings': args.freeze_embeddings,
         'use_wandb': not args.no_wandb,
         'run_name': args.run_name,
+        'use_triton': args.use_triton,
     }
     return config
 
@@ -195,6 +200,7 @@ def main():
         log_path = os.path.join(config['log_dir'], "training_metrics.csv")
         print(f"Logging metrics to: {log_path}")
         print(f"Using attention type: {config['attention_type']}")
+        print(f"Triton acceleration: {'ENABLED' if config.get('use_triton') else 'disabled'}")
         print(f"Config: {json.dumps(config, indent=2, default=str)}")
         
         # Build experiment config for wandb logging
@@ -370,6 +376,17 @@ def main():
     if rank == 0:
         print("Training complete. Model saved.")
         if config['use_wandb']:
+            print("Uploading model to WandB...")
+            artifact = wandb.Artifact(
+                name=f"model-{run_name}", 
+                type="model",
+                description=f"TinyGPT model trained with {config['attention_type']}"
+            )
+            # Add the DeepSpeed checkpoint subdirectory
+            # Note: saved to checkpoint_dir/final_model
+            final_model_path = os.path.join(config['checkpoint_dir'], "final_model")
+            artifact.add_dir(local_path=final_model_path, name="final_model")
+            wandb.log_artifact(artifact)
             wandb.finish()
 
 
