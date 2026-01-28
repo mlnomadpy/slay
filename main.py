@@ -49,14 +49,8 @@ def create_ds_config(config):
                 "weight_decay": config['weight_decay']
             }
         },
-        "fp16": {
-            "enabled": True,
-            "auto_cast": True,
-            "loss_scale": 0,
-            "loss_scale_window": 1000,
-            "initial_scale_power": 16,
-            "hysteresis": 2,
-            "min_loss_scale": 1
+        "bf16": {
+            "enabled": True
         },
         "zero_optimization": {
             "stage": 2,
