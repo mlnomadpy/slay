@@ -116,7 +116,7 @@ class TinyGPT(nn.Module):
                 x = checkpoint(block, x, use_reentrant=False)
             else:
                 x = block(x)
-        if attention_type in NOVEL_ACTIVATION_TYPES:
+        if self.attention_type in NOVEL_ACTIVATION_TYPES:
             pass
         else:
             x = self.ln(x)
