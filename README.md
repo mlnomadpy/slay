@@ -314,11 +314,11 @@ deepspeed main.py \
 ## Citation
 
 ```bibtex
-@article{slay2024,
-  title={Spherical Linearized Attention with Yat-Kernel},
+@article{slay2026,
+  title={SLAY: Geometry-Aware Spherical Linearized Attention with Yat-Kernel},
   author={...},
   journal={...},
-  year={2024}
+  year={2026}
 }
 ```
 
