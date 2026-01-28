@@ -247,14 +247,18 @@ out = attn(x)  # (2, 128, 64)
 Train a GPT-style model with configurable attention:
 
 ```bash
-# Basic training with DeepSpeed
-deepspeed main.py --attention standard --context-len 1024
+# Basic training with DeepSpeed (uses all available GPUs by default)
+# To specify number of GPUs, use --num_gpus=X BEFORE main.py
+deepspeed --num_gpus=8 main.py --attention standard --context-len 1024
+
+# If 'deepspeed' command is not found, run as module:
+python3 -m deepspeed.launcher.runner --num_gpus=8 main.py --attention standard --context-len 1024
 
 # Train with Yat-Performer (linear complexity)
-deepspeed main.py --attention yat-performer-anchor --context-len 2048
+deepspeed --num_gpus=8 main.py --attention yat-performer-anchor --context-len 2048
 
 # Full configuration example
-deepspeed main.py \
+deepspeed --num_gpus=8 main.py \
     --attention cosformer \
     --context-len 1024 \
     --embed-dim 768 \
