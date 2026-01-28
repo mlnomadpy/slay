@@ -736,7 +736,7 @@ def run_benchmark(args):
         # Replicated State Sharding
         replicated_sharding = NamedSharding(mesh, P())
         
-        with mesh, nnx.check_traceing():
+        with mesh:
              # Initialize model (replicated)
              rngs = nnx.Rngs(args.seed)
              if name == 'FullSoftmax':
@@ -769,8 +769,6 @@ def run_benchmark(args):
                     return m.loss(indices, mask, labels, label_mask)
                 
                 loss, grads = nnx.value_and_grad(loss_fn)(model)
-                loss = jax.lax.pmean(loss, axis_name='data')
-                grads = jax.lax.pmean(grads, axis_name='data') # Average grads across devices
                 optimizer.update(model, grads)
                 return loss
 
