@@ -63,8 +63,8 @@
 
 \twocolumn[
 \icmltitle{SLAY:\\
-Spherical Linearized Attention with Yat-Kernel}
-\icmltitlerunning{SLAY: Spherical Linearized Attention with Yat-Kernel}
+Geometry-Aware Spherical Linearized Attention with Yat-Kernel}
+\icmltitlerunning{SLAY: Geometry-Aware Spherical Linearized Attention with Yat-Kernel}
 
 \begin{icmlauthorlist}
 \icmlauthor{Jose Miguel Luna}{equal}
@@ -357,50 +357,36 @@ We isolate the polynomial factor $(\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}
 
 For reference, we also include Laplace-only and a Hadamard-fusion variant. These are not polynomial approximations of $(\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})^2$: they change the estimator by removing or altering the polynomial factor. Under feature-budget matching, they might require substantially larger number of RFs to reach comparable overall feature counts, which can dominate runtime.
 
-At the large scale (Table~\ref{tab:poly-ablation-snapshot}), anchor and Laplace-only achieve the lowest errors, but anchor is markedly faster (\,$\mathbf{489}$ ms vs.~$\mathbf{1906}$ ms\,) and thus becomes our default choice in the remaining experiments. Nystrom is substantially less accurate at these budgets. Signed polynomial approximations (TensorSketch and Random Maclaurin) can yield negative approximate inner products, leading to denominator cancellation and severe instability; we include them as efficiency baselines rather than positivity-guaranteeing estimators.
-
 \begin{table}[htbp]
 \centering
 \small
-\caption{\small{Kernel approximation quality. Rel.~$\ell_2$ is a relative L2 error (lower is better), Cos is cosine similarity (higher is better). The anchor features method delivers best performance in terms of both metrics.}}
-\label{tab:kernel-quality}
-\begin{tabular}{lccc}
+\caption{\small{Kernel approximation quality and latency comparison. Rel.~$\ell_2$ is relative L2 error (lower is better), Cos is cosine similarity (higher is better), MSE is mean squared error (lower is better), and Latency is forward-pass time in milliseconds (lower is better). For large-scale snapshot, see the ``Large'' block in Table~\ref{tab:poly-sweep}).}}
+\label{tab:kernel-combined}
+\resizebox{1.05\columnwidth}{!}{%
+\begin{tabular}{lcccc}
 \toprule
-Method & Rel.~$\ell_2\downarrow$ & Cos$\uparrow$ & MSE$\downarrow$\\
+Method & Rel.~$\ell_2\downarrow$ & Cos$\uparrow$ & MSE$\downarrow$ & Latency(ms)$\downarrow$ \\
 \midrule
-yat-performer-anchor & 0.5275 & \textbf{0.8496} & \textbf{4.55e-03}\\
-yat-performer-laplace & 0.5440 & 0.8391 & 4.84e-03\\
-yat-performer & 0.7894 & 0.7321 & 1.02e-02\\
-yat-performer-nystrom & 70.2908 & -0.0088 & 8.08e+01\\
-yat-performer-rm & 15826.8408 & 0.0043 & 4.10e+06\\
-yat-performer-tensor & 24823.6855 & 0.0024 & 1.01e+07\\
+Exact (Spherical) & 0.789 & 0.732 & 1.02e-02 & 5.02 \\
+\textbf{Anchor} & \textbf{0.527} & \textbf{0.850} & \textbf{4.55e-03} & \textbf{489.42} \\
+Laplace-only & 0.544 & 0.839 & 4.84e-03 & 1905.80 \\
+Hadamard (shared $\omega$) & 0.789 & 0.732 & 1.02e-02 & 1932.07 \\
+Nystrom & 70.291 & -0.009 & 8.08e+01 & 569.64 \\
+TensorSketch & 24823.685 & 0.002 & 1.01e+07 & 547.76 \\
+Random Maclaurin & 15826.841 & 0.004 & 4.10e+06 & 551.43 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
-\begin{table}[htbp]
+As shown in (Table~\ref{tab:poly-sweep}), anchor and Laplace-only achieve the lowest errors, but anchor is markedly faster (\,$\mathbf{489}$ ms vs.~$\mathbf{1906}$ ms\,) and thus becomes our default choice in the remaining experiments. Nystrom is substantially less accurate at these budgets. Signed polynomial approximations (TensorSketch and Random Maclaurin) can yield negative approximate inner products, leading to denominator cancellation and severe instability; we include them as efficiency baselines rather than positivity-guaranteeing estimators.
+
+\begin{figure}[htbp]
 \centering
-\small
-\caption{\textcolor{red}{Polynomial-approximation ablation} (large-scale snapshot; see the ``Large'' block in Table~\ref{tab:poly-sweep}). Lower Rel.~$\ell_2$ is better; latency is forward-pass time under the same feature-budget matching across methods (which can increase PRF dimensionality for Laplace-only/Hadamard). Large errors indicate severe kernel mismatch/instability. Full multi-scale sweep is in Table~\ref{tab:poly-sweep} (Appendix~\ref{app:poly-ablation}).}
-% Note: these latencies include the full attention pipeline (PRF/quadrature, fusion/sketching, and contractions), not just polynomial feature construction.
-\label{tab:poly-ablation-snapshot}
-\begin{tabular}{lcc}
-\toprule
-Method & Rel.~$\ell_2\downarrow$ & Latency (ms)$\downarrow$ \\
-\midrule
-Exact (Spherical) & 0.0000 & 5.02 \\
-Laplace-only & 0.4850 & 1905.80 \\
-Anchor & 0.4939 & 489.42 \\
-Hadamard (shared $\omega$) & 0.6793 & 1932.07 \\
-Nystrom & 28.1970 & 569.64 \\
-TensorSketch & $4.62\times 10^5$ & 547.76 \\
-Random Maclaurin & $1.77\times 10^6$ & 551.43 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{\textcolor{red}{Attention Approximation}}
-\label{subsec:attention-approximation}
+\includegraphics[width=\columnwidth]{assets/decision_boundaries.pdf}
+\caption{Each panel shows how a kernel partitions the 2D feature space among 5 randomly placed neurons (stars). \textbf{(a)} Linear dot product softmax. \textbf{(b)} FAVOR+ (ReLU random features). \textbf{(c)} Linear with ELU+1. \textbf{(d)} Exact \E-kernel. \textbf{(e)} Spherical \E-kernel. \textbf{(f)} SLAY (Anchor)}
+\label{fig:decision-boundaries}
+\end{figure}
 
 \subsection{Computational Costs}
 \label{subsec:computational-costs}
