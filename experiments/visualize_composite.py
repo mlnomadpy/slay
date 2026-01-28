@@ -220,7 +220,14 @@ def create_story_figure(output_path='slay_overview.pdf'):
         'quadrature_approx': quadrature_approx(x, R=3),
         'sequence_length': T,
         'embed_dim': D,
-    }, description="Composite story figure: kernel comparison, approximation, attention patterns")
+    }, 
+    description="Composite story figure: kernel comparison, approximation, attention patterns",
+    goal="Present the complete SLAY story: from kernel motivation to approximation quality to attention behavior.",
+    what_to_look_for="1) Panel (a): Compare kernel shapes - spherical YAT is bounded unlike softmax. "
+                     "2) Panel (b): SLAY quadrature closely approximates exact kernel. "
+                     "3) Panel (c): Attention patterns show more concentrated SLAY vs diffuse softmax.",
+    expected_conclusion="SLAY combines the best of both worlds: the geometric selectivity of spherical YAT "
+                       "with the linear complexity of random features, enabling scalable yet semantically-aware attention.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path
@@ -232,7 +239,7 @@ def create_scaling_overlay_figure(output_path='scaling_with_exact.pdf'):
     As suggested: "Overlay exact spherical YAT until OOM"
     """
     
-    fig, axes = plt.subplots(1, 3, figsize=(FULL_WIDTH, 2.2))
+    fig, axes = plt.subplots(1, 3, figsize=(FULL_WIDTH, 2.6))  # Taller
     fig.patch.set_facecolor('white')
     
     # Sequence lengths
@@ -260,70 +267,74 @@ def create_scaling_overlay_figure(output_path='scaling_with_exact.pdf'):
     ax = axes[0]
     ax.set_facecolor('white')
     
-    ax.loglog(seq_lengths_exact, latency_standard, 'ko-', label='Standard', markersize=4)
+    ax.loglog(seq_lengths_exact, latency_standard, 'ko-', label='Standard', markersize=5, linewidth=1.2)
     ax.loglog(seq_lengths_exact, latency_yat_exact, 's--', color=COLORS['yat'], 
-              label='ⵟ$_{sph}$ (OOM→)', markersize=4)
-    ax.loglog(seq_lengths, latency_slay, '*-', color=COLORS['slay'], 
-              label='SLAY', markersize=5, linewidth=1.5)
+              label='ⵟ$_{sph}$', markersize=5, linewidth=1.5)
+    ax.loglog(seq_lengths, latency_slay, 'D-', color=COLORS['slay'], 
+              label='SLAY', markersize=4, linewidth=2.0)
     ax.loglog(seq_lengths, latency_favor, '^:', color=COLORS['favor'], 
-              label='FAVOR+', markersize=4)
+              label='FAVOR+', markersize=5, linewidth=1.2)
     
-    # Mark OOM point
-    ax.axvline(x=16384, color='gray', linestyle=':', alpha=0.5)
-    ax.text(16384 * 1.2, 200, 'OOM', fontsize=6, color='gray', rotation=90, va='bottom')
+    # Mark OOM region with shaded area
+    ax.axvspan(16384, 200000, alpha=0.1, color='red')
+    ax.text(25000, 0.5, 'OOM\n(Exact)', fontsize=6, color='gray', ha='center')
     
     ax.set_xlabel('Sequence length')
     ax.set_ylabel('Latency (ms)')
-    ax.set_title('(a) Latency')
-    ax.legend(loc='upper left', fontsize=5, framealpha=0.9)
-    ax.grid(True, alpha=0.2, which='both')
+    ax.set_title('(a) Latency', fontweight='bold')
+    ax.legend(loc='upper left', fontsize=6, framealpha=0.95)
+    ax.grid(True, alpha=0.3, which='major')
+    ax.set_xlim(100, 150000)
     
     for spine in ax.spines.values():
-        spine.set_linewidth(0.6)
+        spine.set_linewidth(0.8)
     
     # Panel (b): Memory
     ax = axes[1]
     ax.set_facecolor('white')
     
-    ax.loglog(seq_lengths_exact, mem_standard, 'ko-', label='Standard', markersize=4)
+    ax.loglog(seq_lengths_exact, mem_standard, 'ko-', label='Standard', markersize=5, linewidth=1.2)
     ax.loglog(seq_lengths_exact, mem_yat_exact, 's--', color=COLORS['yat'], 
-              label='ⵟ$_{sph}$ (OOM→)', markersize=4)
-    ax.loglog(seq_lengths, mem_slay, '*-', color=COLORS['slay'], 
-              label='SLAY', markersize=5, linewidth=1.5)
+              label='ⵟ$_{sph}$', markersize=5, linewidth=1.5)
+    ax.loglog(seq_lengths, mem_slay, 'D-', color=COLORS['slay'], 
+              label='SLAY', markersize=4, linewidth=2.0)
     
-    ax.axvline(x=16384, color='gray', linestyle=':', alpha=0.5)
+    ax.axvspan(16384, 200000, alpha=0.1, color='red')
     
     ax.set_xlabel('Sequence length')
     ax.set_ylabel('Peak Memory (MB)')
-    ax.set_title('(b) Memory')
-    ax.legend(loc='upper left', fontsize=5, framealpha=0.9)
-    ax.grid(True, alpha=0.2, which='both')
+    ax.set_title('(b) Memory', fontweight='bold')
+    ax.legend(loc='upper left', fontsize=6, framealpha=0.95)
+    ax.grid(True, alpha=0.3, which='major')
+    ax.set_xlim(100, 150000)
     
     for spine in ax.spines.values():
-        spine.set_linewidth(0.6)
+        spine.set_linewidth(0.8)
     
     # Panel (c): Throughput
     ax = axes[2]
     ax.set_facecolor('white')
     
-    ax.semilogx(seq_lengths_exact, np.array(tp_standard)/1000, 'ko-', label='Standard', markersize=4)
+    ax.semilogx(seq_lengths_exact, np.array(tp_standard)/1000, 'ko-', label='Standard', markersize=5, linewidth=1.2)
     ax.semilogx(seq_lengths_exact, np.array(tp_yat_exact)/1000, 's--', color=COLORS['yat'], 
-                label='ⵟ$_{sph}$', markersize=4)
-    ax.semilogx(seq_lengths, np.array(tp_slay)/1000, '*-', color=COLORS['slay'], 
-                label='SLAY', markersize=5, linewidth=1.5)
+                label='ⵟ$_{sph}$', markersize=5, linewidth=1.5)
+    ax.semilogx(seq_lengths, np.array(tp_slay)/1000, 'D-', color=COLORS['slay'], 
+                label='SLAY', markersize=4, linewidth=2.0)
     
-    ax.axvline(x=16384, color='gray', linestyle=':', alpha=0.5)
+    ax.axvspan(16384, 200000, alpha=0.1, color='red')
     
     ax.set_xlabel('Sequence length')
     ax.set_ylabel('Throughput (K tok/s)')
-    ax.set_title('(c) Throughput')
-    ax.legend(loc='lower left', fontsize=5, framealpha=0.9)
-    ax.grid(True, alpha=0.2)
+    ax.set_title('(c) Throughput', fontweight='bold')
+    ax.legend(loc='upper right', fontsize=6, framealpha=0.95)
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(100, 150000)
+    ax.set_ylim(0, None)  # Start at 0
     
     for spine in ax.spines.values():
-        spine.set_linewidth(0.6)
+        spine.set_linewidth(0.8)
     
-    plt.tight_layout(pad=0.4)
+    plt.tight_layout(pad=0.5)
     
     plt.savefig(output_path, format='pdf', dpi=300,
                 facecolor='white', edgecolor='none', bbox_inches='tight')
@@ -344,7 +355,14 @@ def create_scaling_overlay_figure(output_path='scaling_with_exact.pdf'):
         'throughput_standard': tp_standard,
         'throughput_yat_exact': tp_yat_exact,
         'throughput_slay': tp_slay,
-    }, description="Scaling comparison with exact spherical YAT overlay until OOM")
+    }, 
+    description="Scaling comparison with exact spherical YAT overlay until OOM",
+    goal="Show computational benefits of SLAY vs exact attention at various sequence lengths.",
+    what_to_look_for="1) Latency: SLAY scales linearly while exact methods scale quadratically. "
+                     "2) Memory: SLAY uses constant memory while exact OOMs past certain length. "
+                     "3) Throughput: SLAY maintains high throughput at long sequences.",
+    expected_conclusion="SLAY achieves O(T) complexity vs O(T²) for exact methods, enabling training on sequences "
+                       "10-100x longer within the same compute/memory budget.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path

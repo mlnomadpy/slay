@@ -1,27 +1,44 @@
 # SLAY Visualization Data Log
-# Generated: 2026-01-28T05:46:14.276909
-# Description: Attention entropy vs position for different attention mechanisms
+# Generated: 2026-01-28T06:28:51.465796
 #============================================================
 
-## sequence_length
+## ANALYSIS CONTEXT
+
+### Goal
+Analyze how attention entropy (spread) changes as query position increases in causal attention.
+
+### What to Look For
+1) Early positions have low entropy (few tokens to attend to). 2) Compare steady-state entropy across mechanisms. 3) Note if any mechanism maintains lower entropy (more focused attention).
+
+### Expected Conclusion
+YAT and spherical YAT maintain lower entropy than softmax at longer positions, indicating more focused/selective attention. SLAY approximates this behavior.
+
+#------------------------------------------------------------
+
+## Description
+Attention entropy vs position for different attention mechanisms
+
+## DATA
+
+### sequence_length
 # Value: 256
 
-## batch_size
+### batch_size
 # Value: 2
 
-## num_heads
+### num_heads
 # Value: 4
 
-## embed_dim
+### embed_dim
 # Value: 64
 
-## positions
+### positions
 # Shape: (256,), dtype: int64
 # First 20: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
 # Last 20: [236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255]
 # Min: 0.000000, Max: 255.000000, Mean: 127.500000, Std: 73.900271
 
-## methods
+### methods
 # Length: 5
 # Values: ['Softmax', 'ⵟ (YAT)', 'ⵟ$_{sph}$', 'SLAY', 'FAVOR+']
 

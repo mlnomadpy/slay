@@ -1,25 +1,42 @@
 # SLAY Visualization Data Log
-# Generated: 2026-01-28T05:46:14.741600
-# Description: Attention entropy vs token cosine similarity
+# Generated: 2026-01-28T06:28:51.784867
 #============================================================
 
-## similarity_levels
+## ANALYSIS CONTEXT
+
+### Goal
+Examine how attention entropy responds to varying degrees of token similarity.
+
+### What to Look For
+1) At low similarity (random tokens), compare baseline entropy. 2) How does entropy change as tokens become more similar? 3) Which mechanism discriminates similar tokens best?
+
+### Expected Conclusion
+When tokens are highly similar (hard to distinguish), YAT kernels maintain lower entropy (better discrimination) than softmax. This shows YAT's geometric selectivity.
+
+#------------------------------------------------------------
+
+## Description
+Attention entropy vs token cosine similarity
+
+## DATA
+
+### similarity_levels
 # Shape: (10,), dtype: float64
 # Values: [0.0, 0.1, 0.2, 0.30000000000000004, 0.4, 0.5, 0.6000000000000001, 0.7000000000000001, 0.8, 0.9]
 
-## softmax_entropy
+### softmax_entropy
 # Shape: (10,), dtype: float64
 # Values: [0.42848241329193115, 0.4372536540031433, 0.4885452687740326, 0.587572455406189, 0.7382639050483704, 0.8609717488288879, 0.9167101383209229, 0.9337844252586365, 0.9373705387115479, 0.9378518462181091]
 
-## yat_entropy
+### yat_entropy
 # Shape: (10,), dtype: float64
 # Values: [0.0013224640861153603, 0.0013375040143728256, 0.0015899728750810027, 0.0026176930405199528, 0.006583928596228361, 0.018255099654197693, 0.04642173647880554, 0.11549156904220581, 0.2814745604991913, 0.6568348407745361]
 
-## spherical_yat_entropy
+### spherical_yat_entropy
 # Shape: (10,), dtype: float64
 # Values: [0.02975103259086609, 0.030059223994612694, 0.035299163311719894, 0.05623403564095497, 0.13023841381072998, 0.30039629340171814, 0.5431150794029236, 0.7681081295013428, 0.8915865421295166, 0.9323354959487915]
 
-## slay_entropy
+### slay_entropy
 # Shape: (10,), dtype: float64
 # Values: [0.9213130474090576, 0.9210293889045715, 0.9206905364990234, 0.9207184314727783, 0.9205031394958496, 0.9235519766807556, 0.9306754469871521, 0.9348708391189575, 0.9369447231292725, 0.9376242160797119]
 

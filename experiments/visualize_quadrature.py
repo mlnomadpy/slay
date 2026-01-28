@@ -140,13 +140,17 @@ def plot_quadrature_contributions(output_path='quadrature_contributions.pdf'):
         ax.set_title(f'$x = {x_val}$', fontsize=9)
         ax.set_xticks(range(R))
         ax.set_xticklabels([f'{r+1}' for r in range(R)])
-        ax.set_ylim(0, 100)
+        ax.set_ylim(0, 110)  # Extra headroom for annotations
         ax.grid(True, alpha=0.3, axis='y')
         
-        # Annotate with s values
+        # Annotate - inside for tall bars, above for short
         for i, bar in enumerate(bars):
-            if contrib_pct[i] > 5:
-                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 2,
+            height = bar.get_height()
+            if contrib_pct[i] > 20:  # Tall bar: label inside
+                ax.text(bar.get_x() + bar.get_width()/2, height - 5,
+                        f'{contrib_pct[i]:.0f}%', ha='center', va='top', fontsize=6, color='white', fontweight='bold')
+            elif contrib_pct[i] > 5:  # Short bar: label above
+                ax.text(bar.get_x() + bar.get_width()/2, height + 1,
                         f'{contrib_pct[i]:.0f}%', ha='center', va='bottom', fontsize=6)
         
         for spine in ax.spines.values():
@@ -164,7 +168,14 @@ def plot_quadrature_contributions(output_path='quadrature_contributions.pdf'):
         'x_samples': np.array(x_samples),
         'num_nodes_R': 5,
         'epsilon': epsilon,
-    }, description="Quadrature node contributions at different x values")
+    }, 
+    description="Quadrature node contributions at different x values",
+    goal="Show how each Gauss-Laguerre node contributes to the kernel approximation at different x values.",
+    what_to_look_for="1) Which nodes contribute most at each x value. "
+                     "2) Note that lower nodes dominate for most x values. "
+                     "3) Check if contribution is concentrated in first few nodes.",
+    expected_conclusion="The first 1-2 quadrature nodes capture most of the contribution, "
+                       "justifying the use of small R (e.g., R=3) for computational efficiency.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path
@@ -217,7 +228,14 @@ def plot_node_locations(output_path='quadrature_nodes.pdf'):
         'R_values_tested': R_values,
         'epsilon': epsilon,
         'C': C,
-    }, description="Gauss-Laguerre node locations for different R values")
+    }, 
+    description="Gauss-Laguerre node locations for different R values",
+    goal="Visualize where Gauss-Laguerre nodes are placed and their relative weights.",
+    what_to_look_for="1) Node positions (s_r = t_r/C) increase with index. "
+                     "2) Weights (shown as marker size) decrease for higher nodes. "
+                     "3) Larger R adds nodes at higher s values.",
+    expected_conclusion="Lower-indexed nodes are both closer to zero and have larger weights, "
+                       "explaining why few nodes suffice for accurate quadrature.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path
@@ -292,7 +310,14 @@ def plot_convergence_vs_nodes(output_path='quadrature_convergence.pdf'):
         'mean_relative_errors': np.array(errors),
         'x_values': x_vals,
         'exact_kernel': compute_exact_kernel(x_vals, epsilon),
-    }, description="Quadrature convergence: error vs number of nodes")
+    }, 
+    description="Quadrature convergence: error vs number of nodes",
+    goal="Demonstrate rapid convergence of quadrature approximation with increasing R.",
+    what_to_look_for="1) How quickly error drops as R increases. "
+                     "2) The error at R=3 (our default choice). "
+                     "3) Compare approximated kernel to exact in panel (b).",
+    expected_conclusion="Error drops exponentially with R. With just R=3 nodes, relative error is <1%, "
+                       "providing excellent approximation quality with minimal computational overhead.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path
@@ -303,7 +328,7 @@ def plot_expected_contribution(output_path='expected_contribution.pdf'):
     Bar plot showing: w_r * E[x² e^(2s_r x)]
     Averaged over typical x distribution.
     """
-    fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 2.5))
+    fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 3.0))  # Taller figure
     fig.patch.set_facecolor('white')
     ax.set_facecolor('white')
     
@@ -329,18 +354,27 @@ def plot_expected_contribution(output_path='expected_contribution.pdf'):
     
     ax.set_xlabel('Quadrature node $r$')
     ax.set_ylabel('Expected contribution (%)')
-    ax.set_title(f'$w_r \\cdot \\mathbb{{E}}[x^2 e^{{2s_r x}}]$ (R={R})')
+    ax.set_title(f'$w_r \\cdot \\mathbb{{E}}[x^2 e^{{2s_r x}}]$ (R={R})', pad=10)
     ax.set_xticks(range(R))
     ax.set_xticklabels([f'{r+1}\n($s={s_vals[r]:.2f}$)' for r in range(R)], fontsize=7)
     ax.grid(True, alpha=0.3, axis='y')
     
-    # Annotate
-    for i, bar in enumerate(bars):
-        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
-                f'{expected_pct[i]:.1f}%', ha='center', va='bottom', fontsize=7)
+    # Set y-axis limit with headroom for annotations
+    max_val = expected_pct.max()
+    ax.set_ylim(0, max_val * 1.25)  # 25% headroom
     
-    # Add insight annotation
-    ax.text(0.95, 0.95, f'First 2 nodes:\n{expected_pct[:2].sum():.0f}% of total',
+    # Annotate inside bars if tall enough, otherwise above
+    for i, bar in enumerate(bars):
+        height = bar.get_height()
+        if height > max_val * 0.15:  # If bar is tall enough, put text inside
+            ax.text(bar.get_x() + bar.get_width()/2, height - 3,
+                    f'{expected_pct[i]:.1f}%', ha='center', va='top', fontsize=7, color='white', fontweight='bold')
+        else:
+            ax.text(bar.get_x() + bar.get_width()/2, height + 0.5,
+                    f'{expected_pct[i]:.1f}%', ha='center', va='bottom', fontsize=7)
+    
+    # Add insight annotation (lower position)
+    ax.text(0.95, 0.88, f'First 2 nodes:\n{expected_pct[:2].sum():.0f}% of total',
             transform=ax.transAxes, fontsize=8, va='top', ha='right',
             bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
     
@@ -361,7 +395,14 @@ def plot_expected_contribution(output_path='expected_contribution.pdf'):
         'w_values': w_vals,
         'expected_contribution_pct': expected_pct,
         'first_2_nodes_pct': float(expected_pct[:2].sum()),
-    }, description="Expected quadrature contributions E[w_r * x^2 * exp(2s_r x)]")
+    }, 
+    description="Expected quadrature contributions E[w_r * x^2 * exp(2s_r x)]",
+    goal="Show the expected contribution of each node averaged over typical x distributions.",
+    what_to_look_for="1) Percentage contribution of each node. "
+                     "2) The sum of first 2 nodes (shown in annotation). "
+                     "3) Diminishing returns for higher-indexed nodes.",
+    expected_conclusion="First 2 nodes contribute >80% of the total, confirming that small R "
+                       "captures the essential behavior of the Laplace integral.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path

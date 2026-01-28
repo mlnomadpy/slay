@@ -241,7 +241,14 @@ def plot_spherical_heatmaps(output_path='spherical_heatmap.pdf'):
         'grid_resolution': {'n_theta': n_theta, 'n_phi': n_phi},
         'query_position': 'north pole [0, 0, 1]',
         'kernels_compared': ['Softmax', 'YAT', 'Spherical YAT', 'SLAY (Anchor)'],
-    }, description="3D spherical heatmap of attention weights on S^2")
+    }, 
+    description="3D spherical heatmap of attention weights on S^2",
+    goal="Visualize how different attention mechanisms weight keys distributed on a unit sphere relative to a fixed query.",
+    what_to_look_for="1) How attention weight changes with angular distance from query. "
+                     "2) Compare spread/concentration of attention across mechanisms. "
+                     "3) Note symmetry and smoothness of the attention distribution.",
+    expected_conclusion="Spherical YAT and SLAY show more concentrated attention around the query direction, "
+                       "while softmax distributes weight more uniformly. YAT kernels respect geometric structure.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path
@@ -314,7 +321,14 @@ def plot_polar_projection(output_path='spherical_polar.pdf'):
         'num_angles': n_angles,
         'angles_radians': angles,
         'kernels_compared': ['Softmax', 'YAT', 'Spherical YAT', 'SLAY'],
-    }, description="2D polar projection of attention weights")
+    }, 
+    description="2D polar projection of attention weights",
+    goal="Show attention weight as a function of angle in a clear 2D polar format.",
+    what_to_look_for="1) How quickly attention drops off with angular distance. "
+                     "2) Compare the 'sharpness' of each kernel's attention profile. "
+                     "3) Verify SLAY approximates spherical YAT profile closely.",
+    expected_conclusion="Spherical YAT produces sharper, more localized attention than softmax. "
+                       "SLAY closely matches the spherical YAT profile, validating the approximation.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path

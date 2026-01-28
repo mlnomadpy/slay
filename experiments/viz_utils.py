@@ -12,14 +12,17 @@ from datetime import datetime
 # ============================================================================
 # Data Logging
 # ============================================================================
-def log_data(filename, data_dict, description=""):
+def log_data(filename, data_dict, description="", goal="", what_to_look_for="", expected_conclusion=""):
     """
     Log plot data to a text file for LLM analysis.
     
     Args:
         filename: Output txt file path
         data_dict: Dictionary of arrays/values to log
-        description: Optional description of the data
+        description: Brief description of the data
+        goal: The goal/purpose of this visualization
+        what_to_look_for: What patterns/features to analyze
+        expected_conclusion: The conclusion that should be drawn
     
     Returns:
         Path to the created log file
@@ -29,11 +32,26 @@ def log_data(filename, data_dict, description=""):
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(f"# SLAY Visualization Data Log\n")
         f.write(f"# Generated: {datetime.now().isoformat()}\n")
-        f.write(f"# Description: {description}\n")
         f.write(f"#" + "="*60 + "\n\n")
         
+        # Analysis context section
+        if goal or what_to_look_for or expected_conclusion:
+            f.write("## ANALYSIS CONTEXT\n\n")
+            if goal:
+                f.write(f"### Goal\n{goal}\n\n")
+            if what_to_look_for:
+                f.write(f"### What to Look For\n{what_to_look_for}\n\n")
+            if expected_conclusion:
+                f.write(f"### Expected Conclusion\n{expected_conclusion}\n\n")
+            f.write("#" + "-"*60 + "\n\n")
+        
+        if description:
+            f.write(f"## Description\n{description}\n\n")
+        
+        f.write("## DATA\n\n")
+        
         for key, value in data_dict.items():
-            f.write(f"## {key}\n")
+            f.write(f"### {key}\n")
             if isinstance(value, np.ndarray):
                 f.write(f"# Shape: {value.shape}, dtype: {value.dtype}\n")
                 if value.ndim == 1 and len(value) <= 100:

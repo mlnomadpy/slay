@@ -1,15 +1,32 @@
 # SLAY Visualization Data Log
-# Generated: 2026-01-28T05:46:15.220600
-# Description: Attention pattern heatmaps for different mechanisms
+# Generated: 2026-01-28T06:34:50.359529
 #============================================================
 
-## sequence_length
+## ANALYSIS CONTEXT
+
+### Goal
+Visualize the structure of attention matrices for different mechanisms.
+
+### What to Look For
+1) Compare sparsity/concentration of attention weights. 2) Look for diagonal bias (local attention) or uniform spread. 3) Compare YAT/SLAY patterns against softmax baseline.
+
+### Expected Conclusion
+YAT and SLAY show more structured, concentrated attention patterns compared to softmax, indicating selective attention to relevant tokens rather than uniform spreading.
+
+#------------------------------------------------------------
+
+## Description
+Attention pattern heatmaps for different mechanisms
+
+## DATA
+
+### sequence_length
 # Value: 64
 
-## embed_dim
+### embed_dim
 # Value: 32
 
-## methods
+### methods
 # Length: 4
 # Values: ['Softmax', 'ⵟ (YAT)', 'ⵟ$_{sph}$ (Sph. YAT)', 'SLAY']
 

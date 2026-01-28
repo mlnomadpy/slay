@@ -1,20 +1,37 @@
 # SLAY Visualization Data Log
-# Generated: 2026-01-28T05:46:13.649742
-# Description: Stability summary: fraction of negative denominators by method
+# Generated: 2026-01-28T06:18:00.628075
 #============================================================
 
-## methods
+## ANALYSIS CONTEXT
+
+### Goal
+Summarize denominator stability across multiple random seeds.
+
+### What to Look For
+1) Which methods have zero negative denominators (green = stable). 2) Compare mean and std of negative percentages. 3) Note the stark contrast between SLAY/YAT and signed polynomial methods.
+
+### Expected Conclusion
+SLAY and exact YAT variants consistently have 0% negative denominators across all seeds, while Tensor Sketch and Random Maclaurin show significant instability.
+
+#------------------------------------------------------------
+
+## Description
+Stability summary: fraction of negative denominators by method
+
+## DATA
+
+### methods
 # Length: 5
 # Values: ['ⵟ', 'ⵟ$_{sph}$', 'SLAY\n(Anchor)', 'Tensor\nSketch', 'Random\nMaclaurin']
 
-## negative_pct_means
+### negative_pct_means
 # Shape: (5,), dtype: float64
 # Values: [0.0, 0.0, 0.0, 19.248046875, 16.7822265625]
 
-## negative_pct_stds
+### negative_pct_stds
 # Shape: (5,), dtype: float64
 # Values: [0.0, 0.0, 0.0, 1.209972366143564, 0.7949542664622925]
 
-## num_seeds_tested
+### num_seeds_tested
 # Value: 5
 

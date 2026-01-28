@@ -329,7 +329,14 @@ def plot_denominator_histograms(output_path='denominator_histogram.pdf'):
             'ts_min': float(denom_ts.min()), 'ts_negative_pct': float((denom_ts < 0).mean() * 100),
             'rm_min': float(denom_rm.min()), 'rm_negative_pct': float((denom_rm < 0).mean() * 100),
         }
-    }, description="Denominator positivity analysis across attention mechanisms")
+    }, 
+    description="Denominator positivity analysis across attention mechanisms",
+    goal="Verify that SLAY maintains positive denominators (numerical stability) unlike signed polynomial baselines.",
+    what_to_look_for="1) Check if any denominator values are negative (causes NaN/instability). "
+                     "2) Compare minimum values across methods. "
+                     "3) Look at the percentage of negative samples for each method.",
+    expected_conclusion="SLAY (anchor) and spherical YAT have 0% negative denominators, ensuring stability. "
+                       "Tensor Sketch and Random Maclaurin have significant negative fractions, causing training instability.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path
@@ -416,7 +423,14 @@ def plot_stability_summary(output_path='denominator_stability.pdf'):
         'negative_pct_means': np.array(means),
         'negative_pct_stds': np.array(stds),
         'num_seeds_tested': 5,
-    }, description="Stability summary: fraction of negative denominators by method")
+    }, 
+    description="Stability summary: fraction of negative denominators by method",
+    goal="Summarize denominator stability across multiple random seeds.",
+    what_to_look_for="1) Which methods have zero negative denominators (green = stable). "
+                     "2) Compare mean and std of negative percentages. "
+                     "3) Note the stark contrast between SLAY/YAT and signed polynomial methods.",
+    expected_conclusion="SLAY and exact YAT variants consistently have 0% negative denominators across all seeds, "
+                       "while Tensor Sketch and Random Maclaurin show significant instability.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path

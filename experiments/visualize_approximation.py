@@ -229,7 +229,15 @@ def plot_kernel_reconstruction(output_path='approximation_quality.pdf'):
             'max_quad_error': float(np.max(quad_error)),
             'max_slay_error': float(np.max(slay_error)),
         }
-    }, description="Approximation quality: exact vs quadrature vs SLAY")
+    }, 
+    description="Approximation quality: exact vs quadrature vs SLAY",
+    goal="Demonstrate that SLAY's quadrature-based approximation faithfully reconstructs the spherical YAT kernel.",
+    what_to_look_for="1) Compare exact ⵟ_sph curve against quadrature-only and SLAY approximations. "
+                     "2) Check error magnitude and distribution across x values. "
+                     "3) Note that SLAY errors are structured (smooth) not random.",
+    expected_conclusion="SLAY approximation has low mean error and the error is smooth/structured, "
+                       "indicating the approximation preserves the essential shape of the kernel. "
+                       "With just R=3 quadrature nodes, we achieve excellent reconstruction.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path
@@ -305,7 +313,14 @@ def plot_error_vs_features(output_path='error_vs_features.pdf'):
         'slay_errors': np.array(slay_errors),
         'favor_errors': np.array(favor_errors),
         'laplace_errors': np.array(laplace_errors),
-    }, description="Error vs feature budget: SLAY, FAVOR+, Laplace-only")
+    }, 
+    description="Error vs feature budget: SLAY, FAVOR+, Laplace-only",
+    goal="Compare sample efficiency of SLAY against other linear attention approximations.",
+    what_to_look_for="1) How quickly error decreases as feature budget grows. "
+                     "2) Compare SLAY's slope against FAVOR+ and Laplace-only. "
+                     "3) Note the absolute error level at each feature dimension.",
+    expected_conclusion="SLAY achieves lower error than alternatives for the same feature budget, "
+                       "demonstrating better sample efficiency from the structured polynomial+PRF approach.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path
@@ -446,7 +461,14 @@ def plot_attention_output_comparison(output_path='attention_comparison.pdf'):
         'attention_row_positions': positions,
         'yat_attention_row': yat_row,
         'slay_attention_row': slay_row,
-    }, description="Attention output comparison: YAT vs Spherical YAT vs SLAY")
+    }, 
+    description="Attention output comparison: YAT vs Spherical YAT vs SLAY",
+    goal="Verify that SLAY attention outputs match exact spherical YAT outputs on real inputs.",
+    what_to_look_for="1) Correlation between spherical YAT and SLAY outputs (should be >0.99). "
+                     "2) Relative L2 error between outputs (should be <0.1). "
+                     "3) Attention row patterns should look nearly identical.",
+    expected_conclusion="SLAY produces attention outputs highly correlated with exact spherical YAT, "
+                       "validating that the linear-complexity approximation preserves the essential behavior.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path

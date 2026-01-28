@@ -14,6 +14,7 @@ import matplotlib as mpl
 import os
 import json
 from datetime import datetime
+from viz_utils import log_data
 
 # ============================================================================
 # Publication Settings (ICML)
@@ -106,53 +107,6 @@ def elu_plus_one_kernel(x):
     return (elu_x + 1) ** 2 / 4  # Normalized for visualization
 
 
-# ============================================================================
-# Data Logging
-# ============================================================================
-def log_data(filename, data_dict, description=""):
-    """
-    Log plot data to a text file for LLM analysis.
-    
-    Args:
-        filename: Output txt file path
-        data_dict: Dictionary of arrays/values to log
-        description: Optional description of the data
-    """
-    os.makedirs(os.path.dirname(filename) if os.path.dirname(filename) else 'assets', exist_ok=True)
-    
-    with open(filename, 'w', encoding='utf-8') as f:
-        f.write(f"# SLAY Visualization Data Log\n")
-        f.write(f"# Generated: {datetime.now().isoformat()}\n")
-        f.write(f"# Description: {description}\n")
-        f.write(f"#" + "="*60 + "\n\n")
-        
-        for key, value in data_dict.items():
-            f.write(f"## {key}\n")
-            if isinstance(value, np.ndarray):
-                f.write(f"# Shape: {value.shape}, dtype: {value.dtype}\n")
-                if value.ndim == 1 and len(value) <= 100:
-                    f.write(f"# Values: {value.tolist()}\n")
-                elif value.ndim == 1:
-                    f.write(f"# First 20: {value[:20].tolist()}\n")
-                    f.write(f"# Last 20: {value[-20:].tolist()}\n")
-                    f.write(f"# Min: {value.min():.6f}, Max: {value.max():.6f}, Mean: {value.mean():.6f}\n")
-                else:
-                    f.write(f"# Min: {value.min():.6f}, Max: {value.max():.6f}, Mean: {value.mean():.6f}\n")
-            elif isinstance(value, (list, tuple)):
-                f.write(f"# Length: {len(value)}\n")
-                f.write(f"# Values: {value[:50]}...\n" if len(value) > 50 else f"# Values: {value}\n")
-            elif isinstance(value, dict):
-                for sub_key, sub_val in value.items():
-                    if isinstance(sub_val, np.ndarray):
-                        f.write(f"#   {sub_key}: shape={sub_val.shape}, min={sub_val.min():.4f}, max={sub_val.max():.4f}\n")
-                    else:
-                        f.write(f"#   {sub_key}: {sub_val}\n")
-            else:
-                f.write(f"# Value: {value}\n")
-            f.write("\n")
-    
-    return filename
-
 
 # ============================================================================
 # Plotting
@@ -244,7 +198,17 @@ def plot_kernel_comparison(output_path='kernel_comparison.pdf'):
         'yat': yat_kernel(x, norm_q=1.5, norm_k=1.2),
         'spherical_yat': spherical_yat_kernel(x),
         'parameters': {'epsilon': 1e-2, 'yat_norm_q': 1.5, 'yat_norm_k': 1.2}
-    }, description="Kernel functions comparison: k(x) for different attention mechanisms")
+    }, 
+    description="Kernel functions comparison: k(x) for different attention mechanisms",
+    goal="Compare how different attention kernels weight token pairs based on their cosine similarity. "
+         "This shows the fundamental difference in how softmax, polynomial, and YAT kernels respond to alignment.",
+    what_to_look_for="1) Softmax grows exponentially for aligned tokens (x→1), potentially causing gradient issues. "
+                     "2) Pure x² is symmetric and bounded but assigns positive weight to negatively correlated tokens. "
+                     "3) Spherical YAT (ⵟ_sph) is bounded, positive only for positive correlations, and self-regularizing. "
+                     "4) Compare the growth rates near x=1 where numerical stability matters.",
+    expected_conclusion="Spherical YAT (ⵟ_sph) offers the best balance: it is bounded (self-regularizing), "
+                       "respects cosine sign (no negative correlation weight), and grows subexponentially. "
+                       "This makes it more numerically stable than softmax while preserving semantic locality.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path
@@ -299,7 +263,11 @@ def plot_angle_based_comparison(output_path='kernel_angle.pdf'):
         'softmax': softmax_kernel(x, scale=1.0),
         'x_squared': pure_polynomial_kernel(x),
         'spherical_yat': spherical_yat_kernel(x),
-    }, description="Kernel functions as function of angle theta")
+    }, 
+    description="Kernel functions as function of angle theta",
+    goal="Visualize kernel response in terms of geometric angle rather than cosine similarity.",
+    what_to_look_for="Notice how kernel values drop off as angle increases from 0° (aligned) to 90° (orthogonal) to 180° (opposite).",
+    expected_conclusion="Spherical YAT concentrates attention on aligned tokens (small angles) while gracefully handling orthogonal and opposite tokens.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path
@@ -359,7 +327,13 @@ def plot_kernel_derivatives(output_path='kernel_derivatives.pdf'):
             'sph_yat_max_grad': float(sph_yat_grad.max()),
             'x_squared_max_grad': float(poly_grad.max()),
         }
-    }, description="Kernel gradients dk/dx showing self-regularization")
+    }, 
+    description="Kernel gradients dk/dx showing self-regularization",
+    goal="Compare gradient magnitudes to understand gradient flow during backpropagation.",
+    what_to_look_for="1) Softmax gradient grows unboundedly as x→1, causing exploding gradients. "
+                     "2) Spherical YAT gradient remains bounded even for highly aligned tokens. "
+                     "3) Compare max gradient values in statistics.",
+    expected_conclusion="Spherical YAT's bounded gradient explains its training stability - it is self-regularizing and prevents exploding gradients that plague softmax with long sequences.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path

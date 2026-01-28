@@ -1,15 +1,32 @@
 # SLAY Visualization Data Log
-# Generated: 2026-01-28T05:46:21.177727
-# Description: Quadrature node contributions at different x values
+# Generated: 2026-01-28T06:42:06.634901
 #============================================================
 
-## x_samples
+## ANALYSIS CONTEXT
+
+### Goal
+Show how each Gauss-Laguerre node contributes to the kernel approximation at different x values.
+
+### What to Look For
+1) Which nodes contribute most at each x value. 2) Note that lower nodes dominate for most x values. 3) Check if contribution is concentrated in first few nodes.
+
+### Expected Conclusion
+The first 1-2 quadrature nodes capture most of the contribution, justifying the use of small R (e.g., R=3) for computational efficiency.
+
+#------------------------------------------------------------
+
+## Description
+Quadrature node contributions at different x values
+
+## DATA
+
+### x_samples
 # Shape: (3,), dtype: float64
 # Values: [0.2, 0.5, 0.8]
 
-## num_nodes_R
+### num_nodes_R
 # Value: 5
 
-## epsilon
+### epsilon
 # Value: 0.01
 

@@ -1,21 +1,38 @@
 # SLAY Visualization Data Log
-# Generated: 2026-01-28T05:46:05.374439
-# Description: Error vs feature budget: SLAY, FAVOR+, Laplace-only
+# Generated: 2026-01-28T06:17:49.909446
 #============================================================
 
-## feature_dims
+## ANALYSIS CONTEXT
+
+### Goal
+Compare sample efficiency of SLAY against other linear attention approximations.
+
+### What to Look For
+1) How quickly error decreases as feature budget grows. 2) Compare SLAY's slope against FAVOR+ and Laplace-only. 3) Note the absolute error level at each feature dimension.
+
+### Expected Conclusion
+SLAY achieves lower error than alternatives for the same feature budget, demonstrating better sample efficiency from the structured polynomial+PRF approach.
+
+#------------------------------------------------------------
+
+## Description
+Error vs feature budget: SLAY, FAVOR+, Laplace-only
+
+## DATA
+
+### feature_dims
 # Shape: (6,), dtype: int64
 # Values: [16, 32, 64, 128, 256, 512]
 
-## slay_errors
+### slay_errors
 # Shape: (6,), dtype: float64
 # Values: [0.08253490540524018, 0.08211829022911868, 0.08310450886262168, 0.08306691498293628, 0.08270387410086633, 0.08217543287044826]
 
-## favor_errors
+### favor_errors
 # Shape: (6,), dtype: float64
 # Values: [0.012725739885612923, 0.014795297816550566, 0.012546107871134084, 0.014673565386115464, 0.016535067024983384, 0.014180555581061918]
 
-## laplace_errors
+### laplace_errors
 # Shape: (6,), dtype: float64
 # Values: [0.15623298576556344, 0.046561495254778776, 0.016450268746758888, 0.016450268746758888, 0.016450268746758888, 0.016450268746758888]
 

@@ -230,6 +230,9 @@ def plot_entropy_vs_position(output_path='attention_entropy.pdf'):
     
     colors_list = [COLORS['softmax'], COLORS['yat'], COLORS['spherical_yat'], 
                    COLORS['slay'], COLORS['performer']]
+    linestyles = ['-', '--', '-.', ':', '-']
+    linewidths = [2.0, 1.8, 1.6, 2.5, 1.4]  # Vary widths, SLAY thicker
+    markers = ['', '', '', 'o', '']  # Add markers to SLAY
     
     fig, axes = plt.subplots(1, 2, figsize=(FULL_WIDTH, 2.8))
     fig.patch.set_facecolor('white')
@@ -240,7 +243,7 @@ def plot_entropy_vs_position(output_path='attention_entropy.pdf'):
     
     positions = np.arange(T)
     
-    for (name, fn), color in zip(methods, colors_list):
+    for i, ((name, fn), color) in enumerate(zip(methods, colors_list)):
         with torch.no_grad():
             attn, _ = fn(q.float(), k.float(), v.float())
             entropy = compute_attention_entropy(attn)
@@ -252,7 +255,12 @@ def plot_entropy_vs_position(output_path='attention_entropy.pdf'):
         window = 10
         entropy_smooth = np.convolve(entropy_mean, np.ones(window)/window, mode='valid')
         
-        ax.plot(positions[window-1:], entropy_smooth, label=name, color=color, linewidth=1.5)
+        # Use different styles for each line
+        marker = markers[i]
+        markevery = 25 if marker else None
+        ax.plot(positions[window-1:], entropy_smooth, label=name, color=color, 
+                linewidth=linewidths[i], linestyle=linestyles[i],
+                marker=marker, markevery=markevery, markersize=4)
     
     ax.set_xlabel('Query position')
     ax.set_ylabel('Normalized entropy')
@@ -269,7 +277,7 @@ def plot_entropy_vs_position(output_path='attention_entropy.pdf'):
     ax = axes[1]
     ax.set_facecolor('white')
     
-    for (name, fn), color in zip(methods, colors_list):
+    for i, ((name, fn), color) in enumerate(zip(methods, colors_list)):
         with torch.no_grad():
             attn, _ = fn(q.float(), k.float(), v.float())
             entropy = compute_attention_entropy(attn)
@@ -277,7 +285,10 @@ def plot_entropy_vs_position(output_path='attention_entropy.pdf'):
             # Flatten all entropy values
             entropy_flat = entropy[:, :, T//4:].flatten().cpu().numpy()  # Skip early positions
         
-        ax.hist(entropy_flat, bins=30, alpha=0.5, label=name, color=color, density=True)
+        # Use step histogram for better visibility
+        ax.hist(entropy_flat, bins=30, alpha=0.3 if i < 2 else 0.7, 
+                label=name, color=color, density=True, 
+                histtype='step', linewidth=linewidths[i])
     
     ax.set_xlabel('Normalized entropy')
     ax.set_ylabel('Density')
@@ -301,7 +312,14 @@ def plot_entropy_vs_position(output_path='attention_entropy.pdf'):
         'sequence_length': T, 'batch_size': B, 'num_heads': H, 'embed_dim': D,
         'positions': positions,
         'methods': [name for name, _ in methods],
-    }, description="Attention entropy vs position for different attention mechanisms")
+    }, 
+    description="Attention entropy vs position for different attention mechanisms",
+    goal="Analyze how attention entropy (spread) changes as query position increases in causal attention.",
+    what_to_look_for="1) Early positions have low entropy (few tokens to attend to). "
+                     "2) Compare steady-state entropy across mechanisms. "
+                     "3) Note if any mechanism maintains lower entropy (more focused attention).",
+    expected_conclusion="YAT and spherical YAT maintain lower entropy than softmax at longer positions, "
+                       "indicating more focused/selective attention. SLAY approximates this behavior.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path
@@ -386,7 +404,14 @@ def plot_entropy_vs_similarity(output_path='entropy_vs_similarity.pdf'):
         'yat_entropy': np.array(results['ⵟ (YAT)']),
         'spherical_yat_entropy': np.array(results['ⵟ$_{sph}$']),
         'slay_entropy': np.array(results['SLAY']),
-    }, description="Attention entropy vs token cosine similarity")
+    }, 
+    description="Attention entropy vs token cosine similarity",
+    goal="Examine how attention entropy responds to varying degrees of token similarity.",
+    what_to_look_for="1) At low similarity (random tokens), compare baseline entropy. "
+                     "2) How does entropy change as tokens become more similar? "
+                     "3) Which mechanism discriminates similar tokens best?",
+    expected_conclusion="When tokens are highly similar (hard to distinguish), YAT kernels maintain lower entropy "
+                       "(better discrimination) than softmax. This shows YAT's geometric selectivity.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path
@@ -413,8 +438,17 @@ def plot_attention_patterns(output_path='attention_patterns.pdf'):
         ('SLAY', compute_slay_attention),
     ]
     
-    fig, axes = plt.subplots(1, 4, figsize=(FULL_WIDTH, 2.0))
+    
+    # Use wider figure to accommodate colorbar
+    fig = plt.figure(figsize=(FULL_WIDTH + 0.5, 2.0))
     fig.patch.set_facecolor('white')
+    
+    # Create GridSpec: 4 columns for plots, 1 narrow for colorbar
+    from matplotlib.gridspec import GridSpec
+    gs = GridSpec(1, 5, width_ratios=[1, 1, 1, 1, 0.05], wspace=0.3)
+    
+    axes = [fig.add_subplot(gs[0, i]) for i in range(4)]
+    cax = fig.add_subplot(gs[0, 4])  # Colorbar axis
     
     for idx, (name, fn) in enumerate(methods):
         ax = axes[idx]
@@ -437,12 +471,10 @@ def plot_attention_patterns(output_path='attention_patterns.pdf'):
         ax.set_yticks([0, T//2, T-1])
         ax.tick_params(labelsize=6)
     
-    # Add colorbar
-    cbar = fig.colorbar(im, ax=axes.ravel().tolist(), shrink=0.8, pad=0.02)
+    # Add colorbar to dedicated axis
+    cbar = fig.colorbar(im, cax=cax)
     cbar.set_label('Attention weight', fontsize=7)
     cbar.ax.tick_params(labelsize=6)
-    
-    plt.tight_layout()
     
     plt.savefig(output_path, format='pdf', dpi=300,
                 facecolor='white', edgecolor='none', bbox_inches='tight')
@@ -453,7 +485,14 @@ def plot_attention_patterns(output_path='attention_patterns.pdf'):
     log_data(log_path, {
         'sequence_length': T, 'embed_dim': D,
         'methods': [name for name, _ in methods],
-    }, description="Attention pattern heatmaps for different mechanisms")
+    }, 
+    description="Attention pattern heatmaps for different mechanisms",
+    goal="Visualize the structure of attention matrices for different mechanisms.",
+    what_to_look_for="1) Compare sparsity/concentration of attention weights. "
+                     "2) Look for diagonal bias (local attention) or uniform spread. "
+                     "3) Compare YAT/SLAY patterns against softmax baseline.",
+    expected_conclusion="YAT and SLAY show more structured, concentrated attention patterns compared to softmax, "
+                       "indicating selective attention to relevant tokens rather than uniform spreading.")
     print(f"  ✓ Data log: {log_path}")
     
     return output_path
