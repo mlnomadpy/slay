@@ -39,11 +39,22 @@ class TinyGPT(nn.Module):
         
         dropout = config.get('dropout', 0.1)
         
+        # Collect attention-specific kwargs from config
+        attn_kwargs = {
+            'num_rff_features': config.get('num_rff_features'),
+            'num_prf_features': config.get('num_prf_features'),
+            'num_poly_features': config.get('num_poly_features'),
+            'num_quadrature_nodes': config.get('num_quadrature_nodes'),
+            'epsilon': config.get('epsilon'),
+        }
+        # Filter out None values just in case
+        attn_kwargs = {k: v for k, v in attn_kwargs.items() if v is not None}
+        
         self.tok = nn.Embedding(vocab_size, embed_dim)
         self.pos = nn.Embedding(context_len, embed_dim)
         self.embed_dropout = nn.Dropout(dropout)  # Embedding dropout
         self.blocks = nn.ModuleList([
-            block_class(embed_dim, n_heads, attention_class, use_triton=use_triton, dropout=dropout) 
+            block_class(embed_dim, n_heads, attention_class, use_triton=use_triton, dropout=dropout, **attn_kwargs) 
             for _ in range(n_layers)
         ])
         self.ln = nn.LayerNorm(embed_dim)

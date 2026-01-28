@@ -55,6 +55,7 @@ class _YatPerformerPolyBase(nn.Module):
         denominator_stabilizer=1e-6,
         use_sketching=False,
         sketch_dim=None,
+        **kwargs,
     ):
         """
         Args:
@@ -71,6 +72,11 @@ class _YatPerformerPolyBase(nn.Module):
             sketch_dim: Sketch dimension D_t (if None, uses P*M)
         """
         super().__init__()
+        
+        # Handle parameter aliases from config
+        if 'num_poly_features' in kwargs and poly_dim == 64:  # Default value check
+             poly_dim = kwargs['num_poly_features']
+             
         self.embed_dim = embed_dim
         self.n_heads = n_heads
         self.head_dim = embed_dim // n_heads
