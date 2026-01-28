@@ -65,6 +65,15 @@ def create_ds_config(config):
             "overlap_comm": True,
             "reduce_bucket_size": 2e8,
             "contiguous_gradients": True
+        },
+        "scheduler": {
+            "type": "WarmupDecayLR",
+            "params": {
+                "warmup_min_lr": 0,
+                "warmup_max_lr": config['lr'],
+                "warmup_num_steps": config.get('warmup_steps', 2000),
+                "total_num_steps": config['total_steps']
+            }
         }
     }
     with open("ds_zero2.json", "w") as f:
@@ -110,6 +119,10 @@ def parse_args():
                         help='Weight decay for AdamW optimizer')
     parser.add_argument('--total-steps', type=int, default=DEFAULT_CONFIG['total_steps'],
                         help='Total training steps')
+    parser.add_argument('--warmup-steps', type=int, default=DEFAULT_CONFIG.get('warmup_steps', 2000),
+                        help='Number of warmup steps for LR scheduler')
+    parser.add_argument('--dropout', type=float, default=DEFAULT_CONFIG.get('dropout', 0.1),
+                        help='Dropout rate for attention and MLP')
     
     # Logging and checkpointing
     parser.add_argument('--log-dir', type=str, default=DEFAULT_CONFIG['log_dir'],
@@ -168,6 +181,7 @@ def args_to_config(args):
         'eval_interval': args.eval_interval,
         'save_interval': args.save_interval,
         'total_steps': args.total_steps,
+        'warmup_steps': args.warmup_steps,
         'wandb_project': args.wandb_project,
         'num_rff_features': args.num_rff_features,
         'num_prf_features': args.num_prf_features,
@@ -179,6 +193,7 @@ def args_to_config(args):
         'use_wandb': not args.no_wandb,
         'run_name': args.run_name,
         'use_triton': args.use_triton,
+        'dropout': args.dropout,
     }
     return config
 

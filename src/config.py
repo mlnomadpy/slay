@@ -17,11 +17,13 @@ DEFAULT_CONFIG = {
     'eval_interval': 500,
     'save_interval': 1000,
     'total_steps': 20000,  # Increased for more significant training (~10B tokens)
+    'warmup_steps': 2000,  # LR warmup steps (~10% of total_steps)
     'wandb_project': 'slay-bert-base-fineweb',
     'num_rff_features': 64,
     'num_prf_features': 16,
     'num_poly_features': 8,
     'num_quadrature_nodes': 2,
-    'epsilon': 0.01,
+    'epsilon': 0.001,
     'use_triton': False,  # Use Triton-accelerated CUDA kernels for linear attention
+    'dropout': 0.1,  # Dropout rate for attention and MLP
 }

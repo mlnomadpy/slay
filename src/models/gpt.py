@@ -37,10 +37,13 @@ class TinyGPT(nn.Module):
         else:
             block_class = GPT2Block
         
+        dropout = config.get('dropout', 0.1)
+        
         self.tok = nn.Embedding(vocab_size, embed_dim)
         self.pos = nn.Embedding(context_len, embed_dim)
+        self.embed_dropout = nn.Dropout(dropout)  # Embedding dropout
         self.blocks = nn.ModuleList([
-            block_class(embed_dim, n_heads, attention_class, use_triton=use_triton) 
+            block_class(embed_dim, n_heads, attention_class, use_triton=use_triton, dropout=dropout) 
             for _ in range(n_layers)
         ])
         self.ln = nn.LayerNorm(embed_dim)
@@ -51,6 +54,10 @@ class TinyGPT(nn.Module):
         
         # Initialize weights first
         self.apply(self._init_weights)
+        
+        # Zero the final LayerNorm bias (GPT-2 style)
+        with torch.no_grad():
+            self.ln.bias.zero_()
         
         # Then optionally load pretrained embeddings
         if freeze_embeddings:
@@ -100,7 +107,7 @@ class TinyGPT(nn.Module):
         x = x.long()
         B, T = x.shape
         pos = torch.arange(T, device=x.device)
-        x = self.tok(x) + self.pos(pos)
+        x = self.embed_dropout(self.tok(x) + self.pos(pos))  # Apply embedding dropout
         
         # Gradient Checkpointing Loop
         for block in self.blocks:
