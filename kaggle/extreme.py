@@ -10,6 +10,7 @@ import subprocess
 import numpy as np
 import jax
 import jax.numpy as jnp
+from jax.sharding import Mesh, PartitionSpec as P, NamedSharding
 from flax import nnx
 import optax
 from sklearn.datasets import load_svmlight_file
@@ -663,7 +664,9 @@ def psp_at_k(targets_list, pred_indices, propensity_scores, k=5):
 # --- RUNNER ---
 # --- RUNNER ---
 # --- RUNNER ---
-def run_benchmark(dataset_name: str = "all", method_filter: str = "all"):
+def run_benchmark(args):
+    dataset_name = args.dataset
+    method_filter = args.method
     # JAX Device Check
     print(f"JAX Devices: {jax.devices()}")
 
@@ -697,12 +700,8 @@ def run_benchmark(dataset_name: str = "all", method_filter: str = "all"):
         propensity = get_propensity_scores(Y_train, n_lab)
         
         # Config
-        BATCH_SIZE = 1024
-        # Adjust embedding dim based on dataset size if needed? 
-        # Keeping constant 256 for now.
-        EMBED_DIM = 256 
-        LR = 1e-3
-        EPOCHS = 3 # Keep low for speed as per user preference in previous turns
+        # Config from args
+        BATCH_SIZE = args.batch_size
         
         train_ds = XMLDataset(X_train, Y_train, n_lab, BATCH_SIZE, shuffle=True)
         test_ds = XMLDataset(X_test, Y_test, n_lab, BATCH_SIZE, shuffle=False)
@@ -715,7 +714,7 @@ def run_benchmark(dataset_name: str = "all", method_filter: str = "all"):
             ('Yat (Spherical)', {'exact': True, 'spherical': True}),
             ('FullSoftmax', {}),
             #('Performer', {'attention_type': 'performer', 'attention_kwargs': {'kernel_size': 64}}),
-            ('SLAY (Approx)', {'attention_type': 'slay', 'attention_kwargs': {'num_features': 32, 'num_quadrature_nodes': 2}}),
+            ('SLAY (Approx)', {'attention_type': 'slay', 'attention_kwargs': {'num_features': args.num_features, 'num_quadrature_nodes': args.num_quadrature_nodes}}),
         ]
         
         if method_filter == "all":
@@ -724,57 +723,82 @@ def run_benchmark(dataset_name: str = "all", method_filter: str = "all"):
             configs = [c for c in all_configs if method_filter.lower() in c[0].lower()]
             if not configs:
                 print(f"No method matched filter '{method_filter}'. Available: {[c[0] for c in all_configs]}")
-                continue
+                return {}
 
-        for name, args in configs:
-            print(f"\nTraining {name} on {ds_name}...")
-            rngs = nnx.Rngs(0)
+    # Mesh for Data Parallelism
+    devices = jax.devices()
+    mesh = Mesh(devices, axis_names=('data',))
+    print(f"Mesh: {mesh}")
+
+    for name, args_model in configs:
+        print(f"\nTraining {name} on {ds_name}...")
+        
+        # Replicated State Sharding
+        replicated_sharding = NamedSharding(mesh, P())
+        
+        with mesh, nnx.check_traceing():
+             # Initialize model (replicated)
+             rngs = nnx.Rngs(args.seed)
+             if name == 'FullSoftmax':
+                 model = FullSoftmaxXML(n_feat, n_lab, args.embed_dim, rngs=rngs)
+             elif args_model.get('exact'):
+                  if args_model.get('spherical'):
+                      model = ExactSphericalYatXML(n_feat, n_lab, args.embed_dim, rngs=rngs)
+                  else:
+                      model = ExactYatXML(n_feat, n_lab, args.embed_dim, rngs=rngs)
+             else:
+                 try:
+                     model = KernelXML(n_feat, n_lab, args.embed_dim, **args_model, rngs=rngs)
+                 except ValueError as e:
+                     print(f"Skipping {name}: {e}")
+                     continue
             
-            if name == 'FullSoftmax':
-                model = FullSoftmaxXML(n_feat, n_lab, EMBED_DIM, rngs=rngs)
-            elif args.get('exact'):
-                 if args.get('spherical'):
-                     model = ExactSphericalYatXML(n_feat, n_lab, EMBED_DIM, rngs=rngs)
-                 else:
-                     model = ExactYatXML(n_feat, n_lab, EMBED_DIM, rngs=rngs)
-            else:
-                try:
-                    model = KernelXML(n_feat, n_lab, EMBED_DIM, **args, rngs=rngs)
-                except ValueError as e:
-                    print(f"Skipping {name}: {e}")
-                    continue
+             # Create Optimizer
+             optimizer = nnx.Optimizer(model, optax.adam(args.lr), wrt=nnx.Param)
+
+        # Iterate over graph params to set sharding? 
+        # NNX variables are not automatically sharded by context manager unless created inside?
+        # Actually initializing inside `with mesh` puts arrays on device but default sharding depends on creation op.
+        # Ideally we want to force replicated sharding for parameters.
+        # NNX is experimental, but we can usually just let JIT handle it if we pass sharded data.
+        # But for explicit data parallelism, we want inputs sharded and params replicated.
+        
+        @nnx.jit
+        def train_step(model, optimizer, indices, mask, labels, label_mask):
+                def loss_fn(m):
+                    return m.loss(indices, mask, labels, label_mask)
                 
-            optimizer = nnx.Optimizer(model, optax.adam(LR), wrt=nnx.Param)
+                loss, grads = nnx.value_and_grad(loss_fn)(model)
+                loss = jax.lax.pmean(loss, axis_name='data')
+                grads = jax.lax.pmean(grads, axis_name='data') # Average grads across devices
+                optimizer.update(model, grads)
+                return loss
+
+        def train_epoch(model, optimizer):
+            total_loss = 0
+            count = 0
             
-            @nnx.jit
-            def train_step(model, optimizer, indices, mask, labels, label_mask):
-                 def loss_fn(m):
-                     return m.loss(indices, mask, labels, label_mask)
-                 
-                 loss, grads = nnx.value_and_grad(loss_fn)(model)
-                 optimizer.update(model, grads)
-                 return loss
-    
-            def train_epoch(model, optimizer):
-                total_loss = 0
-                count = 0
-                for batch in train_ds:
-                    indices = batch['features']
-                    mask = batch['masks']
-                    labels = batch['labels']
-                    label_mask = batch['label_masks']
-                    
-                    loss = train_step(model, optimizer, indices, mask, labels, label_mask)
-                    
-                    total_loss += loss
-                    count += 1
-                    
-                return total_loss / count
-    
-            for ep in range(EPOCHS):
-                t0 = time.time()
-                loss = train_epoch(model, optimizer)
-                print(f"Ep {ep+1} | Loss: {loss:.4f} | Time: {time.time()-t0:.2f}s")
+            # Data Sharding Spec
+            data_sharding = NamedSharding(mesh, P('data', None))
+            
+            for batch in train_ds:
+                # Shard batch explicitly
+                indices = jax.device_put(batch['features'], data_sharding)
+                mask = jax.device_put(batch['masks'], data_sharding)
+                labels = jax.device_put(batch['labels'], data_sharding)
+                label_mask = jax.device_put(batch['label_masks'], data_sharding)
+                
+                loss = train_step(model, optimizer, indices, mask, labels, label_mask)
+                
+                total_loss += loss
+                count += 1
+                
+            return total_loss / count
+
+        for ep in range(args.epochs):
+            t0 = time.time()
+            loss = train_epoch(model, optimizer)
+            print(f"Ep {ep+1} | Loss: {loss:.4f} | Time: {time.time()-t0:.2f}s")
                 
             # Eval
             all_preds = []
@@ -833,7 +857,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="LF-AmazonTitles-131K", help="Dataset to run (or 'all')")
     parser.add_argument("--method", type=str, default="all", help="Method to run (filter)")
+    
+    # Approx Params
+    parser.add_argument("--num_features", type=int, default=32, help="Features for SLAY approx")
+    parser.add_argument("--num_quadrature_nodes", type=int, default=2, help="Quad nodes for SLAY")
+    
+    # Training
+    parser.add_argument("--batch-size", type=int, default=512, help="Batch size")
+    parser.add_argument("--embed-dim", type=int, default=256, help="Embedding dimension")
+    parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
+    parser.add_argument("--epochs", type=int, default=3, help="Number of epochs")
+    parser.add_argument("--seed", type=int, default=0, help="Random seed")
+    
     args = parser.parse_args()
     
-    results = run_benchmark(args.dataset, args.method)
+    results = run_benchmark(args)
     generate_latex(results)
