@@ -3,7 +3,7 @@ Transformer block implementations.
 """
 
 import torch.nn as nn
-from nmn.torch import YatNMN
+from .yatnmn import YatNMN
 from ..attention import FastAttention
 from ..activations import novel_activation
 
