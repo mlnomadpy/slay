@@ -183,6 +183,12 @@ def parse_args():
     parser.add_argument('--use-triton', action='store_true',
                         help='Use Triton-accelerated CUDA kernels for linear attention (36x faster)')
     
+    # Data Loading
+    parser.add_argument('--num-workers', type=int, default=DEFAULT_CONFIG.get('num_workers', 16),
+                        help='Number of data loading workers')
+    parser.add_argument('--prefetch-factor', type=int, default=DEFAULT_CONFIG.get('prefetch_factor', 4),
+                        help='Number of batches to prefetch per worker')
+    
     args, _ = parser.parse_known_args()
     return args
 
@@ -220,6 +226,8 @@ def args_to_config(args):
         'batch_rampup': args.batch_rampup,
         'batch_rampup_start': args.batch_rampup_start,
         'batch_rampup_step': args.batch_rampup_step,
+        'num_workers': args.num_workers,
+        'prefetch_factor': args.prefetch_factor,
     }
     return config
 
@@ -315,7 +323,8 @@ def main():
         dataset,
         batch_size=model_engine.train_micro_batch_size_per_gpu(),
         pin_memory=True,
-        num_workers=0, 
+        num_workers=config['num_workers'],
+        prefetch_factor=config['prefetch_factor'],
         )    
     
     if rank == 0:
