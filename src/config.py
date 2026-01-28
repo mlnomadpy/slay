@@ -26,4 +26,7 @@ DEFAULT_CONFIG = {
     'epsilon': 0.001,
     'use_triton': False,  # Use Triton-accelerated CUDA kernels for linear attention
     'dropout': 0.1,  # Dropout rate for attention and MLP
+    'batch_rampup': False,  # Enable batch size ramp-up
+    'batch_rampup_start': 8,  # Starting batch size per GPU
+    'batch_rampup_step': 1000,  # Steps over which to ramp up
 }

@@ -76,6 +76,21 @@ def create_ds_config(config):
             }
         }
     }
+    
+    # Add batch size ramp-up if enabled (DeepSpeed native feature)
+    # Format: [start_batch_size, batch_size_increment, rampup_samples]
+    # Example: Start at 8 per GPU, ramp to 32 per GPU over rampup_step steps
+    if config.get('batch_rampup'):
+        start_batch = config.get('batch_rampup_start', 8)  # Start batch per GPU
+        final_batch = config['batch_size']  # Final batch per GPU (e.g., 32)
+        rampup_steps = config.get('batch_rampup_step', 1000)
+        # rampup_samples = steps * batch_size (approximate tokens to ramp over)
+        rampup_samples = rampup_steps * start_batch * config['gradient_accumulation_steps']
+        batch_increment = max(1, (final_batch - start_batch) // 4)  # Increment in 4 stages
+        
+        ds_config["train_micro_batch_size_per_gpu"] = final_batch
+        ds_config["rampup_batch_size"] = [start_batch, batch_increment, rampup_samples]
+    
     with open("ds_zero2.json", "w") as f:
         json.dump(ds_config, f)
     return ds_config
@@ -123,6 +138,14 @@ def parse_args():
                         help='Number of warmup steps for LR scheduler')
     parser.add_argument('--dropout', type=float, default=DEFAULT_CONFIG.get('dropout', 0.1),
                         help='Dropout rate for attention and MLP')
+    
+    # Batch size ramp-up (optional)
+    parser.add_argument('--batch-rampup', action='store_true',
+                        help='Enable batch size ramp-up (start small, increase to --batch-size)')
+    parser.add_argument('--batch-rampup-start', type=int, default=8,
+                        help='Starting batch size per GPU (ramps up to --batch-size)')
+    parser.add_argument('--batch-rampup-step', type=int, default=1000,
+                        help='Number of steps over which to ramp up batch size')
     
     # Logging and checkpointing
     parser.add_argument('--log-dir', type=str, default=DEFAULT_CONFIG['log_dir'],
@@ -194,6 +217,9 @@ def args_to_config(args):
         'run_name': args.run_name,
         'use_triton': args.use_triton,
         'dropout': args.dropout,
+        'batch_rampup': args.batch_rampup,
+        'batch_rampup_start': args.batch_rampup_start,
+        'batch_rampup_step': args.batch_rampup_step,
     }
     return config
 
@@ -294,6 +320,8 @@ def main():
     
     if rank == 0:
         print("Starting training loop...")
+        if config.get('batch_rampup'):
+            print(f"Batch ramp-up enabled (DeepSpeed native): {config['batch_rampup_start']} -> {config['batch_size']} per GPU over {config['batch_rampup_step']} steps")
 
     # Plateau detector for optimizer switching
     plateau_detector = LossPlateauDetector(patience=3)
@@ -302,6 +330,7 @@ def main():
     step = 0
     total_tokens = 0
     tokens_per_batch = model_engine.train_micro_batch_size_per_gpu() * config['context_len'] * deepspeed.comm.get_world_size()
+    effective_batch_size = config['batch_size'] * config['gradient_accumulation_steps'] * deepspeed.comm.get_world_size()
     t0 = time.time()
     
     for batch_idx, batch in enumerate(loader):
@@ -323,6 +352,7 @@ def main():
                 "train_loss_step": loss.item(),  # Use step as x-axis
                 "train_loss_tokens": loss.item(),  # Use tokens as x-axis
                 "learning_rate": current_lr,
+                "effective_batch_size": effective_batch_size,
                 "step": step,
                 "tokens_processed": total_tokens,
             })
