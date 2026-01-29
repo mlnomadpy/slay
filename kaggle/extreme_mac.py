@@ -658,7 +658,7 @@ def run_benchmark(args):
                         return m.loss(indices, mask, labels, label_mask)
                     
                     loss, grads = nnx.value_and_grad(loss_fn)(model)
-                    optimizer.update(grads)
+                    optimizer.update(model, grads)
                     return loss
     
              def train_epoch(model, optimizer):
