@@ -606,7 +606,7 @@ def run_benchmark(args):
             ('Yat (Exact)', {'exact': True, 'spherical': False}),
             ('Yat (Spherical)', {'exact': True, 'spherical': True}),
             ('FullSoftmax', {}),
-            #('Performer', {'attention_type': 'performer', 'attention_kwargs': {'kernel_size': 64}}),
+            ('Performer', {'attention_type': 'performer', 'attention_kwargs': {'kernel_size': 64}}),
             ('SLAY (Approx)', {'attention_type': 'slay', 'attention_kwargs': {'num_features': args.num_features, 'num_quadrature_nodes': args.num_quadrature_nodes}}),
         ]
         
