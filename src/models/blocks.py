@@ -47,7 +47,7 @@ class NovelBlock(nn.Module):
         self.use_triton = use_triton
         self.attn = attention_class(embed_dim, n_heads, **kwargs)
         self.mlp = nn.Sequential(
-            YatNMN(embed_dim, 4 * embed_dim, bias=False, alpha=False),
+            YatNMN(embed_dim, 4 * embed_dim, bias=False),
             nn.Dropout(dropout),
             nn.Linear(4 * embed_dim, embed_dim, bias=False),
         )
