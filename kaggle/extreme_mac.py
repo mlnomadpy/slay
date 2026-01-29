@@ -618,10 +618,10 @@ def run_benchmark(args):
                 print(f"No method matched filter '{method_filter}'. Available: {[c[0] for c in all_configs]}")
                 return {}
 
-    # Mesh for Data Parallelism
-    devices = jax.devices()
-    mesh = Mesh(devices, axis_names=('data',))
-    print(f"Mesh: {mesh}")
+        # Mesh for Data Parallelism
+        devices = jax.devices()
+        mesh = Mesh(devices, axis_names=('data',))
+        print(f"Mesh: {mesh}")
 
     for name, args_model in configs:
         print(f"\nTraining {name} on {ds_name}...")
