@@ -26,8 +26,13 @@ class YatSphericalCausalAttention(nn.Module):
         score_scale: Optional multiplicative factor applied to K (cancels under K-normalization)
     """
     
-    def __init__(self, embed_dim, n_heads, epsilon=1e-2, score_scale=None):
+    def __init__(self, embed_dim, n_heads, epsilon=1e-2, score_scale=None, **kwargs):
         super().__init__()
+        
+        # Handle parameter aliases
+        if 'num_quadrature_nodes' in kwargs: 
+             # Just consume it, spherical (exact) doesn't use quadrature but might receive it
+             pass
         self.embed_dim = embed_dim
         self.n_heads = n_heads
         self.head_dim = embed_dim // n_heads

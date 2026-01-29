@@ -19,7 +19,7 @@ class YatCausalAttention(nn.Module):
         score_scale: Scale factor for attention scores (default: sqrt(2))
     """
     
-    def __init__(self, embed_dim, n_heads, epsilon=1e-6, score_scale=None):
+    def __init__(self, embed_dim, n_heads, epsilon=1e-6, score_scale=None, **kwargs):
         super().__init__()
         self.embed_dim = embed_dim
         self.n_heads = n_heads

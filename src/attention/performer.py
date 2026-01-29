@@ -30,16 +30,21 @@ class FastAttention(nn.Module):
     """
     
     def __init__(self, embed_dim, n_heads, kernel_size=64, chunk_size=128, 
-                 denominator_stabilizer=1e-6):
+                 denominator_stabilizer=1e-6, **kwargs):
         """
         Args:
             embed_dim: Total embedding dimension
             n_heads: Number of attention heads
-            kernel_size: Number of random features M
+            kernel_size: Number of random features M (aliased from num_prf_features)
             chunk_size: Chunk size for memory-efficient processing
             denominator_stabilizer: Small constant δ for normalization stability
         """
         super().__init__()
+        
+        # Handle aliases from config
+        if 'num_prf_features' in kwargs and kwargs['num_prf_features'] is not None:
+            kernel_size = kwargs['num_prf_features']
+            
         self.embed_dim = embed_dim
         self.n_heads = n_heads
         self.head_dim = embed_dim // n_heads

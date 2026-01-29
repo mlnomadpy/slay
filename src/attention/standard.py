@@ -11,7 +11,7 @@ import torch.nn.functional as F
 class StandardCausalAttention(nn.Module):
     """Standard softmax attention with causal masking."""
     
-    def __init__(self, embed_dim, n_heads):
+    def __init__(self, embed_dim, n_heads, **kwargs):
         super().__init__()
         self.embed_dim = embed_dim
         self.n_heads = n_heads
