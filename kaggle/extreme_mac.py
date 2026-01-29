@@ -3,95 +3,140 @@ import os
 import sys
 import argparse
 import time
+import json
 import zipfile
+import math
 import subprocess
 import numpy as np
 import jax
 import jax.numpy as jnp
+from jax.sharding import Mesh, PartitionSpec as P, NamedSharding
 from flax import nnx
 import optax
 from sklearn.datasets import load_svmlight_file
 from scipy.sparse import csr_matrix
-from typing import List
-from functools import partial
-
-jax.config.update("jax_enable_x64", False)
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 # --- Helpers ---
 
 def safe_normalize(x, axis=-1, eps=1e-4):
-    norm = jnp.linalg.norm(x, axis=axis, keepdims=True)
-    return x / jnp.maximum(norm, eps)
+    """Safely normalize vectors to unit length, avoiding division by zero."""
+    # Robust normalization to avoid nan gradients at zero
+    sq_sum = jnp.sum(x**2, axis=axis, keepdims=True)
+    # Avoid sqrt(0) by adding epsilon inside sqrt or using maximum
+    norm = jnp.sqrt(jnp.maximum(sq_sum, 1e-12))
+    return x / (norm + eps)
 
-def safe_log(x, eps=1e-8):
-    return jnp.log(jnp.maximum(x, eps))
-
-# --- Feature Maps ---
+# --- Feature Maps (Approximations) ---
 
 class PerformerFeatures(nnx.Module):
+    """
+    Performer (FAVOR+) feature map: ReLU(x @ W).
+    Approximates Softmax kernel.
+    """
     def __init__(self, embed_dim: int, num_heads: int, kernel_size: int = 64, *, rngs: nnx.Rngs):
         self.num_heads = num_heads
+        self.embed_dim = embed_dim
         self.head_dim = embed_dim // num_heads
+        self.kernel_size = kernel_size
         
-        proj = jax.random.normal(rngs.params(), (self.num_heads, self.head_dim, kernel_size))
-        proj = proj / jnp.linalg.norm(proj, axis=1, keepdims=True)
-        self.proj_matrix = nnx.Cache(proj)
+        proj_key = rngs.params()
+        # Random projection matrix for Performer (Fixed, so use Cache)
+        self.proj_matrix = nnx.Cache(jax.random.normal(proj_key, (self.num_heads, self.head_dim, kernel_size)) / jnp.sqrt(self.head_dim))
 
     def __call__(self, x):
-        B = x.shape[0]
-        x_reshaped = x.reshape(B, self.num_heads, self.head_dim)
-        proj = jnp.einsum('bhd,hdm->bhm', x_reshaped, self.proj_matrix[...])
-        features = jax.nn.softplus(proj)
-        return features.reshape(B, -1)
-
+        # x: [Batch, Dim]
+        orig_shape = x.shape
+        x_reshaped = x.reshape(x.shape[0], self.num_heads, self.head_dim)
+        
+        proj_matrix = self.proj_matrix[...] # [H, D, M]
+        
+        # [B, H, D] @ [H, D, M] -> [B, H, M]
+        proj = jnp.einsum('bhd,hdm->bhm', x_reshaped, proj_matrix)
+        
+        features = jax.nn.relu(proj)
+        
+        # Flatten back to [B, Features_Flat]
+        return features.reshape(orig_shape[0], -1)
 
 class SLAYFeatures(nnx.Module):
-    def __init__(self, embed_dim: int, num_heads: int, num_features: int = 32, 
-                 poly_dim: int = 16, num_quadrature_nodes: int = 2, epsilon: float = 1e-6, *, rngs: nnx.Rngs):
+    """
+    SLAY feature map: Tensor product of Anchor-based Polynomial and PRF features.
+    Approximates Yat kernel (Spherical) with Anchor approximation for polynomial part.
+    """
+    def __init__(self, embed_dim: int, num_heads: int, num_features: int = 32, poly_dim: int = 16, num_quadrature_nodes: int = 2, epsilon: float = 1e-6, *, rngs: nnx.Rngs):
         self.num_heads = num_heads
+        self.embed_dim = embed_dim
         self.head_dim = embed_dim // num_heads
-        self.num_features = num_features
-        self.poly_dim = poly_dim
+        self.num_features = num_features # PRF features (M)
+        self.poly_dim = poly_dim # Anchor/Poly features (P)
+        self.num_quadrature_nodes = num_quadrature_nodes
+        self.epsilon = epsilon
         self.C = 2.0 + epsilon
         
-        nodes, weights = np.polynomial.laguerre.laggauss(num_quadrature_nodes)
-        nodes = np.maximum(nodes, 0.01)
-        weights = np.maximum(weights, 0.01)
+        try:
+            nodes, weights = np.polynomial.laguerre.laggauss(num_quadrature_nodes)
+        except Exception:
+            nodes = np.array([0.585786, 3.414214]) if num_quadrature_nodes == 2 else np.array([1.0])
+            weights = np.array([0.853553, 0.146447]) if num_quadrature_nodes == 2 else np.array([1.0])
+            
         self.quad_nodes = nnx.Cache(jnp.array(nodes, dtype=jnp.float32) / self.C)
         self.quad_weights = nnx.Cache(jnp.array(weights, dtype=jnp.float32) / self.C)
         
-        k1, k2 = jax.random.split(rngs.params())
-        omega = jax.random.normal(k1, (num_quadrature_nodes, self.num_heads, self.head_dim, num_features))
-        self.omega = nnx.Cache(omega / jnp.sqrt(self.head_dim))
+        param_key = rngs.params()
+        k1, k2 = jax.random.split(param_key)
         
+        # PRF Projections
+        self.omega = nnx.Cache(jax.random.normal(k1, (num_quadrature_nodes, self.num_heads, self.head_dim, num_features)))
+        
+        # Anchors for polynomial part
         anchors = jax.random.normal(k2, (poly_dim, self.head_dim))
-        self.anchor_vectors = nnx.Cache(anchors / jnp.linalg.norm(anchors, axis=-1, keepdims=True))
+        anchors = anchors / jnp.linalg.norm(anchors, axis=-1, keepdims=True)
+        self.anchor_vectors = nnx.Cache(anchors)
 
     def __call__(self, x):
+        # x: [Batch, Dim]
         B = x.shape[0]
         x_reshaped = x.reshape(B, self.num_heads, self.head_dim)
+        
+        # Normalize
         x_norm = safe_normalize(x_reshaped, axis=-1)
         
-        # Polynomial features
-        poly_proj = jnp.clip(jnp.einsum('bhd,pd->bhp', x_norm, self.anchor_vectors[...]), -1.0, 1.0)
+        # 1. Polynomial Features (Anchors)
+        anchors = self.anchor_vectors[...] # [P, D]
+        # [B, H, D] @ [P, D].T -> [B, H, P]
+        poly_proj = jnp.einsum('bhd,pd->bhp', x_norm, anchors)
         poly_feat = (poly_proj ** 2) / jnp.sqrt(self.poly_dim)
         
-        # PRF features
-        prf_proj = jnp.einsum('bhd,rhdm->rbhm', x_norm, self.omega[...])
-        s_vals = jnp.maximum(self.quad_nodes[...].reshape(-1, 1, 1, 1), 1e-6)
-        exp_arg = jnp.clip(prf_proj * jnp.sqrt(2.0 * s_vals) - s_vals, -20.0, 20.0)
-        prf_feat = jnp.exp(exp_arg) / jnp.sqrt(self.num_features + 1e-6)
-        prf_feat = prf_feat * jnp.sqrt(jnp.maximum(self.quad_weights[...].reshape(-1, 1, 1, 1), 1e-6))
+        # 2. PRF Features
+        omega = self.omega[...] # [R, H, D, M]
+        quad_nodes = self.quad_nodes[...]
+        quad_weights = self.quad_weights[...]
         
-        # Tensor product fusion
-        out_chunks = []
-        for r in range(prf_feat.shape[0]):
-            fused_r = poly_feat[:, :, :, None] * prf_feat[r][:, :, None, :]
-            out_chunks.append(fused_r.reshape(B, -1))
-        return jnp.concatenate(out_chunks, axis=-1)
+        # proj: x [B,H,D], omega [R,H,D,M] -> [R, B, H, M]
+        prf_proj = jnp.einsum('bhd,rhdm->rbhm', x_norm, omega)
+        
+        s_vals = quad_nodes.reshape(-1, 1, 1, 1) # [R, 1, 1, 1]
+        sqrt_2s = jnp.sqrt(2.0 * jnp.clip(s_vals, a_min=0))
+        
+        exp_arg = jnp.clip(prf_proj * sqrt_2s - s_vals, a_min=-10.0, a_max=10.0)
+        prf_feat = jnp.exp(exp_arg) / jnp.sqrt(self.num_features) # [R, B, H, M]
+        
+        # Apply quad weights
+        sq_weights = jnp.sqrt(jnp.clip(quad_weights.reshape(-1, 1, 1, 1), a_min=0))
+        prf_feat = prf_feat * sq_weights
+        
+        # 3. Fusion: Tensor Product
+        # poly: b h p
+        # prf:  r b h m
+        # Out:  b h (r p m)
+        
+        fused = jnp.einsum('bhp,rbhm->brhpm', poly_feat, prf_feat)
+        # Flatten: [B, R, H, P, M] -> [B, -1]
+        output = fused.reshape(B, -1)
+        return output
 
-
-# --- Configuration ---
+# --- CONFIGURATION ---
 DATASETS = {
     'Eurlex-4K': {
         'id': '0B3lPMIHmG6vGU0VTR1pCejFpWjg',
@@ -124,37 +169,62 @@ DATASETS = {
         'test': 'LF-AmazonTitles-1.3M/test.txt'
     },
 }
+TRAIN_FILE = "Eurlex/eurlex_train.txt"
+TEST_FILE = "Eurlex/eurlex_test.txt"
 
-
+# --- DATA DOWNLOADER ---
+# --- DATA DOWNLOADER ---
 def download_data(dataset_name):
     if dataset_name not in DATASETS:
         print(f"Unknown dataset: {dataset_name}")
         return
 
     info = DATASETS[dataset_name]
-    dataset_dir = os.path.dirname(info['train'])
+    train_file = info['train']
+    
+    # Check if extracted dir exists (heuristic: dirname of train file)
+    dataset_dir = os.path.dirname(train_file)
     if os.path.exists(dataset_dir):
-        print(f"Dataset {dataset_name} already exists")
+        print(f"Dataset {dataset_name} already exists at {dataset_dir}")
         return
 
-    print(f"Downloading {dataset_name}...")
+    print(f"Downloading {dataset_name} from Google Drive...")
     try:
         import gdown
     except ImportError:
+        print("Installing gdown...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "gdown"])
         import gdown
 
+    file_id = info['id']
     output = f"{dataset_name}.zip"
+    
     if not os.path.exists(output):
-        gdown.download(f'https://drive.google.com/uc?id={info["id"]}', output, quiet=False)
+        url = f'https://drive.google.com/uc?id={file_id}'
+        # Resource key handling if needed (simplified for now as most new links don't seem to need it explicitly or gdown handles it)
+        gdown.download(url, output, quiet=False)
 
+    print(f"Extracting {dataset_name}...")
     with zipfile.ZipFile(output, 'r') as zip_ref:
         zip_ref.extractall(".")
     print("Done.")
 
-
+# --- DATA LOADER ---
 def load_xml_data(file_path):
     print(f"Loading {file_path}...")
+    
+    # Log head of file before loading
+    print(f"--- Head of {file_path} (Raw) ---")
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            for _ in range(5):
+                line = f.readline()
+                if not line: break
+                print(line.strip())
+    except Exception as e:
+        print(f"Could not read raw file head: {e}")
+    print("-----------------------------------")
+
     with open(file_path, 'rb') as f:
         header_line = f.readline()
         header = header_line.decode('utf-8').strip().split()
@@ -162,10 +232,21 @@ def load_xml_data(file_path):
         offset = len(header_line)
         
     data = load_svmlight_file(file_path, multilabel=True, n_features=num_features, offset=offset)
+    # Convert to list of lists for labels
     labels = [np.array(l, dtype=np.int32) for l in data[1]]
-    print(f"  Loaded {num_samples} samples, {num_features} features, {num_labels} labels")
-    return data[0], labels, num_features, num_labels
 
+    # Log head of data after loading
+    print(f"--- Head of Loaded Data ({file_path}) ---")
+    print(f"Num Samples: {num_samples}, Num Features: {num_features}, Num Labels: {num_labels}")
+    print("First 5 samples X (indices):")
+    for i in range(min(5, data[0].shape[0])):
+        print(f"  Sample {i}: {data[0][i].indices}")
+    print("First 5 samples Y (labels):")
+    for i in range(min(5, len(labels))):
+        print(f"  Sample {i}: {labels[i]}")
+    print("-----------------------------------------")
+
+    return data[0], labels, num_features, num_labels
 
 class XMLDataset:
     def __init__(self, X: csr_matrix, Y: List[np.ndarray], num_labels: int, batch_size: int, shuffle: bool = True):
@@ -175,6 +256,19 @@ class XMLDataset:
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.indices = np.arange(X.shape[0])
+        
+        # Calculate fixed max lengths for TPU stability (avoid dynamic shapes causing recompilation)
+        if X.shape[0] > 0:
+            self.max_feat_len = int(X.getnnz(axis=1).max())
+            # Y is a list of arrays
+            self.max_label_len = max((len(y) for y in Y), default=0)
+        else:
+            self.max_feat_len = 0
+            self.max_label_len = 0
+            
+        self.max_feat_len = max(self.max_feat_len, 1) # Ensure at least 1
+        self.max_label_len = max(self.max_label_len, 1)
+
         self.on_epoch_end()
 
     def __len__(self):
@@ -193,34 +287,41 @@ class XMLDataset:
             self.on_epoch_end()
             raise StopIteration
             
-        batch_indices = self.indices[self.n:self.n + self.batch_size]
+        batch_indices = self.indices[self.n: min(self.n + self.batch_size, len(self.indices))]
         self.n += self.batch_size
         
+        # Prepare batch
+        # Retrieve raw samples
         batch_X = self.X[batch_indices]
-        max_feats = max(max((len(batch_X[i].indices) for i in range(len(batch_indices))), default=0), 1)
         
-        padded_feats = np.zeros((len(batch_indices), max_feats), dtype=np.int32)
-        masks = np.zeros((len(batch_indices), max_feats), dtype=np.float32)
+        # Determine actual valid count
+        actual_batch_size = len(batch_indices)
         
-        for i in range(len(batch_indices)):
-            row = batch_X[i]
-            length = len(row.indices)
-            if length > 0:
-                padded_feats[i, :length] = row.indices
-                masks[i, :length] = 1.0
+        # Pad features
+        # Use fixed max length from __init__ to ensure stable shapes
+        padded_feats = np.zeros((self.batch_size, self.max_feat_len), dtype=np.int32)
+        masks = np.zeros((self.batch_size, self.max_feat_len), dtype=np.float32)
+        
+        for i, row_idx in enumerate(range(actual_batch_size)):
+             row = batch_X[i] 
+             indices = row.indices
+             length = len(indices)
+             # Safe clip just in case
+             length = min(length, self.max_feat_len)
+             padded_feats[i, :length] = indices[:length]
+             masks[i, :length] = 1.0
              
-        MAX_LABELS = 16
-        max_labels = max(min(MAX_LABELS, max((len(self.Y[i]) for i in batch_indices), default=1)), 1)
-        
-        padded_labels = np.full((len(batch_indices), max_labels), -1, dtype=np.int32)
-        label_masks = np.zeros((len(batch_indices), max_labels), dtype=np.float32)
+        # Y labels: Pad to fixed max length
+        padded_labels = np.full((self.batch_size, self.max_label_len), -1, dtype=np.int32)
+        label_masks = np.zeros((self.batch_size, self.max_label_len), dtype=np.float32)
         
         for i, idx in enumerate(batch_indices):
             lbls = self.Y[idx]
             if len(lbls) > 0:
-                n = min(len(lbls), max_labels)
-                padded_labels[i, :n] = lbls[:n]
-                label_masks[i, :n] = 1.0
+                length = len(lbls)
+                length = min(length, self.max_label_len)
+                padded_labels[i, :length] = lbls[:length]
+                label_masks[i, :length] = 1.0
         
         return {
             'features': jnp.array(padded_feats),
@@ -229,255 +330,240 @@ class XMLDataset:
             'label_masks': jnp.array(label_masks)
         }
 
-
-# --- Models with Negative Sampling ---
+# --- MODELS ---
 
 class MeanEmbedding(nnx.Module):
     def __init__(self, num_features: int, embed_dim: int, *, rngs: nnx.Rngs):
         self.embedding = nnx.Embed(num_features, embed_dim, rngs=rngs)
     
     def __call__(self, indices, mask):
-        embeds = self.embedding(indices)
-        sum_embeds = jnp.sum(embeds * mask[:, :, None], axis=1)
-        return sum_embeds / jnp.maximum(jnp.sum(mask, axis=1, keepdims=True), 1.0)
+        # indices: [B, L]
+        # mask: [B, L]
+        embeds = self.embedding(indices) # [B, L, D]
+        sum_embeds = jnp.sum(embeds * mask[:, :, None], axis=1) # [B, D]
+        sum_mask = jnp.sum(mask, axis=1, keepdims=True) # [B, 1]
+        return sum_embeds / jnp.clip(sum_mask, a_min=1e-9)
 
-
-class SampledSoftmaxXML(nnx.Module):
-    """Full softmax with sampled negatives for training efficiency."""
-    def __init__(self, num_features: int, num_labels: int, embed_dim: int, 
-                 num_negatives: int = 2048, *, rngs: nnx.Rngs):
+class BaseXML(nnx.Module):
+    def __init__(self, num_features: int, num_labels: int, embed_dim: int, *, rngs: nnx.Rngs):
         self.encoder = MeanEmbedding(num_features, embed_dim, rngs=rngs)
-        self.classifier = nnx.Linear(embed_dim, num_labels, use_bias=False, rngs=rngs)
-        self.num_negatives = num_negatives
         self.num_labels = num_labels
-        
-    def __call__(self, indices, mask):
-        embeds = self.encoder(indices, mask)
-        return self.classifier(safe_normalize(embeds, axis=-1))
-        
-    def loss(self, indices, mask, labels, label_mask, rng_key):
-        B = indices.shape[0]
-        K = labels.shape[1]
-        
-        embeds = safe_normalize(self.encoder(indices, mask), axis=-1)  # [B, D]
-        W = self.classifier.kernel[...]  # [D, L]
-        
-        # Sample negatives
-        neg_indices = jax.random.randint(rng_key, (self.num_negatives,), 0, self.num_labels)
-        
-        # Gather weights for positives and negatives
-        safe_labels = jnp.maximum(labels, 0)  # [B, K]
-        
-        # Positive logits: need W[:, labels[b, k]] for each b, k
-        W_pos = W[:, safe_labels.reshape(-1)].T.reshape(B, K, -1)  # [B, K, D]
-        pos_logits = jnp.sum(embeds[:, None, :] * W_pos, axis=-1)  # [B, K]
-        
-        # Negative logits
-        W_neg = W[:, neg_indices].T  # [N, D]
-        neg_logits = embeds @ W_neg.T  # [B, N]
-        
-        # Combine and compute softmax loss
-        all_logits = jnp.concatenate([pos_logits, neg_logits], axis=1)  # [B, K+N]
-        log_probs = jax.nn.log_softmax(all_logits, axis=-1)
-        
-        # Loss is negative log prob of positives
-        pos_log_probs = log_probs[:, :K] * label_mask
-        return -jnp.sum(pos_log_probs) / (jnp.sum(label_mask) + 1e-6)
 
+    def get_scores(self, indices, mask):
+        """Returns raw scores/logits/probabilities-ish [B, L]"""
+        raise NotImplementedError
+
+    def get_logits(self, indices, mask):
+        """Returns logits for Softmax [B, L]"""
+        # Default: Assume scores ARE logits (for Linear/FullSoftmax)
+        return self.get_scores(indices, mask)
+
+    def loss(self, indices, mask, labels, label_mask):
+        logits = self.get_logits(indices, mask)
+        B = logits.shape[0]
+        
+        # Create dense targets [B, L]
+        targets = jnp.zeros((B, self.num_labels))
+        batch_inds = jnp.arange(B)[:, None]
+        safe_lbls = jnp.maximum(labels, 0)
+        
+        # Scatter 1s where labels exist based on label_mask
+        targets = targets.at[batch_inds, safe_lbls].max(label_mask)
+        
+        # Normalize to distribution (Sum to 1)
+        target_sum = jnp.sum(targets, axis=-1, keepdims=True)
+        targets = targets / jnp.clip(target_sum, a_min=1e-9)
+        
+        # Optax Loss (Stable Softmax Cross Entropy)
+        loss_val = optax.softmax_cross_entropy(logits=logits, labels=targets)
+        
+        return jnp.mean(loss_val)
+        
     def predict(self, indices, mask, k=5):
-        logits = self(indices, mask)
-        return jax.lax.top_k(logits, k)
+        scores = self.get_scores(indices, mask)
+        return jax.lax.top_k(scores, k)
 
-
-class SampledKernelXML(nnx.Module):
-    """Kernel-based XML with negative sampling."""
-    def __init__(self, num_features: int, num_labels: int, embed_dim: int, 
-                 attention_type: str, num_negatives: int = 2048,
-                 attention_kwargs: dict = {}, *, rngs: nnx.Rngs):
-        self.encoder = MeanEmbedding(num_features, embed_dim, rngs=rngs)
+class FullSoftmaxXML(BaseXML):
+    def __init__(self, num_features: int, num_labels: int, embed_dim: int, *, rngs: nnx.Rngs):
+        super().__init__(num_features, num_labels, embed_dim, rngs=rngs)
         self.classifier = nnx.Linear(embed_dim, num_labels, use_bias=False, rngs=rngs)
-        self.num_negatives = num_negatives
-        self.num_labels = num_labels
+        
+    def get_scores(self, indices, mask):
+        embeds = self.encoder(indices, mask)
+        # Normalize embeddings to match others
+        embeds = safe_normalize(embeds, axis=-1)
+        return self.classifier(embeds)
+
+class KernelXML(BaseXML):
+    """
+    Approximation-based XML using Attention Feature Maps.
+    """
+    def __init__(self, num_features: int, num_labels: int, embed_dim: int, attention_type: str, attention_kwargs: dict = {}, *, rngs: nnx.Rngs):
+        super().__init__(num_features, num_labels, embed_dim, rngs=rngs)
+        self.classifier = nnx.Linear(embed_dim, num_labels, use_bias=False, rngs=rngs)
+        self.attention_type = attention_type
         
         num_heads = attention_kwargs.get('num_heads', 4)
-        if embed_dim % num_heads != 0:
-            num_heads = 1
+        if embed_dim % num_heads != 0: num_heads = 1
         
         if attention_type in ['slay', 'yat', 'yat-spherical']:
             self.feature_map = SLAYFeatures(embed_dim, num_heads, **attention_kwargs, rngs=rngs)
         elif attention_type == 'performer':
             self.feature_map = PerformerFeatures(embed_dim, num_heads, **attention_kwargs, rngs=rngs)
         else:
-            raise ValueError(f"Unsupported attention type: {attention_type}")
+             raise ValueError(f"Unsupported attention type: {attention_type}")
 
     def get_features(self, x):
         return self.feature_map(x)
         
-    def loss(self, indices, mask, labels, label_mask, rng_key):
-        B = indices.shape[0]
-        K = labels.shape[1]
+    def get_scores(self, indices, mask):
+        query = self.encoder(indices, mask)
+        query = safe_normalize(query, axis=-1)
         
-        query = safe_normalize(self.encoder(indices, mask), axis=-1)
-        phi_query = self.get_features(query)  # [B, M]
+        phi_query = self.get_features(query) # [B, M]
         
-        W = self.classifier.kernel[...].T  # [L, D]
-        W = safe_normalize(W, axis=-1)
+        W_vecs = self.classifier.kernel[...]
+        W_vecs = W_vecs.T # [L, D]
+        phi_W = self.get_features(W_vecs) # [L, M]
         
-        # Sample negatives
-        neg_indices = jax.random.randint(rng_key, (self.num_negatives,), 0, self.num_labels)
-        safe_labels = jnp.maximum(labels, 0)
-        
-        # Combine all indices we need
-        all_needed = jnp.concatenate([safe_labels.reshape(-1), neg_indices])  # [B*K + N]
-        W_subset = W[all_needed]  # [B*K + N, D]
-        phi_W_subset = self.get_features(W_subset)  # [B*K + N, M]
-        
-        # Scores
-        scores = phi_query @ phi_W_subset.T  # [B, B*K + N]
-        
-        # Extract positive scores for each sample
-        # pos_scores[b] = scores[b, b*K:(b+1)*K]
-        idx_offsets = jnp.arange(B)[:, None] * K + jnp.arange(K)[None, :]  # [B, K]
-        pos_scores = jnp.take_along_axis(scores, idx_offsets, axis=1)  # [B, K]
-        
-        # Negative scores (shared)
-        neg_scores = scores[:, B*K:]  # [B, N]
-        
-        all_scores = jnp.concatenate([pos_scores, neg_scores], axis=1) + 1e-8
-        log_Z = jax.scipy.special.logsumexp(safe_log(all_scores), axis=1)
-        
-        log_probs = safe_log(pos_scores + 1e-8) - log_Z[:, None]
-        return -jnp.sum(log_probs * label_mask) / (jnp.sum(label_mask) + 1e-6)
-        
-    def predict(self, indices, mask, k=5):
-        query = safe_normalize(self.encoder(indices, mask), axis=-1)
-        phi_query = self.get_features(query)
-        W = safe_normalize(self.classifier.kernel[...].T, axis=-1)
-        phi_W = self.get_features(W)
-        scores = phi_query @ phi_W.T
-        return jax.lax.top_k(scores, k)
+        scores = phi_query @ phi_W.T # [B, L]
+        return scores
 
+    def get_logits(self, indices, mask):
+        scores = self.get_scores(indices, mask)
+        # Handle small negative values from approx? Performer/SLAY usually positive.
+        return jnp.log(jnp.clip(scores, a_min=1e-9))
 
-class SampledYatXML(nnx.Module):
-    """Exact Yat kernel with negative sampling."""
-    def __init__(self, num_features: int, num_labels: int, embed_dim: int,
-                 spherical: bool = True, epsilon: float = 0.1, 
-                 num_negatives: int = 2048, *, rngs: nnx.Rngs):
-        self.encoder = MeanEmbedding(num_features, embed_dim, rngs=rngs)
+class ExactSphericalYatXML(BaseXML):
+    def __init__(self, num_features: int, num_labels: int, embed_dim: int, epsilon: float = 1e-4, *, rngs: nnx.Rngs):
+        super().__init__(num_features, num_labels, embed_dim, rngs=rngs)
         self.classifier = nnx.Linear(embed_dim, num_labels, use_bias=False, rngs=rngs)
-        self.epsilon = epsilon
-        self.spherical = spherical
         self.C = 2.0 + epsilon
-        self.num_negatives = num_negatives
-        self.num_labels = num_labels
 
     def kernel_fn(self, q, k_vecs):
-        """Compute kernel between queries and key vectors."""
         dot = jnp.dot(q, k_vecs.T)
-        
-        if self.spherical:
-            dot = jnp.clip(dot, -0.999, 0.999)
-            denom = jnp.maximum(self.C - 2.0 * dot, self.epsilon)
-        else:
-            q_norm2 = jnp.sum(q**2, axis=-1, keepdims=True)
-            k_norm2 = jnp.sum(k_vecs**2, axis=-1)
-            dist2 = jnp.maximum(q_norm2 + k_norm2[None, :] - 2 * dot, 0.0)
-            denom = dist2 + self.epsilon
-            
-        return (dot ** 2) / denom
+        raw_kernel = (dot ** 2) / (self.C - 2 * dot + 1e-6)
+        return raw_kernel
 
-    def loss(self, indices, mask, labels, label_mask, rng_key):
-        B = indices.shape[0]
-        K = labels.shape[1]
+    def get_scores(self, indices, mask):
+        query = self.encoder(indices, mask) 
+        query = safe_normalize(query, axis=-1)
         
-        query = safe_normalize(self.encoder(indices, mask), axis=-1)
-        W = safe_normalize(self.classifier.kernel[...].T, axis=-1)
+        W_vecs = self.classifier.kernel[...] 
+        W_vecs = safe_normalize(W_vecs.T, axis=-1)
         
-        # Sample negatives
-        neg_indices = jax.random.randint(rng_key, (self.num_negatives,), 0, self.num_labels)
-        safe_labels = jnp.maximum(labels, 0)
-        
-        # Gather subset of W
-        all_indices = jnp.concatenate([safe_labels.reshape(-1), neg_indices])
-        W_subset = W[all_indices]  # [B*K + N, D]
-        
-        # Compute kernel scores
-        scores = self.kernel_fn(query, W_subset)  # [B, B*K + N]
-        
-        # Extract positives
-        idx_offsets = jnp.arange(B)[:, None] * K + jnp.arange(K)[None, :]
-        pos_scores = jnp.take_along_axis(scores, idx_offsets, axis=1)
-        neg_scores = scores[:, B*K:]
-        
-        all_scores = jnp.concatenate([pos_scores, neg_scores], axis=1) + 1e-8
-        log_Z = jax.scipy.special.logsumexp(safe_log(all_scores), axis=1)
-        
-        log_probs = safe_log(pos_scores + 1e-8) - log_Z[:, None]
-        return -jnp.sum(log_probs * label_mask) / (jnp.sum(label_mask) + 1e-6)
-        
-    def predict(self, indices, mask, k=5):
-        query = safe_normalize(self.encoder(indices, mask), axis=-1)
-        W = safe_normalize(self.classifier.kernel[...].T, axis=-1)
-        scores = self.kernel_fn(query, W)
-        return jax.lax.top_k(scores, k)
+        return self.kernel_fn(query, W_vecs)
 
+    def get_logits(self, indices, mask):
+        scores = self.get_scores(indices, mask)
+        return jnp.log(jnp.clip(scores, a_min=1e-9))
 
-# --- Metrics ---
+class ExactYatXML(BaseXML):
+    def __init__(self, num_features: int, num_labels: int, embed_dim: int, epsilon: float = 1e-4, *, rngs: nnx.Rngs):
+        super().__init__(num_features, num_labels, embed_dim, rngs=rngs)
+        self.classifier = nnx.Linear(embed_dim, num_labels, use_bias=False, rngs=rngs)
+        self.epsilon = epsilon
+
+    def kernel_fn(self, q, k_vecs):
+        dot = jnp.dot(q, k_vecs.T) # [B, L]
+        q_norm2 = jnp.sum(q**2, axis=-1, keepdims=True) # [B, 1]
+        k_norm2 = jnp.sum(k_vecs**2, axis=-1) # [L]
+        
+        dist2 = q_norm2 + k_norm2[None, :] - 2 * dot + self.epsilon
+        
+        raw_kernel = (dot ** 2) / dist2
+        return raw_kernel
+        
+    def get_scores(self, indices, mask):
+        query = self.encoder(indices, mask)
+        W_vecs = self.classifier.kernel[...]
+        W_vecs = W_vecs.T
+        return self.kernel_fn(query, W_vecs)
+
+    def get_logits(self, indices, mask):
+        scores = self.get_scores(indices, mask)
+        return jnp.log(jnp.clip(scores, a_min=1e-9))
+
+# --- METRICS ---
 
 def get_propensity_scores(labels, num_labels, A=0.55, B=1.5):
-    N = len(labels)
+    """
+    Calculate propensity scores based on Jain et al. 2016.
+    p_l = 1 / (1 + C * (N_l + B)^-A)
+    C = (log N - 1) * (B + 1)^A
+    """
+    N = len(labels) # Number of samples
+    
     freqs = np.zeros(num_labels)
     for i in range(N):
         freqs[labels[i]] += 1
+        
     C = (np.log(N) - 1) * ((B + 1) ** A)
+    
     p = 1.0 / (1.0 + C * ((freqs + B) ** (-A)))
-    p[freqs == 0] = 1e-6
+    p[freqs == 0] = 0.0 # Handle missing labels if any (though usually not an issue for prop calculation, just ensures no division by zero later if p used in denominator)
     return p
 
 def precision_at_k(targets_list, pred_indices, k=5):
-    p_k_sum = np.zeros(k)
+    p_k_sum = np.zeros(k) # P@1...P@k
     n_samples = len(targets_list)
     pred_indices = np.array(pred_indices)
 
     for i in range(n_samples):
-        t_row = np.array(targets_list[i])
+        # targets_list[i] is likely a JAX array or numpy array with padding -1
+        t_row = np.array(targets_list[i]) 
+        # Filter out padding (-1)
         true_labels = set(t_row[t_row != -1])
-        if len(true_labels) == 0:
-            continue
+        
+        if len(true_labels) == 0: continue
+        
         preds = pred_indices[i]
         hits = 0
         for j in range(k):
             if j < len(preds) and preds[j] in true_labels:
                 hits += 1
             p_k_sum[j] += hits / (j + 1)
+            
     return p_k_sum / n_samples
 
 def psp_at_k(targets_list, pred_indices, propensity_scores, k=5):
+    """
+    Propensity Scored Precision @ k
+    PSP@k = (1/k) * sum_{l in top_k} (y_l / p_l)
+    """
     psp_sum = np.zeros(k)
     n_samples = len(targets_list)
     pred_indices = np.array(pred_indices)
+    
+    # Pre-compute 1/p to avoid division inside loop
     inv_p = np.zeros_like(propensity_scores)
     inv_p[propensity_scores > 0] = 1.0 / propensity_scores[propensity_scores > 0]
 
     for i in range(n_samples):
         t_row = np.array(targets_list[i])
         true_labels = set(t_row[t_row != -1])
-        if len(true_labels) == 0:
-            continue
+        
+        if len(true_labels) == 0: continue
+        
         preds = pred_indices[i]
         score = 0.0
         for j in range(k):
             if j < len(preds) and preds[j] in true_labels:
                 score += inv_p[preds[j]]
             psp_sum[j] += score / (j + 1)
+            
     return psp_sum / n_samples
 
-
-# --- Runner ---
-
-def run_benchmark(dataset_name: str = "all", method_filter: str = "all"):
+# --- RUNNER ---
+# --- RUNNER ---
+# --- RUNNER ---
+def run_benchmark(args):
+    dataset_name = args.dataset
+    method_filter = args.method
+    # JAX Device Check
     print(f"JAX Devices: {jax.devices()}")
 
+    # Determine datasets to run
     if dataset_name == "all":
         datasets_to_run = list(DATASETS.keys())
     elif dataset_name in DATASETS:
@@ -489,9 +575,7 @@ def run_benchmark(dataset_name: str = "all", method_filter: str = "all"):
     final_results = {}
 
     for ds_name in datasets_to_run:
-        print(f"\n{'='*50}")
-        print(f"Benchmarking on {ds_name}")
-        print('='*50)
+        print(f"\n=== Benchmarking on {ds_name} ===")
         download_data(ds_name)
         
         info = DATASETS[ds_name]
@@ -503,108 +587,135 @@ def run_benchmark(dataset_name: str = "all", method_filter: str = "all"):
             continue
             
         n_feat = max(n_feat, X_test.shape[1])
+        
+        # Calculate Propensity Scores
+        print("Calculating propensity scores...")
         propensity = get_propensity_scores(Y_train, n_lab)
         
-        # Optimized settings for Mac
-        BATCH_SIZE = 128 if jax.devices()[0].platform == "metal" else 512
-        EMBED_DIM = 256
-        LR = 5e-4
-        EPOCHS = 10  # Fewer epochs, faster iteration
-        NUM_NEGATIVES = min(2048, n_lab // 4)  # Scale negatives with label space
+        # Config
+        # Config from args
+        BATCH_SIZE = args.batch_size
         
         train_ds = XMLDataset(X_train, Y_train, n_lab, BATCH_SIZE, shuffle=True)
         test_ds = XMLDataset(X_test, Y_test, n_lab, BATCH_SIZE, shuffle=False)
         
         ds_results = {}
         
+        # Models to test
         all_configs = [
-            ('Yat (Exact)', {'spherical': False}),
-            ('Yat (Spherical)', {'spherical': True}),
-            ('Softmax', {}),
-            ('Performer', {'attention_type': 'performer', 'attention_kwargs': {'kernel_size': 64}}),
-            ('SLAY', {'attention_type': 'slay', 'attention_kwargs': {'num_features': 16, 'num_quadrature_nodes': 2}}),
+            ('Yat (Exact)', {'exact': True, 'spherical': False}),
+            ('Yat (Spherical)', {'exact': True, 'spherical': True}),
+            ('FullSoftmax', {}),
+            #('Performer', {'attention_type': 'performer', 'attention_kwargs': {'kernel_size': 64}}),
+            ('SLAY (Approx)', {'attention_type': 'slay', 'attention_kwargs': {'num_features': args.num_features, 'num_quadrature_nodes': args.num_quadrature_nodes}}),
         ]
         
-        if method_filter != "all":
+        if method_filter == "all":
+            configs = all_configs
+        else:
             configs = [c for c in all_configs if method_filter.lower() in c[0].lower()]
             if not configs:
-                print(f"No method matched '{method_filter}'")
-                continue
-        else:
-            configs = all_configs
+                print(f"No method matched filter '{method_filter}'. Available: {[c[0] for c in all_configs]}")
+                return {}
 
-        for name, args in configs:
-            print(f"\n--- Training {name} ---")
-            rngs = nnx.Rngs(42)
-            rng_key = jax.random.PRNGKey(42)
-            
-            if name == 'Softmax':
-                model = SampledSoftmaxXML(n_feat, n_lab, EMBED_DIM, NUM_NEGATIVES, rngs=rngs)
-            elif 'Yat' in name:
-                model = SampledYatXML(n_feat, n_lab, EMBED_DIM, 
-                                      spherical=args.get('spherical', True),
-                                      num_negatives=NUM_NEGATIVES, rngs=rngs)
-            else:
-                try:
-                    model = SampledKernelXML(n_feat, n_lab, EMBED_DIM,
-                                             num_negatives=NUM_NEGATIVES, **args, rngs=rngs)
-                except ValueError as e:
-                    print(f"Skipping {name}: {e}")
-                    continue
-            
-            optimizer = nnx.Optimizer(
-                model, 
-                optax.chain(optax.clip_by_global_norm(1.0), optax.adamw(LR, weight_decay=1e-5)),
-                wrt=nnx.Param
-            )
+    # Mesh for Data Parallelism
+    devices = jax.devices()
+    mesh = Mesh(devices, axis_names=('data',))
+    print(f"Mesh: {mesh}")
 
-            @nnx.jit
-            def train_step(model, optimizer, indices, mask, labels, label_mask, rng_key):
-                def loss_fn(m):
-                    return m.loss(indices, mask, labels, label_mask, rng_key)
-                loss, grads = nnx.value_and_grad(loss_fn)(model)
-                optimizer.update(model, grads)
-                return loss
+    for name, args_model in configs:
+        print(f"\nTraining {name} on {ds_name}...")
+        
+        # Replicated State Sharding
+        replicated_sharding = NamedSharding(mesh, P())
+        
+        with mesh:
+             # Initialize model (replicated)
+             rngs = nnx.Rngs(args.seed)
+             if name == 'FullSoftmax':
+                 model = FullSoftmaxXML(n_feat, n_lab, args.embed_dim, rngs=rngs)
+             elif args_model.get('exact'):
+                  if args_model.get('spherical'):
+                      model = ExactSphericalYatXML(n_feat, n_lab, args.embed_dim, rngs=rngs)
+                  else:
+                      model = ExactYatXML(n_feat, n_lab, args.embed_dim, rngs=rngs)
+             else:
+                 try:
+                     model = KernelXML(n_feat, n_lab, args.embed_dim, **args_model, rngs=rngs)
+                 except ValueError as e:
+                     print(f"Skipping {name}: {e}")
+                     continue
+            
+             # Create Optimizer with Gradient Clipping
+             optimizer = nnx.Optimizer(model, optax.chain(
+                 optax.clip_by_global_norm(1.0),
+                 optax.adam(args.lr)
+             ), wrt=nnx.Param)
+
+             @nnx.jit
+             def train_step(model, optimizer, indices, mask, labels, label_mask):
+                    def loss_fn(m):
+                        return m.loss(indices, mask, labels, label_mask)
+                    
+                    loss, grads = nnx.value_and_grad(loss_fn)(model)
+                    optimizer.update(grads)
+                    return loss
     
-            for ep in range(EPOCHS):
-                t0 = time.time()
-                total_loss, count = 0.0, 0
+             def train_epoch(model, optimizer):
+                total_loss = 0
+                count = 0
+                
+                # Data Sharding Spec
+                data_sharding = NamedSharding(mesh, P('data', None))
+                
                 for batch in train_ds:
-                    rng_key, subkey = jax.random.split(rng_key)
-                    loss = train_step(model, optimizer, 
-                                      batch['features'], batch['masks'],
-                                      batch['labels'], batch['label_masks'], subkey)
-                    if not jnp.isnan(loss):
-                        total_loss += float(loss)
-                        count += 1
-                avg_loss = total_loss / max(count, 1)
-                print(f"  Epoch {ep+1}/{EPOCHS} | Loss: {avg_loss:.4f} | Time: {time.time()-t0:.1f}s")
+                    # Shard batch explicitly
+                    indices = jax.device_put(batch['features'], data_sharding)
+                    mask = jax.device_put(batch['masks'], data_sharding)
+                    labels = jax.device_put(batch['labels'], data_sharding)
+                    label_mask = jax.device_put(batch['label_masks'], data_sharding)
+                    
+                    loss = train_step(model, optimizer, indices, mask, labels, label_mask)
+                    
+                    total_loss += loss
+                    count += 1
+                    
+                return total_loss / count
+    
+             for ep in range(args.epochs):
+                t0 = time.time()
+                loss = train_epoch(model, optimizer)
+                print(f"Ep {ep+1} | Loss: {loss:.4f} | Time: {time.time()-t0:.2f}s")
+                    
+                # Eval
+                all_preds = []
+                all_targets = []
+                for batch in test_ds:
+                    indices = batch['features']
+                    mask = batch['masks']
+                    # Predict top 5
+                    _, top_k = model.predict(indices, mask, k=5)
+                    all_preds.extend(top_k)
+                    all_targets.extend(batch['labels'])
+                    
+                pk = precision_at_k(all_targets, all_preds, k=5)
+                pspk = psp_at_k(all_targets, all_preds, propensity, k=5)
                 
-            # Evaluation
-            print("  Evaluating...")
-            all_preds, all_targets = [], []
-            for batch in test_ds:
-                _, top_k = model.predict(batch['features'], batch['masks'], k=5)
-                all_preds.extend(top_k)
-                all_targets.extend(batch['labels'])
+                print(f"Results for {name}:")
+                print(f"  P@1: {pk[0]:.4f}, P@3: {pk[2]:.4f}, P@5: {pk[4]:.4f}")
+                print(f"  PSP@1: {pspk[0]:.4f}, PSP@3: {pspk[2]:.4f}, PSP@5: {pspk[4]:.4f}")
                 
-            pk = precision_at_k(all_targets, all_preds, k=5)
-            pspk = psp_at_k(all_targets, all_preds, propensity, k=5)
+                ds_results[name] = {
+                    'P@1': pk[0], 'P@3': pk[2], 'P@5': pk[4],
+                    'PSP@1': pspk[0], 'PSP@3': pspk[2], 'PSP@5': pspk[4]
+                }
             
-            print(f"  P@1: {pk[0]:.4f}, P@3: {pk[2]:.4f}, P@5: {pk[4]:.4f}")
-            print(f"  PSP@1: {pspk[0]:.4f}, PSP@3: {pspk[2]:.4f}, PSP@5: {pspk[4]:.4f}")
-            
-            ds_results[name] = {
-                'P@1': pk[0], 'P@3': pk[2], 'P@5': pk[4],
-                'PSP@1': pspk[0], 'PSP@3': pspk[2], 'PSP@5': pspk[4]
-            }
-            
-        final_results[ds_name] = ds_results
+             final_results[ds_name] = ds_results
         
     return final_results
 
-
 def generate_latex(results):
+    print("\nGenerating LaTeX Table...")
     path = "extreme_results.tex"
     with open(path, "w") as f:
         f.write(r"\begin{table}[h]" + "\n")
@@ -627,17 +738,25 @@ def generate_latex(results):
         f.write(r"\caption{Extreme Classification Benchmark Results}" + "\n")
         f.write(r"\label{tab:extreme_results}" + "\n")
         f.write(r"\end{table}" + "\n")
-    print(f"\nLaTeX table saved to {path}")
-
+    print(f"Table saved to {path}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=str, default="Eurlex-4K", 
-                        help="Dataset name or 'all'")
-    parser.add_argument("--method", type=str, default="all", 
-                        help="Method filter (e.g., 'yat', 'performer', or 'all')")
+    parser.add_argument("--dataset", type=str, default="LF-AmazonTitles-131K", help="Dataset to run (or 'all')")
+    parser.add_argument("--method", type=str, default="all", help="Method to run (filter)")
+    
+    # Approx Params
+    parser.add_argument("--num_features", type=int, default=32, help="Features for SLAY approx")
+    parser.add_argument("--num_quadrature_nodes", type=int, default=2, help="Quad nodes for SLAY")
+    
+    # Training
+    parser.add_argument("--batch-size", type=int, default=512, help="Batch size")
+    parser.add_argument("--embed-dim", type=int, default=256, help="Embedding dimension")
+    parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
+    parser.add_argument("--epochs", type=int, default=3, help="Number of epochs")
+    parser.add_argument("--seed", type=int, default=0, help="Random seed")
+    
     args = parser.parse_args()
     
-    results = run_benchmark(args.dataset, args.method)
-    if results:
-        generate_latex(results)
+    results = run_benchmark(args)
+    generate_latex(results)
