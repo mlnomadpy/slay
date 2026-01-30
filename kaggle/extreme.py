@@ -68,8 +68,15 @@ class SLAYFeatures(nnx.Module):
     """
     SLAY feature map: Tensor product of Anchor-based Polynomial and PRF features.
     Approximates Yat kernel (Spherical) with Anchor approximation for polynomial part.
+    
+    Improvements:
+    - Modularized feature computation (Poly, PRF, Fusion)
+    - CountSketch approximation for high-dimensional tensor products
+    - Improved numerical stability
     """
-    def __init__(self, embed_dim: int, num_heads: int, num_features: int = 32, poly_dim: int = 16, num_quadrature_nodes: int = 2, epsilon: float = 1e-6, *, rngs: nnx.Rngs):
+    def __init__(self, embed_dim: int, num_heads: int, num_features: int = 32, poly_dim: int = 16, 
+                 num_quadrature_nodes: int = 2, epsilon: float = 1e-6, 
+                 use_sketching: bool = False, sketch_dim: Optional[int] = None, *, rngs: nnx.Rngs):
         self.num_heads = num_heads
         self.embed_dim = embed_dim
         self.head_dim = embed_dim // num_heads
@@ -78,6 +85,9 @@ class SLAYFeatures(nnx.Module):
         self.num_quadrature_nodes = num_quadrature_nodes
         self.epsilon = epsilon
         self.C = 2.0 + epsilon
+        
+        self.use_sketching = use_sketching
+        self.sketch_dim = sketch_dim if sketch_dim is not None else (poly_dim * num_features)
         
         try:
             nodes, weights = np.polynomial.laguerre.laggauss(num_quadrature_nodes)
@@ -89,15 +99,105 @@ class SLAYFeatures(nnx.Module):
         self.quad_weights = nnx.Cache(jnp.array(weights, dtype=jnp.float32) / self.C)
         
         param_key = rngs.params()
-        k1, k2 = jax.random.split(param_key)
+        k1, k2, k3, k4 = jax.random.split(param_key, 4)
         
-        # PRF Projections
+        # PRF Projections: ω ~ N(0, I)
         self.omega = nnx.Cache(jax.random.normal(k1, (num_quadrature_nodes, self.num_heads, self.head_dim, num_features)))
         
         # Anchors for polynomial part
+        # "Anchor features are computationally simplest... and empirically most stable at small P"
         anchors = jax.random.normal(k2, (poly_dim, self.head_dim))
-        anchors = anchors / jnp.linalg.norm(anchors, axis=-1, keepdims=True)
+        anchors = safe_normalize(anchors, axis=-1)
         self.anchor_vectors = nnx.Cache(anchors)
+        
+        # CountSketch Parameters
+        if self.use_sketching:
+            total_dim = poly_dim * num_features
+            # Hash functions for CountSketch: h \in [0, D_t-1], s \in {-1, 1}
+            self.sketch_hash = nnx.Cache(jax.random.randint(k3, (total_dim,), 0, self.sketch_dim))
+            self.sketch_sign = nnx.Cache(jax.random.choice(k4, jnp.array([-1.0, 1.0]), (total_dim,)))
+
+    def _poly_features(self, x_norm):
+        """Compute Anchor features for (x^T y)^2."""
+        anchors = self.anchor_vectors[...] # [P, D]
+        # [B, H, D] @ [P, D].T -> [B, H, P]
+        poly_proj = jnp.einsum('bhd,pd->bhp', x_norm, anchors)
+        # φ_anc(x) = (a_i^T x)^2 / sqrt(P)
+        poly_feat = (poly_proj ** 2) / jnp.sqrt(self.poly_dim)
+        return poly_feat
+
+    def _prf_features(self, x_norm):
+        """Compute PRF features for exp(2s x^T y)."""
+        # [B, H, D]
+        omega = self.omega[...] # [R, H, D, M]
+        quad_nodes = self.quad_nodes[...] # [R]
+        
+        # proj: x [B,H,D], omega [R,H,D,M] -> [R, B, H, M]
+        prf_proj = jnp.einsum('bhd,rhdm->rbhm', x_norm, omega)
+        
+        s_vals = quad_nodes.reshape(-1, 1, 1, 1) # [R, 1, 1, 1]
+        sqrt_2s = jnp.sqrt(2.0 * jnp.maximum(s_vals, 0.0))
+        
+        # exp(sqrt(2s) w^T x - s)
+        # Expanded clipping range [-20, 20] typical for float32 exp stability
+        exp_arg = jnp.clip(prf_proj * sqrt_2s - s_vals, a_min=-20.0, a_max=20.0)
+        prf_feat = jnp.exp(exp_arg) / jnp.sqrt(self.num_features) # [R, B, H, M]
+        
+        return prf_feat
+
+    def _apply_quadrature_weights(self, prf_feat):
+        quad_weights = self.quad_weights[...]
+        sq_weights = jnp.sqrt(jnp.maximum(quad_weights.reshape(-1, 1, 1, 1), 0.0))
+        return prf_feat * sq_weights
+
+    def _fuse_features(self, poly_feat, prf_feat):
+        """
+        Fuse Poly and PRF features.
+        poly: [B, H, P]
+        prf:  [R, B, H, M]
+        Returns: [R, B, H, FeatureDim] where FeatureDim = P*M or SketchDim
+        """
+        R, B, H, M = prf_feat.shape
+        P = poly_feat.shape[-1]
+        
+        # Outer product: [R, B, H, P, M]
+        # Equivalent to e.g. poly[:,:,:,None] * prf[:,:,:,None,:] broadcasted
+        # poly: b h p -> r b h p 1
+        # prf: r b h m -> r b h 1 m
+        outer = poly_feat[None, :, :, :, None] * prf_feat[:, :, :, None, :]
+        
+        if self.use_sketching:
+             # Flatten P, M -> [R, B, H, P*M]
+             outer_flat = outer.reshape(R, B, H, P * M)
+             
+             # Apply CountSketch
+             # y_j = sum_{i: h(i)=j} s(i) x_i
+             hash_idxs = self.sketch_hash[...] # [P*M]
+             signs = self.sketch_sign[...]     # [P*M]
+             
+             # Pre-multiply by signs
+             weighted_input = outer_flat * signs[None, None, None, :]
+             
+             # Aggregate into buckets
+             # We want to sum over the last dimension based on hash_idxs
+             # JAX: target.at[..., idxs].add(values) works for fixed shapes, but here we scan/reduce?
+             # Better: use jax.ops.segment_sum logic or .at[].add with broadcasting
+             
+             # We can treat (R, B, H) as a large batch dim N
+             flat_input = weighted_input.reshape(-1, P*M)
+             # Initialize output: [N, D_sketch]
+             output_flat = jnp.zeros((flat_input.shape[0], self.sketch_dim), dtype=flat_input.dtype)
+             
+             # To vectorize efficiently:
+             # This is essentially a sparse matrix multiply or scatter add.
+             # output_flat.at[:, hash_idxs].add(flat_input)
+             # JAX's .at[].add handles duplicate indices correctly by summing.
+             output_flat = output_flat.at[:, hash_idxs].add(flat_input)
+             
+             return output_flat.reshape(R, B, H, self.sketch_dim)
+        else:
+             # Flatten P, M -> [R, B, H, P*M]
+             return outer.reshape(R, B, H, P * M)
 
     def __call__(self, x):
         # x: [Batch, Dim]
@@ -107,37 +207,30 @@ class SLAYFeatures(nnx.Module):
         # Normalize
         x_norm = safe_normalize(x_reshaped, axis=-1)
         
-        # 1. Polynomial Features (Anchors)
-        anchors = self.anchor_vectors[...] # [P, D]
-        # [B, H, D] @ [P, D].T -> [B, H, P]
-        poly_proj = jnp.einsum('bhd,pd->bhp', x_norm, anchors)
-        poly_feat = (poly_proj ** 2) / jnp.sqrt(self.poly_dim)
+        # 1. Polynomial
+        poly_feat = self._poly_features(x_norm)
         
-        # 2. PRF Features
-        omega = self.omega[...] # [R, H, D, M]
-        quad_nodes = self.quad_nodes[...]
-        quad_weights = self.quad_weights[...]
+        # 2. PRF
+        prf_feat = self._prf_features(x_norm)
+        prf_feat = self._apply_quadrature_weights(prf_feat)
         
-        # proj: x [B,H,D], omega [R,H,D,M] -> [R, B, H, M]
-        prf_proj = jnp.einsum('bhd,rhdm->rbhm', x_norm, omega)
+        # 3. Fuse
+        # Output: [R, B, H, Feature_Flat]
+        fused = self._fuse_features(poly_feat, prf_feat)
         
-        s_vals = quad_nodes.reshape(-1, 1, 1, 1) # [R, 1, 1, 1]
-        sqrt_2s = jnp.sqrt(2.0 * jnp.clip(s_vals, a_min=0))
+        # Flatten R and H into feature dimension or similar?
+        # Original code flattened [B, R, H, P, M] -> [B, -1].
+        # Here we return [B, -1].
+        # fused: [R, B, H, D_feat]
+        # We need to preserve B. Flatten everything else?
+        # Typically Kernel approximation is phi(x)^T phi(y).
+        # We have integrated over R via sum (approximated kernel is sum_r w_r K_r).
+        # So we can concat features over R? 
+        # Yes, if K = sum phi_r(x) phi_r(y), then phi(x) = [phi_1(x), ..., phi_R(x)]
         
-        exp_arg = jnp.clip(prf_proj * sqrt_2s - s_vals, a_min=-10.0, a_max=10.0)
-        prf_feat = jnp.exp(exp_arg) / jnp.sqrt(self.num_features) # [R, B, H, M]
-        
-        # Apply quad weights
-        sq_weights = jnp.sqrt(jnp.clip(quad_weights.reshape(-1, 1, 1, 1), a_min=0))
-        prf_feat = prf_feat * sq_weights
-        
-        # 3. Fusion: Tensor Product
-        # poly: b h p
-        # prf:  r b h m
-        # Out:  b h (r p m)
-        
-        fused = jnp.einsum('bhp,rbhm->brhpm', poly_feat, prf_feat)
-        # Flatten: [B, R, H, P, M] -> [B, -1]
+        # Transpose to [B, R, H, D_feat]
+        fused = fused.transpose(1, 0, 2, 3) 
+        # Flatten [B, (R * H * D_feat)]
         output = fused.reshape(B, -1)
         return output
 

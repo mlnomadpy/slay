@@ -89,7 +89,9 @@ Geometry-Aware Spherical Linearized Attention with Yat-Kernel}
 % Abstract
 % ------------------------------------------------------------
 \begin{abstract}
-We propose a new class of linear-time attention mechanisms, relying on the relaxed, computationally-efficient version of the recently introduced \emph{\E-Product}, often referred to as the Yat-kernel \citep{bouhsine2025no}, yielding geometry-aware interactions and inspired by the inverse-square interactions in Physics. Our introduced \emph{Spherical Linearized Attention with YAT-Kernels}, or \emph{SLAY}, constrains queries and keys to the unit sphere so the kernel depends only on the angular alignment. Using Bernstein’s Theorem, we express the spherical YAT-kernel as a nonnegative mixture of polynomial--exponential product kernels and derive a strictly positive random-feature approximation with linear-time $O(L)$ attention, where $L$ stands for the sequence length. We prove positive definiteness and boundedness on the sphere and show that the estimator yields nonnegative scores with a positive denominator under mild conditions. Empirically, SLAY matches full spherical YAT attention and compares favorably to linearized baselines on language and vision tasks, while retaining linear scaling in $L$.
+We propose a new class of linear‑time attention mechanisms based on a relaxed and computationally efficient formulation of the recently introduced \emph{$\mathbb{E}$‑Product}, often referred to as the Yat‑kernel \citep{Author2026Concurrent}. The resulting interactions are geometry‑aware and inspired by inverse‑square interactions in physics. 
+Our method, \emph{Spherical Linearized Attention with Yat Kernels} \textbf{(\emph{SLAY})}, constrains queries and keys to the unit sphere so that attention depends only on angular alignment. Using Bernstein’s theorem, we express the spherical Yat‑kernel as a nonnegative mixture of polynomial–exponential product kernels and derive a strictly positive random‑feature approximation enabling linear‑time $O(L)$ attention. We establish positive definiteness and boundedness on the sphere and show that the estimator yields well‑defined, nonnegative attention scores.
+Empirically, SLAY achieves performance that is nearly indistinguishable from standard softmax attention while retaining linear time and memory scaling, and consistently outperforms prior linear‑time attention mechanisms such as Performers and Cosformers. To the best of our knowledge, SLAY represents the closest linear‑time approximation to softmax attention reported to date, enabling scalable Transformers without the typical performance trade‑offs of attention linearization.
 \end{abstract}
 
 % ============================================================
@@ -103,16 +105,16 @@ Transformer models \citep{transformers-base, vit, bert, brown, longt5, bigbird} 
 To overcome this bottleneck several so-called \textit{efficient-attention} mechanisms, characterized by time complexity sub-quadratic (often linear) in $L$ were proposed.
 They leverage a large spectrum of techniques ranging from clustering/hashing \citep{reformer, routing, lsh-transformer, clustr} to approaches casting attention matrix as a kernel matrix and applying techniques based on random features (RFs) \citep{performers, performer2, chefs, dense-exponential, luo, fft-t, arora}. Those mechanisms critically rely on \textbf{positive} RFs, since regular trigonometric mechanisms, that can be derived from the seminal papers on linearizing shift-invariant kernels \citep{random-features, sinks} lead to unstable training.
 
-Despite these advances, softmax attention remains tied to a specific similarity: the exponential of an inner product. This choice conflates alignment and magnitude, and its unbounded growth requires careful normalization and stabilization. These limitations motivate alternative attention kernels that are geometrically grounded, self-regularizing, and compatible with efficient computation, as explored in activation-free architectures \citep{bouhsine2025no}.
+Despite these advances, softmax attention remains tied to a specific similarity: the exponential of an inner product. This choice conflates alignment and magnitude, and its unbounded growth requires careful normalization and stabilization. These limitations motivate alternative attention kernels that are geometrically grounded, self-regularizing, and compatible with efficient computation, as explored in activation-free architectures \citep{Author2026Concurrent}.
 
-\textit{Neural Matter Networks (NMNs)} introduced the \emph{\E-Product}, also referred to as the Yat-kernel \citep{bouhsine2025no}, a kernel operator inspired by inverse-square interactions in physics:
+\textit{Neural Matter Networks (NMNs)} introduced the \emph{\E-Product}, also referred to as the Yat-kernel \citep{Author2026Concurrent}, a kernel operator inspired by inverse-square interactions in physics:
 \begin{equation}
 \E(\mathbf{q},\mathbf{k}) \overset{\mathrm{def}}{=} \frac{(\mathbf{q}^\top \mathbf{k})^2}{\|\mathbf{q}-\mathbf{k}\|^2 + \epsilon}
 \label{eq:eproduct}
 \end{equation}
 where $\epsilon > 0$ ensures numerical stability. Unlike standard dot-product similarity, the \E-Product explicitly couples two geometric quantities: \emph{alignment} and \emph{proximity}. The squared inner product in the numerator yields an even (sign-symmetric) alignment score, while the inverse-distance denominator penalizes interactions between distant vectors. This ratio yields a self-regularizing response that can suppress irrelevant interactions without requiring explicit activation functions or normalization layers.
 
-From a theoretical perspective, the \E-Product can be viewed as a kernel-like similarity operator. The NMNs, constructed as linear combinations of \E-Product units, are universal approximators on compact domains, despite being entirely activation-free \citep{bouhsine2025no}. In the context of attention, the \E-Product offers a geometry-aware alternative to softmax similarity. It favors tokens that are both aligned and close in representation space. However, the same geometric coupling introduces a computational obstacle: the denominator $\|\mathbf{q}-\mathbf{k}\|_{2}^2 = \|\mathbf{q}\|_{2}^2 + \|\mathbf{k}\|_{2}^2 - 2\mathbf{q}^\top \mathbf{k}$ entangles query and key terms and prevents the factorization required for efficient linear attention. As a result, naive \E-Product attention still requires explicit pairwise interactions and reverts to quadratic complexity. This mirrors the general limitation for non-factorizable kernels that motivates linearization techniques such as those used in Performers and related models \citep{performers, hedgehog, insuhan}.
+From a theoretical perspective, the \E-Product can be viewed as a kernel-like similarity operator. The NMNs, constructed as linear combinations of \E-Product units, are universal approximators on compact domains, despite being entirely activation-free \citep{Author2026Concurrent}. In the context of attention, the \E-Product offers a geometry-aware alternative to softmax similarity. It favors tokens that are both aligned and close in representation space. However, the same geometric coupling introduces a computational obstacle: the denominator $\|\mathbf{q}-\mathbf{k}\|_{2}^2 = \|\mathbf{q}\|_{2}^2 + \|\mathbf{k}\|_{2}^2 - 2\mathbf{q}^\top \mathbf{k}$ entangles query and key terms and prevents the factorization required for efficient linear attention. As a result, naive \E-Product attention still requires explicit pairwise interactions and reverts to quadratic complexity. This mirrors the general limitation for non-factorizable kernels that motivates linearization techniques such as those used in Performers and related models \citep{performers, hedgehog, insuhan}.
 
 This paper addresses this limitation for \E-Attention. We show that by constraining queries and keys to lie on the unit sphere and reformulating the resulting kernel using Bernstein’s Theorem, the \E-Product admits a nonnegative mixture representation, involving polynomial--exponential product kernels, that can be approximated by strictly positive random features. This yields a linear-time attention mechanism that preserves the core geometric and self-regulating properties of the \E-Product while enabling scalable long-context Transformers. We refer to our proposed mechanism as: \emph{Spherical Linearized Attention with YAT-Kernels}, or \emph{SLAY}. Empirically, SLAY matches full spherical YAT attention and compares favorably to linearized baselines on regular Transformer tasks, while retaining $O(L)$-scaling. To summarize, SLAY:
 \vspace{-2mm}
@@ -359,7 +361,7 @@ We evaluate SLAY along several axes:
 We isolate the polynomial factor $(\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})^2$ from the formula of the spherical \E-product (see: Sec. \ref{sec:poly-exp-rfs}) and compare several approximations (anchor, Nystrom, TensorSketch, Random Maclaurin). We report (i) kernel-normalized attention output error relative to exact spherical \E-attention and (ii) forward-pass latency, under matched feature budgets; protocol details and the multi-scale sweep are in Appendix~\ref{app:experiments} and Table~\ref{tab:poly-sweep} (Appendix~\ref{app:poly-ablation}).
 
 For reference, we also include Laplace-only and a Hadamard-fusion variant. These are not polynomial approximations of $(\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})^2$: they change the estimator by removing or altering the polynomial factor. Under feature-budget matching, they might require substantially larger number of RFs to reach comparable overall feature counts, which can dominate runtime.
-
+% TODO table is going out of bounds
 \begin{table}[htbp]
 \centering
 \small
@@ -401,7 +403,7 @@ We compare the computational efficiency of \textbf{SLAY} as a linearized estimat
 \paragraph{Benchmark setup.}
 All attention mechanisms are benchmarked in isolation, using a causal attention kernel with identical architectural settings (embedding dimension $256$, $8$ heads, batch size $1$). Experiments are conducted on a single NVIDIA A100-SXM4 GPU (80\,GB). For each sequence length, we report mean latency over multiple timed runs after warm-up, peak GPU memory allocation, and effective throughput measured in tokens per second. Sequence lengths range from 128 tokens up to 131K tokens, or until out-of-memory (OOM) failure.
 
-\begin{figure}[htbp]
+\begin{figure}[t!]
 \centering
 \caption{Attention mechanisms scaling behaviors. Several variants are compared: brute-force regular attention (\textrm{Standard}), YAT-attention (YAT), {linear attention} (\textrm{ELU+1}), Cosformer attention from \citep{cosformer} , Performer's attention from \citep{performers} (FAVOR+),  and SLAY's attention.}
 \label{fig:scaling}
@@ -630,335 +632,543 @@ Linear          & 0.85 & 0.56 & 0.80 \\
 
 Overall, SLAY matches or exceeds the performance of existing linearized attention mechanisms across the full spectrum of evaluated tasks. As shown in Table~\ref{tab:summary}, SLAY consistently performs on par with the strongest linear baselines on core capabilities such as long‑range dependency modeling and memory, while closing much of the gap to standard attention on basic operations. Notably, SLAY demonstrates competitive or superior accuracy in arithmetic and pattern‑based tasks, and achieves the highest average performance on higher‑level behaviors, including patterns and reasoning. These results indicate that SLAY preserves the representational strengths of linear attention while, in many settings, providing measurable gains over comparable linearized approaches.
 
-\subsection{Extreme Classification Test}
+\subsection{Extreme Classification Evaluation}
 \label{subsec:extreme-classification}
-% TODO add results from MM-AmazonTitles-300K LF-AmazonTitles-131K
-\textcolor{red}{We have also conducted the extreme classification tests on the Eurlex dataset} and found that the SLAY mechanism provides the best performance across five tested attention methods. Interestingly, it also outperformed
-the brute-force softmax attention and regular YAT. The results are summarized in Table \ref{table:extreme_class_tests}.
+
+We further evaluate the proposed approach in an extreme classification setting using the \textsc{Eurlex} dataset. Specifically, we compare \textbf{SLAY} against the Performer FAVOR+ mechanism.
 
 \begin{table}[htbp]
 \centering
-\caption{Precision@5 (P@5) results on the Eurlex dataset for different output layer methods.}
-\label{tab:eurlex_p5}
-\begin{tabular}{l c}
-\hline
-\textbf{Method} & \textbf{P@5} \\
-\hline
-Full Softmax      & 0.2638 \\
-Performer         & 0.2551 \\
-Yat               & 0.2612 \\
-Yat (Spherical)   & 0.2597 \\
-\textbf{SLAY}     & \textbf{0.2652} \\
-\hline
-\label{table:extreme_class_tests}
+\caption{Extreme Classification Benchmark Results on Eurlex-4K}
+\label{tab:extreme_results}
+\begin{tabular}{lcc}
+\toprule
+Metric & SLAY (Approx) & Performer \\
+\midrule
+P@1 & \textbf{0.4978} & 0.3442 \\
+P@3 & \textbf{0.3953} & 0.2703 \\
+P@5 & \textbf{0.3261} & 0.2263 \\
+PSP@1 & \textbf{0.9391} & 0.5970 \\
+PSP@3 & \textbf{0.7862} & 0.4785 \\
+PSP@5 & \textbf{0.6693} & 0.4141 \\
+\bottomrule
 \end{tabular}
 \end{table}
 
+As shown in Table~\ref{tab:extreme_results}, \textbf{SLAY} achieves higher scores across the board versus the Performer. These results suggest that SLAY provides a favorable trade-off between modeling capacity and efficiency in large-label regimes, making it well-suited for extreme classification tasks.
+
 % ------------------------------------------------------------
-\subsection{\textcolor{red}{SLAYformer: SLAY in Transformers}}
+\subsection{SLAYformer: SLAY in Transformers}
 \label{subsec:slayformer}
 
-We now evaluate SLAY in the context of fully trained transformer language models, comparing it against
-state‑of‑the‑art linear attention mechanisms and standard softmax attention under identical training
-conditions. All models are trained to the same token budget, satisfying the Chinchilla scaling law,
-and share architecture, optimization, and data, ensuring a controlled comparison.
+We now evaluate \textbf{SLAY} in the context of fully trained transformer language models, focusing on how our
+\emph{linear‑time} attention mechanism compares to both standard softmax attention and other linear-time approximations such as Performers and Cosformers.
+To this end, we instantiate a \textbf{SLAYformer}, i.e., a GPT‑2 Small–scale model equipped with Spherical
+Linearized YAT attention, and compare it against both quadratic softmax attention and state‑of‑the‑art
+linear attention baselines under strictly controlled training conditions.
 
-Table~\ref{tab:attention-val-comparison} summarizes validation loss and perplexity after training.
-Among linear‑time attention mechanisms, SLAY achieves the strongest overall performance, matching or
-slightly outperforming FAVOR+ (Performer) and remaining competitive with Cosformer.
-Importantly, SLAY does so without introducing additional approximations beyond those already inherent
-to linear attention, and without sacrificing stability or convergence speed.
-
-While standard softmax attention remains the strongest performer in absolute terms, its quadratic
-computational and memory complexity makes it infeasible at long context lengths.
-In contrast, SLAY operates in linear time and memory with respect to sequence length, enabling
-scaling to substantially longer contexts while preserving competitive modeling performance.
-
+All models are trained to the same token budget in accordance with the Chinchilla scaling law, and share
+identical architecture, optimization hyperparameters, and training data. This setup isolates the effect
+of the attention mechanism itself.
+% TODO the caption is stocked with information that should be mentioned elsewhere (model size, layers ...)
 \begin{table}[htbp]
 \centering
 \small
 \caption{\small{
-Validation performance comparison of attention mechanisms after satisfying the Chinchilla scaling law (2.5B tokens processed).
-All models are $\sim$125M parameters with context length 1024, embedding dimension 768, 12 layers, 12 attention heads,
-trained on FineWeb using learning rate $1\times10^{-4}$ and batch size 32.
-Val Loss denotes token‑level cross‑entropy loss on the validation set, and PPL is the corresponding perplexity.
+Validation performance comparison of attention mechanisms after satisfying the Chinchilla scaling law. Full model details available in Appendix \ref{app:experiments}.
 }}
 \label{tab:attention-val-comparison}
 \resizebox{1\columnwidth}{!}{%
-\begin{tabular}{lcc}
+\begin{tabular}{llcc}
 \toprule
-Method & Val Loss $\downarrow$ & PPL $\downarrow$ \\
+Method & Complexity & Val Loss $\downarrow$ & PPL $\downarrow$ \\
 \midrule
-\textbf{SLAY} & \textbf{5.3463} & \textbf{209.84} \\
-FAVOR+ (Performer) & 5.3531 & 211.27 \\
-Cosformer & 5.1983 & 180.97 \\
-Standard Softmax & 4.6417 & 103.73 \\
+\multicolumn{4}{l}{\textit{Quadratic Attention}} \\
+\quad \textbf{Yat (Exact)} & $O(n^2)$ & \textbf{4.5747} & \textbf{97.03} \\
+\quad Standard Softmax & $O(n^2)$ & 4.6417 & 103.73 \\
+\quad Yat (Spherical) & $O(n^2)$ & 4.7180 & 112.00 \\
+\midrule
+\multicolumn{4}{l}{\textit{Linear Attention}} \\
+\quad \textbf{SLAYformer (Ours)} & $O(n)$ & \textbf{4.6760} & \textbf{107.35} \\
+\quad Linear (ELU+1) & $O(n)$ & 5.0884 & 161.99 \\
+\quad Cosformer & $O(n)$ & 5.1983 & 180.97 \\
+\quad FAVOR+ (Performer) & $O(n)$ & 5.4524 & 233.32 \\
 \bottomrule
 \end{tabular}%
 }
 \end{table}
 
-Figures~\ref{fig:val-loss-curves} and~\ref{fig:perplexity-curves} provide a detailed view of training
-dynamics. Across the full training trajectory, SLAY exhibits stable optimization behavior and
-converges at least as quickly as existing linear attention alternatives.
-Notably, the gap between SLAY and FAVOR+ steadily narrows over training, and SLAY consistently
-matches or exceeds FAVOR+ at convergence in both validation loss and perplexity.
-This indicates that the benefits of SLAY are not limited to early‑stage optimization, but persist
-through full convergence.
+Table~\ref{tab:attention-val-comparison} reports validation loss and perplexity at convergence.
+Strikingly, the SLAYformer achieves performance \emph{within a narrow margin of standard softmax attention},
+despite operating with linear time and memory complexity.
+In contrast, existing linear‑time attention mechanisms such as FAVOR+ (Performer), Linear (ELU+1) and Cosformer exhibit a
+substantial degradation in both loss and perplexity relative to standard softmax attention. Notably, the quadratic versions of SLAY, namely Exact YAT and Spherical YAT offer very competitive performances, even surpassing Standard Softmax in the case of Exact Yat. 
 
-\begin{figure}[htbp]
+To our knowledge, this is the first demonstration of a linear‑time attention mechanism that approaches
+standard softmax attention this closely in a fully trained transformer language model.
+% TODO mention that we used fineweb for training and wikitext-2 for validation during training, PS we can add more validation for the trained models for rebutal
+
+\begin{figure}[h]
 \centering
 \small
+\captionsetup{width=0.95\columnwidth}
 \caption{\small{
-Validation loss as a function of training steps after satisfying the Chinchilla scaling law.
-All models are $\sim$125M parameters, trained on FineWeb with identical optimization settings.
+Validation loss (top) and validation perplexity (bottom) as a function of training steps after satisfying the Chinchilla scaling law with 125M parameters and 2.5B tokens.
 }}
-\label{fig:val-loss-curves}
+\label{fig:val-curves-group}
 \vspace{0.5em}
 
 \begin{tikzpicture}
-\begin{axis}[
-    width=1\columnwidth,
-    height=0.75\columnwidth,
-    xlabel={Training Steps},
-    ylabel={Validation Loss},
-    xmin=0,
-    ymin=5,
-    ymax=7.6,
-    grid=both,
-    legend style={
-        at={(0.98,0.98)},
-        anchor=north east,
-        draw=none
+\begin{groupplot}[
+    group style={
+        group size=1 by 2,
+        horizontal sep=1.5cm
     },
+    width=1\columnwidth,
+    height=0.6\columnwidth,
+    xlabel={Training Steps},
+    grid=both,
     tick label style={font=\small},
     label style={font=\small},
+    legend style={
+        at={(0.4, 1.20)},
+        anchor=south,
+        legend columns=2,
+        draw=none,
+        /tikz/column sep=6pt,
+        row sep=2pt
+    },
+    legend cell align=left
 ]
 
-% ---------- SLAY ----------
-\addplot[ultra thick, red]
-table[row sep=\\]{
-Step Loss\\
-500 7.3243\\
-1001 7.0039\\
-1502 6.7714\\
-2003 6.5691\\
-2504 6.4146\\
-3005 6.3099\\
-3506 6.1787\\
-4007 6.0955\\
-4508 6.0146\\
-5009 5.9158\\
-5510 5.8397\\
-6011 5.7736\\
-6512 5.7110\\
-7013 5.6408\\
-7514 5.6312\\
-8015 5.5789\\
-8516 5.5368\\
-9017 5.4884\\
-9518 5.4636\\
-10019 5.4260\\
-10520 5.3869\\
-11021 5.3512\\
-11522 5.3463\\
-};
-\addlegendentry{\textbf{SLAY}}
+% ==========================================================
+% Top: Validation Loss
+% ==========================================================
+\nextgroupplot[
+    ylabel={Validation Loss},
+    xlabel={},
+    xmin=0,
+    xmax=10500,
+    ymin=4.5,
+    ymax=7.7,
+]
 
-% ---------- Cosformer ----------
-\addplot[thick, dashed, blue]
+% === SLAY (stands out most) ===
+\addplot[ultra thick, red, solid]
 table[row sep=\\]{
 Step Loss\\
-500 7.4607\\
-1001 7.1226\\
-1502 6.9385\\
-2003 6.7731\\
-2504 6.6259\\
-3005 6.4808\\
-3506 6.3822\\
-4007 6.2881\\
-4508 6.1228\\
-5009 6.0009\\
-5510 5.8881\\
-6011 5.7628\\
-6512 5.6976\\
-7013 5.5801\\
-7514 5.5102\\
-8015 5.4354\\
-8516 5.3964\\
-9017 5.3007\\
-9518 5.2568\\
+500 7.0586\\
+1000 6.5368\\
+1500 6.1375\\
+2000 5.8116\\
+2500 5.6047\\
+3000 5.4824\\
+3500 5.4001\\
+4000 5.2535\\
+4500 5.1868\\
+5000 5.1101\\
+5500 4.9986\\
+6000 4.9702\\
+6500 4.9103\\
+7000 4.8294\\
+7500 4.7947\\
+8000 4.8103\\
+8500 4.7267\\
+9000 4.7095\\
+9500 4.7163\\
+10019 4.676\\
+};
+\addlegendentry{\textbf{SLAYformer}}
+
+% === QUADRATIC METHODS: dashed lines, cool dark colors ===
+
+% Standard Softmax
+\addplot[thick, dashed, black]
+table[row sep=\\]{
+Step Loss\\
+500   7.4607\\
+1001  6.9356\\
+1502  6.5100\\
+2003  6.0163\\
+2504  5.5681\\
+3005  5.3346\\
+3506  5.2265\\
+4007  5.1308\\
+4508  5.0961\\
+5009  4.9952\\
+5510  4.9090\\
+6011  4.8817\\
+6512  4.8381\\
+7013  4.7568\\
+7514  4.7724\\
+8015  4.6908\\
+8516  4.6996\\
+9017  4.6841\\
+9518  4.6544\\
+10019 4.6417\\
+};
+\addlegendentry{Standard Softmax}
+
+% Yat (Exact)
+\addplot[thick, dashed, violet]
+table[row sep=\\]{
+Step Loss\\
+500   7.5632\\
+1001  7.1538\\
+1502  6.7704\\
+2003  6.3468\\
+2504  5.7667\\
+3005  5.4633\\
+3506  5.2943\\
+4007  5.1168\\
+4508  5.0192\\
+5009  4.9050\\
+5510  4.8684\\
+6011  4.8011\\
+6512  4.7393\\
+7013  4.6964\\
+7514  4.6691\\
+8015  4.6401\\
+8516  4.6228\\
+9017  4.5947\\
+9518  4.5851\\
+10019 4.5747\\
+};
+\addlegendentry{Yat (Exact)}
+
+% Yat (Spherical)
+\addplot[thick, dashed, teal]
+table[row sep=\\]{
+Step Loss\\
+500   7.5594\\
+1001  7.2115\\
+1502  6.9340\\
+2003  6.6849\\
+2504  6.3210\\
+3005  5.8591\\
+3506  5.4820\\
+4007  5.2922\\
+4508  5.1597\\
+5009  5.0596\\
+5510  4.9933\\
+6011  4.9821\\
+6512  4.8838\\
+7013  4.8393\\
+7514  4.8222\\
+8015  4.7850\\
+8516  4.7567\\
+9017  4.7345\\
+9518  4.7218\\
+10019 4.7180\\
+};
+\addlegendentry{Yat (Spherical)}
+
+% === LINEAR METHODS: solid lines, warm lighter colors ===
+
+% Linear (ELU+1)
+\addplot[thick, solid, brown]
+table[row sep=\\]{
+Step Loss\\
+500   7.4767\\
+1001  7.0787\\
+1502  6.7560\\
+2003  6.5179\\
+2504  6.2725\\
+3005  6.0925\\
+3506  5.9479\\
+4007  5.7758\\
+4508  5.6793\\
+5009  5.5573\\
+5510  5.4970\\
+6011  5.4291\\
+6512  5.3527\\
+7013  5.2960\\
+7514  5.2745\\
+8015  5.2176\\
+8516  5.1888\\
+9017  5.1578\\
+9518  5.1285\\
+10019 5.0884\\
+};
+\addlegendentry{Linear Attention}
+
+% Cosformer
+\addplot[thick, solid, blue]
+table[row sep=\\]{
+Step Loss\\
+500   7.4607\\
+1001  7.1226\\
+1502  6.9385\\
+2003  6.7731\\
+2504  6.6259\\
+3005  6.4808\\
+3506  6.3822\\
+4007  6.2881\\
+4508  6.1228\\
+5009  6.0009\\
+5510  5.8881\\
+6011  5.7628\\
+6512  5.6976\\
+7013  5.5801\\
+7514  5.5102\\
+8015  5.4354\\
+8516  5.3964\\
+9017  5.3007\\
+9518  5.2568\\
 10019 5.1983\\
 };
 \addlegendentry{Cosformer}
 
-% ---------- FAVOR+ (Performer) ----------
-\addplot[thick, dash dot, orange]
+% FAVOR+ (Performer)
+\addplot[thick, solid, orange]
 table[row sep=\\]{
 Step Loss\\
-500 7.5135\\
-1001 7.1177\\
-1502 6.8503\\
-2003 6.6652\\
-2504 6.5269\\
-3005 6.4373\\
-3506 6.3182\\
-4007 6.2614\\
-4508 6.1696\\
-5009 6.0353\\
-5510 5.9576\\
-6011 5.8842\\
-6512 5.8190\\
-7013 5.7325\\
-7514 5.6934\\
-8015 5.6263\\
-8516 5.5874\\
-9017 5.5298\\
-9518 5.5103\\
+500   7.5135\\
+1001  7.1177\\
+1502  6.8503\\
+2003  6.6652\\
+2504  6.5269\\
+3005  6.4373\\
+3506  6.3182\\
+4007  6.2614\\
+4508  6.1696\\
+5009  6.0353\\
+5510  5.9576\\
+6011  5.8842\\
+6512  5.8190\\
+7013  5.7325\\
+7514  5.6934\\
+8015  5.6263\\
+8516  5.5874\\
+9017  5.5298\\
+9518  5.5103\\
 10019 5.4524\\
-10520 5.4269\\
-11021 5.4001\\
-11522 5.3531\\
 };
 \addlegendentry{FAVOR+ (Performer)}
 
-\end{axis}
-\end{tikzpicture}
-\end{figure}
-
-\begin{figure}[htbp]
-\centering
-\small
-\caption{\small{
-Validation perplexity as a function of training steps after satisfying the Chinchilla scaling law.
-All models are $\sim$125M parameters, trained on FineWeb with identical optimization settings.
-}}
-\label{fig:perplexity-curves}
-\vspace{0.5em}
-
-\begin{tikzpicture}
-\begin{axis}[
-    width=1\columnwidth,
-    height=0.75\columnwidth,
-    xlabel={Training Steps},
+% ==========================================================
+% Bottom: Perplexity
+% ==========================================================
+\nextgroupplot[
     ylabel={Perplexity},
     xmin=0,
-    ymin=150,
-    ymax=1900,
+    xmax=10500,
+    ymin=90,
+    ymax=2000,
     ymode=log,
-    grid=both,
-    legend style={
-        at={(0.98,0.98)},
-        anchor=north east,
-        draw=none,
-        font=\footnotesize
-    },
-    tick label style={font=\small},
-    label style={font=\small},
 ]
 
-% ---------- SLAY ----------
-\addplot[ultra thick, red]
+% === SLAY ===
+\addplot[ultra thick, red, solid]
 table[row sep=\\]{
 Step PPL\\
-500 1516.78\\
-1001 1100.96\\
-1502 872.50\\
-2003 712.69\\
-2504 610.68\\
-3005 549.98\\
-3506 482.37\\
-4007 443.86\\
-4508 409.38\\
-5009 370.83\\
-5510 343.67\\
-6011 321.70\\
-6512 302.17\\
-7013 281.67\\
-7514 279.00\\
-8015 264.78\\
-8516 253.87\\
-9017 241.88\\
-9518 235.94\\
-10019 227.24\\
-10520 218.53\\
-11021 210.86\\
-11522 209.84\\
+500 1162.81\\
+1000 690.09\\
+1500 462.91\\
+2000 334.16\\
+2500 271.70\\
+3000 240.43\\
+3500 221.44\\
+4000 191.24\\
+4500 178.89\\
+5000 165.69\\
+5500 148.20\\
+6000 144.06\\
+6500 135.68\\
+7000 125.13\\
+7500 120.87\\
+8000 122.77\\
+8500 112.92\\
+9000 110.99\\
+9500 111.75\\
+10019 107.35\\
 };
-\addlegendentry{\textbf{SLAY}}
 
-% ---------- Cosformer ----------
-\addplot[thick, dashed, blue]
+% === QUADRATIC ===
+
+% Standard Softmax
+\addplot[thick, dashed, black]
 table[row sep=\\]{
 Step PPL\\
-500 1738.36\\
-1001 1239.66\\
-1502 1031.22\\
-2003 873.99\\
-2504 754.40\\
-3005 652.48\\
-3506 591.22\\
-4007 538.14\\
-4508 456.14\\
-5009 403.79\\
-5510 360.73\\
-6011 318.25\\
-6512 298.14\\
-7013 265.10\\
-7514 247.19\\
-8015 229.39\\
-8516 220.60\\
-9017 200.48\\
-9518 191.86\\
+500   1738.40\\
+1001  1028.19\\
+1502  671.83\\
+2003  410.08\\
+2504  261.95\\
+3005  207.38\\
+3506  186.14\\
+4007  169.15\\
+4508  163.38\\
+5009  147.70\\
+5510  135.51\\
+6011  131.85\\
+6512  126.23\\
+7013  116.37\\
+7514  118.21\\
+8015  108.94\\
+8516  109.90\\
+9017  108.21\\
+9518  105.04\\
+10019 103.73\\
+};
+
+% Yat (Exact)
+\addplot[thick, dashed, violet]
+table[row sep=\\]{
+Step PPL\\
+500   1921.05\\
+1001  1276.89\\
+1502  871.55\\
+2003  571.19\\
+2504  319.46\\
+3005  236.06\\
+3506  199.10\\
+4007  166.83\\
+4508  151.14\\
+5009  135.01\\
+5510  130.17\\
+6011  121.72\\
+6512  114.59\\
+7013  109.52\\
+7514  106.60\\
+8015  103.57\\
+8516  101.79\\
+9017  98.96\\
+9518  98.04\\
+10019 97.03\\
+};
+
+% Yat (Spherical)
+\addplot[thick, dashed, teal]
+table[row sep=\\]{
+Step PPL\\
+500   1913.79\\
+1001  1353.74\\
+1502  1028.41\\
+2003  801.92\\
+2504  555.84\\
+3005  350.65\\
+3506  240.17\\
+4007  198.82\\
+4508  174.24\\
+5009  157.66\\
+5510  147.50\\
+6011  145.86\\
+6512  132.10\\
+7013  126.35\\
+7514  124.21\\
+8015  119.68\\
+8516  116.35\\
+9017  113.82\\
+9518  112.38\\
+10019 112.00\\
+};
+
+% === LINEAR ===
+
+% Linear (ELU+1)
+\addplot[thick, solid, brown]
+table[row sep=\\]{
+Step PPL\\
+500   1766.49\\
+1001  1188.82\\
+1502  859.68\\
+2003  676.78\\
+2504  529.27\\
+3005  442.50\\
+3506  382.91\\
+4007  322.48\\
+4508  293.56\\
+5009  259.57\\
+5510  243.93\\
+6011  228.04\\
+6512  211.53\\
+7013  199.66\\
+7514  195.46\\
+8015  184.62\\
+8516  179.40\\
+9017  173.93\\
+9518  168.67\\
+10019 161.99\\
+};
+
+% Cosformer
+\addplot[thick, solid, blue]
+table[row sep=\\]{
+Step PPL\\
+500   1738.36\\
+1001  1239.66\\
+1502  1031.22\\
+2003  873.99\\
+2504  754.40\\
+3005  652.48\\
+3506  591.22\\
+4007  538.14\\
+4508  456.14\\
+5009  403.79\\
+5510  360.73\\
+6011  318.25\\
+6512  298.14\\
+7013  265.10\\
+7514  247.19\\
+8015  229.39\\
+8516  220.60\\
+9017  200.48\\
+9518  191.86\\
 10019 180.97\\
 };
-\addlegendentry{Cosformer}
 
-% ---------- FAVOR+ (Performer) ----------
-\addplot[thick, dash dot, orange]
+% FAVOR+ (Performer)
+\addplot[thick, solid, orange]
 table[row sep=\\]{
 Step PPL\\
-500 1832.56\\
-1001 1233.66\\
-1502 944.18\\
-2003 784.63\\
-2504 683.26\\
-3005 624.74\\
-3506 554.59\\
-4007 523.95\\
-4508 477.98\\
-5009 417.93\\
-5510 386.70\\
-6011 359.30\\
-6512 336.64\\
-7013 308.74\\
-7514 296.90\\
-8015 277.64\\
-8516 267.04\\
-9017 252.10\\
-9518 247.24\\
+500   1832.56\\
+1001  1233.66\\
+1502  944.18\\
+2003  784.63\\
+2504  683.26\\
+3005  624.74\\
+3506  554.59\\
+4007  523.95\\
+4508  477.98\\
+5009  417.93\\
+5510  386.70\\
+6011  359.30\\
+6512  336.64\\
+7013  308.74\\
+7514  296.90\\
+8015  277.64\\
+8516  267.04\\
+9017  252.10\\
+9518  247.24\\
 10019 233.32\\
-10520 227.44\\
-11021 221.42\\
-11522 211.27\\
 };
-\addlegendentry{FAVOR+ (Performer)}
 
-\end{axis}
+\end{groupplot}
 \end{tikzpicture}
 \end{figure}
 
-Taken together, these results demonstrate that SLAY is at least as effective as state‑of‑the‑art
-linear-time attention mechanisms in practical transformer training.
-This finding is particularly significant in light of the theoretical properties of the YAT kernel
-introduced in Section ~\ref{sec:intro}.
-By enabling an efficient linear‑attention implementation of YAT, SLAY makes it possible to train
-large‑scale transformer models (SLAYformers) with long input sequences while preserving the kernel’s desirable
-theoretical properties, without incurring the prohibitive quadratic cost and without sacrificing core modeling performance relative to existing linear alternatives.
+Figure~\ref{fig:val-curves-group} provide further insight into the training dynamics.
+Across the entire optimization trajectory, the SLAYformer exhibits stable training behavior and converges
+at a rate comparable to softmax and yat attention.
+Importantly, the gap between SLAY and softmax remains small throughout training, while the gap between SLAY
+and other linear attention methods remains consistently large.
+This indicates that SLAY’s advantage is not limited to early optimization or transient effects, but persists
+through full convergence.
 
-As a result, SLAY provides a practical path toward scalable long‑context transformers that combine
-strong empirical performance with scalable, geometry-aware kernels, positioning it as a compelling drop‑in
-replacement for existing linear attention mechanisms in large‑scale settings.
+Taken together, these results suggest that \textbf{SLAY represents a qualitative advance over prior linear‑time
+attention mechanisms.}
+Rather than trading expressivity for efficiency, SLAYformers retain modeling performance close to that of
+quadratic softmax attention while enabling scalable training and inference at long context lengths.
+This positions SLAY as a strong candidate for a new state of the art among linear‑time attention transformers.
+
+This empirical behavior is particularly notable in light of the theoretical properties of the YAT kernel
+introduced in Section~\ref{sec:intro}.
+By enabling an efficient linear implementation of YAT, SLAY makes it possible to train large‑scale
+transformers that preserve the kernel’s geometric and theoretical structure, without incurring the
+prohibitive quadratic cost of exact attention.
+As a result, \textbf{SLAY provides a practical and principled path toward long‑context transformer models that
+combine scalability and geometric integrity with near‑softmax performance.}
 
 % ------------------------------------------------------------
 % 9. Conclusion
@@ -966,15 +1176,17 @@ replacement for existing linear attention mechanisms in large‑scale settings.
 \section{Conclusion}
 \label{sec:conclusion}
 
-We introduced SLAY: Spherical Linearized Attention with YAT-Kernel, a linear-time attention mechanism that makes the \E-product operator from Neural Matter Networks (NMNs) practical for long-context sequence modeling. By enforcing unit-norm constraints, applying Bernstein’s Theorem, and approximating the resulting kernel with strictly positive Tensor Product Random Features, we obtain a factorizable and bounded attention kernel compatible with previous low-rank factorized attention techniques, extensively used before \citep{performers}.
+We introduced SLAY (Spherical Linearized Attention with Yat kernel), a linear‑time attention mechanism that makes the $\mathbb{E}$‑product from Neural Matter Networks practical for long‑context sequence modeling. By enforcing unit‑norm constraints and using a strictly positive random‑feature approximation derived via Bernstein’s theorem, SLAY yields a bounded and factorizable attention kernel compatible with existing linear attention frameworks.
 
-Theoretical analysis shows that the proposed approximation preserves the self-regulation and superposition properties of the original \E-product. Empirically, we demonstrate stable end-to-end training, linear time and memory scaling, and the ability to process sequences \textbf{30x} longer than those handled by standard attention mechanism on a single 80 GB GPU.
+We show theoretically that SLAY preserves key structural properties of the $\mathbb{E}$‑product, including self‑regulation and superposition. Empirically, SLAYformers train stably, scale linearly in time and memory, and process sequences up to \textbf{30$\times$ longer} than standard softmax attention.
 
-Taken together, these results suggest that the SLAY mechanism \textit{(spherical linearized attention with Yat Kernel)} offers a viable path toward scalable, geometry-aware attention mechanisms, bridging NMNs and practical long-context Transformers. More broadly, this work also demonstrates that attention mechanisms need not be restricted to softmax-like similarities to admit linear-time computation. By combining spherical geometry with general kernel linearization tools, Spherical Yat-Attention opens a path toward scalable attention mechanisms grounded in alternative interaction principles.
+Across all evaluated settings, SLAYformers achieve performance that is very close to its quadratic but precise counterparts: standard softmax attention, exact yat and spherical yat, all the while substantially outperforming prior linear‑time attention mechanisms such as Performers, Cosformers and Linear Attention. To the best of our knowledge, \textbf{SLAY is the first linear‑time attention mechanism to consistently approach softmax‑level performance without sacrificing scalability}, representing a significant step toward practical and efficient long‑context Transformers.
 
 \section*{Impact Statement}
-This paper presents work whose goal is to advance the field of Machine Learning. There are
-many potential societal consequences of our work, none which we feel must be specifically highlighted here. We would like to note though that linear attention Transformer models, that \textbf{SLAY} can power, address the challenge of the large carbon footprint in training of their brute force and much more computationally intense counterparts. In addition, we believe that scalable geometry-aware mechanisms like SLAY will pave the way for lighter, safer and more interpretable models. We have made every effort to ensure the work’s reproducibility, in particular by providing details regarding hyperparameter settings and direct access to a code respository in the Appendix. 
+
+This work advances efficient Transformer architectures by introducing a linear‑time attention mechanism that closely matches the performance of standard softmax attention. By narrowing the long‑standing gap between quadratic attention and scalable linear alternatives, SLAYformers reduce the need to trade modeling quality for computational efficiency.
+
+As a result, SLAY has the potential to lower the computational and energy costs of training and deploying long‑context models, supporting more sustainable and accessible large‑scale language modeling. More broadly, this work also highlights the promise of geometry‑aware kernel design for efficient attention, and we support reproducibility through detailed experimental settings and a publicly available code repository.
 % ============================================================
 % References
 % ============================================================
@@ -1108,35 +1320,61 @@ $\mathcal{H} = \mathcal{H}_1 \otimes \mathcal{H}_2$
 \label{app:prelim-poly}
 
 We summarize three approximations of the degree-2 polynomial kernel
-$k_{\text{poly}}(x,y)=(x^\top y)^2$ used in our implementation and ablations.
-Let $x,y\in\R^d$.
+$k_{\text{poly}}(\mathbf{x},\mathbf{y})=(\mathbf{x}^\top \mathbf{y})^2$
+used in our implementation and ablations.
+Let $\mathbf{x},\mathbf{y}\in\mathbb{R}^d$.
 
 \paragraph{Random Maclaurin (RM).}
-Draw Rademacher vectors $r_i, s_i\in\{\pm1\}^d$ and define
+Draw Rademacher vectors
+$\mathbf{r}_i, \mathbf{s}_i\in\{\pm1\}^d$ and define
 \[
-\phi_{\text{RM}}(x)=\frac{1}{\sqrt{P}}\bigl[(r_i^\top x)(s_i^\top x)\bigr]_{i=1}^P.
+\phi_{\text{RM}}(\mathbf{x})
+=
+\frac{1}{\sqrt{P}}
+\bigl[(\mathbf{r}_i^\top \mathbf{x})(\mathbf{s}_i^\top \mathbf{x})\bigr]_{i=1}^P.
 \]
-Then $\mathbb{E}[\langle \phi_{\text{RM}}(x),\phi_{\text{RM}}(y)\rangle]=(x^\top y)^2$ \citep{karkarnick2012}.
+Then
+$\mathbb{E}[\langle \phi_{\text{RM}}(\mathbf{x}),
+\phi_{\text{RM}}(\mathbf{y})\rangle]
+=
+(\mathbf{x}^\top \mathbf{y})^2$
+\citep{karkarnick2012}.
 RM is unbiased but can have high variance for small $P$.
 
 \paragraph{Nystrom features.}
-Let anchors $A=\{a_1,\dots,a_P\}\subset\R^d$ and define
-$K_{AA}\in\R^{P\times P}$ with $(K_{AA})_{ij}=(a_i^\top a_j)^2$.
+Let anchors
+$A=\{\mathbf{a}_1,\dots,\mathbf{a}_P\}\subset\mathbb{R}^d$ and define
+$K_{AA}\in\mathbb{R}^{P\times P}$ with
+$(K_{AA})_{ij}=(\mathbf{a}_i^\top \mathbf{a}_j)^2$.
 Given $K_{AA}+\lambda I$, define
 \[
-\phi_{\text{Nys}}(x)=(K_{xA})(K_{AA}+\lambda I)^{-1/2},\quad K_{xA}=[(x^\top a_i)^2]_{i=1}^P.
+\phi_{\text{Nys}}(\mathbf{x})
+=
+(K_{\mathbf{x}A})(K_{AA}+\lambda I)^{-1/2},
+\quad
+K_{\mathbf{x}A}
+=
+[(\mathbf{x}^\top \mathbf{a}_i)^2]_{i=1}^P.
 \]
-This yields a low-rank approximation whose quality depends on anchor coverage and conditioning \citep{williams2001nystrom}.
+This yields a low-rank approximation whose quality depends on anchor
+coverage and conditioning \citep{williams2001nystrom}.
 
 \paragraph{Anchor (low-rank) features.}
 Using the same anchors $A$, define
 \[
-\phi_{\text{Anc}}(x)=\frac{1}{\sqrt{P}}\bigl[(x^\top a_i)^2\bigr]_{i=1}^P.
+\phi_{\text{Anc}}(\mathbf{x})
+=
+\frac{1}{\sqrt{P}}
+\bigl[(\mathbf{x}^\top \mathbf{a}_i)^2\bigr]_{i=1}^P.
 \]
-This is a simple low-rank approximation; it is not unbiased in general but is often stable for small $P$.
+This is a simple low-rank approximation; it is not unbiased in general
+but is often stable for small $P$.
 
 \paragraph{Comparison.}
-RM is unbiased but variance-dominated at small feature budgets; Nystrom reduces variance if anchors are well-conditioned; anchor features are computationally simplest and empirically most stable at small $P$.
+RM is unbiased but variance-dominated at small feature budgets;
+Nystrom reduces variance if anchors are well-conditioned;
+anchor features are computationally simplest and empirically most stable
+at small $P$.
 
 \section{Ablation: Polynomial Approximation Sweep}
 \label{app:poly-ablation}
@@ -1179,17 +1417,21 @@ Large & Exact (Spherical) & 512 & 2 & 32 & 32 & 0.0000 & 5.02\\
 \bottomrule
 \end{tabular}
 \end{table}
+
 \section{Integral Representation of the Spherical \E-Product}
 \label{app:integral}
 
 In this appendix, we provide a detailed derivation of the integral representation used to linearize the spherical \E-product kernel.
 
-Recall that under the unit-norm constraint $\hat q, \hat k \in \Sph^{d-1}$, the \E-product reduces to
+Recall that under the unit-norm constraint
+$\widehat{\mathbf{q}}, \widehat{\mathbf{k}} \in \Sph^{d-1}$,
+the \E-product reduces to
 \begin{equation}
-\E_{\mathrm{sph}}(\hat q, \hat k)
-= \frac{x^2}{C - 2x},
+\E_{\mathrm{sph}}(\widehat{\mathbf{q}}, \widehat{\mathbf{k}})
+=
+\frac{x^2}{C - 2x},
 \qquad
-x = \hat q^\top \hat k \in [-1,1],
+x = \widehat{\mathbf{q}}^\top \widehat{\mathbf{k}} \in [-1,1],
 \quad
 C = 2 + \epsilon.
 \label{eq:app-spherical}
@@ -1203,7 +1445,7 @@ The function $g(y) = 1/y$ is completely monotone on $(0,\infty)$ and therefore a
 
 Applying this identity with $y = C - 2x$, we obtain
 \begin{align}
-\E_{\mathrm{sph}}(\hat q, \hat k)
+\E_{\mathrm{sph}}(\widehat{\mathbf{q}}, \widehat{\mathbf{k}})
 &= x^2 \int_0^\infty e^{-s(C - 2x)} \, ds \\
 &= \int_0^\infty e^{-sC} \, x^2 e^{2s x} \, ds.
 \label{eq:app-integral}
@@ -1218,55 +1460,138 @@ In this appendix, we provide additional details on the random-feature constructi
 
 Recall from Eq.~\eqref{eq:integral} that the spherical \E-product admits the decomposition
 \[
-\E_{\mathrm{sph}}(\hat q, \hat k)
-= \int_0^\infty e^{-sC} \, x^2 e^{2s x} \, ds,
-\qquad x = \hat q^\top \hat k.
+\E_{\mathrm{sph}}(\widehat{\mathbf{q}}, \widehat{\mathbf{k}})
+=
+\int_0^\infty e^{-sC} \, x^2 e^{2s x} \, ds,
+\qquad
+x = \widehat{\mathbf{q}}^\top \widehat{\mathbf{k}}.
 \]
 
 \paragraph{Polynomial component.}
-The term $x^2 = (\hat q^\top \hat k)^2$ corresponds to a homogeneous degree-2 polynomial kernel. This kernel admits an explicit feature map given by
+The term
+$x^2 = (\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})^2$
+corresponds to a homogeneous degree-2 polynomial kernel.
+This kernel admits an explicit feature map given by
 \[
-\phi_{\mathrm{poly}}(u) = \mathrm{vec}(u u^\top),
+\phi_{\mathrm{poly}}(\mathbf{u})
+=
+\mathrm{vec}(\mathbf{u}\mathbf{u}^\top),
 \]
-or an approximate variant implemented via tensor sketching. In both cases, the inner product of feature maps yields an unbiased estimator of the polynomial kernel.
+or an approximate variant implemented via tensor sketching.
+In both cases, the inner product of feature maps yields an unbiased
+estimator of the polynomial kernel.
 
 \paragraph{Exponential component.}
-The exponential term $e^{2s x}$ is approximated using strictly positive random features. For random projections $\omega$ drawn from a Gaussian or orthogonal distribution, the feature map
+The exponential term $e^{2s x}$ is approximated using strictly positive
+random features.
+For random projections $\boldsymbol{\omega}$ drawn from a Gaussian or
+orthogonal distribution, the feature map
 \[
-\phi_{\mathrm{PRF}}(u; s)
+\phi_{\mathrm{PRF}}(\mathbf{u}; s)
 =
-\frac{1}{\sqrt{D}}\exp\!\left(\sqrt{2s}\,\omega^\top u - s\right)
+\frac{1}{\sqrt{D}}
+\exp\!\left(\sqrt{2s}\,\boldsymbol{\omega}^\top \mathbf{u} - s\right)
 \]
 satisfies
 \[
-\mathbb{E}\big[ \langle \phi_{\mathrm{PRF}}(\hat q; s), \phi_{\mathrm{PRF}}(\hat k; s) \rangle \big]
-= e^{2s\, \hat q^\top \hat k}.
+\mathbb{E}\big[
+\langle
+\phi_{\mathrm{PRF}}(\widehat{\mathbf{q}}; s),
+\phi_{\mathrm{PRF}}(\widehat{\mathbf{k}}; s)
+\rangle
+\big]
+=
+e^{2s\, \widehat{\mathbf{q}}^\top \widehat{\mathbf{k}}}.
 \]
 
 \paragraph{Tensor product approximation.}
-Since the polynomial component can be computed exactly (or approximated in practice) and the exponential component is estimated with unbiased PRFs, their tensor product
+Since the polynomial component can be computed exactly (or approximated
+in practice) and the exponential component is estimated with unbiased
+PRFs, their tensor product
 \[
-\phi_{\mathrm{poly}}(u) \otimes \phi_{\mathrm{PRF}}(u; s)
+\phi_{\mathrm{poly}}(\mathbf{u})
+\otimes
+\phi_{\mathrm{PRF}}(\mathbf{u}; s)
 \]
-is an unbiased estimator of the product kernel $x^2 e^{2s x}$ by linearity of expectation. Approximating the outer integral using quadrature preserves unbiasedness up to the discretization error introduced by the numerical integration scheme.
+is an unbiased estimator of the product kernel
+$x^2 e^{2s x}$ by linearity of expectation.
+Approximating the outer integral using quadrature preserves unbiasedness
+up to the discretization error introduced by the numerical integration
+scheme.
 
 \paragraph{On ``pure Laplace'' forms.}
-If one insists on a nonnegative Laplace mixture of plain exponentials $e^{2sx}$, then $x^2/(C-2x)$ cannot be represented exactly, because $k(0)=0$ whereas $\int_0^\infty w(s)\,e^{2s\cdot 0}\,ds=\int_0^\infty w(s)\,ds\ge 0$ for any $w\ge 0$.
-There is, however, an exact decomposition that removes the explicit $x^2$ factor at the cost of an affine correction term:
+If one insists on a nonnegative Laplace mixture of plain exponentials
+$e^{2sx}$, then $x^2/(C-2x)$ cannot be represented exactly, because
+$k(0)=0$ whereas
+\[
+\int_0^\infty w(s)\,e^{2s\cdot 0}\,ds
+=
+\int_0^\infty w(s)\,ds
+\ge 0
+\]
+for any $w\ge 0$.
+There is, however, an exact decomposition that removes the explicit
+$x^2$ factor at the cost of an affine correction term:
 \[
 \frac{x^2}{C-2x}
 =
-\frac{C^2}{4}\int_0^\infty e^{-Cs}\,e^{2sx}\,ds\; -\;\frac{C}{4}\; -\;\frac{x}{2}.
+\frac{C^2}{4}\int_0^\infty e^{-Cs}\,e^{2sx}\,ds
+\;-\;
+\frac{C}{4}
+\;-\;
+\frac{x}{2}.
 \]
-This identity follows from $x^2 e^{2sx}=\tfrac{1}{4}\,\partial_s^2 e^{2sx}$ and two integrations by parts, whose boundary terms yield the affine correction.
-While this removes the need for polynomial random features, it introduces signed components (through the subtraction of constant and linear kernels) and therefore does not retain the ``strictly positive feature map'' and denominator-positivity guarantees emphasized in the main construction.
+This identity follows from
+$x^2 e^{2sx}=\tfrac{1}{4}\,\partial_s^2 e^{2sx}$
+and two integrations by parts, whose boundary terms yield the affine
+correction.
+While this removes the need for polynomial random features, it
+introduces signed components (through the subtraction of constant and
+linear kernels) and therefore does not retain the
+``strictly positive feature map'' and denominator-positivity guarantees
+emphasized in the main construction.
 
 \paragraph{Hadamard (elementwise) fusion variant.}
-Some implementations replace the tensor product with elementwise (Hadamard) fusion,
-\[\phi_{\mathrm{had}}(u; s)=\sqrt{w_r}\,\bigl(\phi_{\mathrm{poly}}(u)\odot \phi_{\mathrm{PRF}}(u; s)\bigr),\]
-which yields a valid positive feature map but targets a \emph{different} kernel than the tensor product. In particular, the expected inner product becomes
-\[\mathbb{E}[\langle \phi_{\mathrm{had}}(\hat q; s),\phi_{\mathrm{had}}(\hat k; s)\rangle]\;\approx\;(\hat q^\top \hat k)^2\,e^{2s\,\hat q^\top \hat k}\quad\text{only if }\phi_{\mathrm{poly}}\text{ and }\phi_{\mathrm{PRF}}\text{ are aligned feature maps.}\]
-With standard independent random features, Hadamard fusion instead corresponds to a product of marginal kernels across matched feature indices, which generally introduces bias relative to the target integrand kernel. The benefit is computational: it avoids the $D_p\times D_r$ tensor expansion and reduces memory, but at the cost of a kernel mismatch. We therefore treat Hadamard fusion as a fast baseline rather than the primary estimator of the spherical \E-product.
+Some implementations replace the tensor product with elementwise
+(Hadamard) fusion,
+\[
+\phi_{\mathrm{had}}(\mathbf{u}; s)
+=
+\sqrt{w_r}\,
+\bigl(
+\phi_{\mathrm{poly}}(\mathbf{u})
+\odot
+\phi_{\mathrm{PRF}}(\mathbf{u}; s)
+\bigr),
+\]
+which yields a valid positive feature map but targets a \emph{different}
+kernel than the tensor product.
+In particular, the expected inner product becomes
+\[
+\mathbb{E}\big[
+\langle
+\phi_{\mathrm{had}}(\widehat{\mathbf{q}}; s),
+\phi_{\mathrm{had}}(\widehat{\mathbf{k}}; s)
+\rangle
+\big]
+\;\approx\;
+(\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})^2
+\,e^{2s\,\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}}}
+\quad
+\text{only if }
+\phi_{\mathrm{poly}}
+\text{ and }
+\phi_{\mathrm{PRF}}
+\text{ are aligned feature maps.}
+\]
+With standard independent random features, Hadamard fusion instead
+corresponds to a product of marginal kernels across matched feature
+indices, which generally introduces bias relative to the target
+integrand kernel.
+The benefit is computational: it avoids the $D_p\times D_r$ tensor
+expansion and reduces memory, but at the cost of a kernel mismatch.
+We therefore treat Hadamard fusion as a fast baseline rather than the
+primary estimator of the spherical \E-product.
 
 \section{Positivity and Stability Guarantees}
 \label{app:stability}
@@ -1276,14 +1601,21 @@ This appendix provides additional justification for the positivity and numerical
 \paragraph{Positivity.}
 All components of the \emph{target} spherical kernel are non-negative. Moreover, if the polynomial feature map is computed exactly (or with a positivity-preserving approximation), then the corresponding approximate scores are non-negative:
 \begin{itemize}[leftmargin=1.4em]
-    \item The polynomial term $(\hat q^\top \hat k)^2$ is non-negative for all $\hat q, \hat k \in \Sph^{d-1}$.
-    \item The exponential term $e^{2s x}$ is strictly positive for all $s \ge 0$ and $x \in [-1,1]$.
+    \item The polynomial term
+    $(\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})^2$
+    is non-negative for all
+    $\widehat{\mathbf{q}}, \widehat{\mathbf{k}} \in \Sph^{d-1}$.
+    \item The exponential term $e^{2s x}$ is strictly positive for all
+    $s \ge 0$ and $x \in [-1,1]$.
     \item The quadrature weights $w_r$ are non-negative.
 \end{itemize}
 Consequently, under this condition the approximate attention scores produced by the tensor-product random features are non-negative.
 
 \paragraph{Numerical stability.}
-The boundedness of the spherical \E-product on $\Sph^{d-1}$ (Proposition~\ref{prop:bounded}) implies that attention scores remain uniformly bounded. Combined with positivity, this prevents the numerical instabilities associated with oscillatory random features and negative attention weights. This behavior mirrors stability properties previously observed in positive random
+The boundedness of the spherical \E-product on $\Sph^{d-1}$
+(Proposition~\ref{prop:bounded}) implies that attention scores remain uniformly bounded.
+Combined with positivity, this prevents the numerical instabilities associated with oscillatory random features and negative attention weights.
+This behavior mirrors stability properties previously observed in positive random
 feature–based linear attention mechanisms \citep{performers}.
 
 \section{Experimental and Implementation Details}
@@ -1298,7 +1630,17 @@ Unless otherwise stated, all experiments use a fixed number of random features p
 Queries and keys are explicitly normalized to unit norm prior to feature computation. This normalization is applied per attention head and does not introduce additional learnable parameters.
 
 \paragraph{Hardware and software.}
-All experiments were conducted using PyTorch on NVIDIA A100 GPUs with ~80\,GB of memory. Attention-only benchmarks use custom linear-attention operators, while full-model experiments rely on standard PyTorch modules augmented with the proposed attention mechanism.
+All experiments were conducted using PyTorch on NVIDIA A100 GPUs with ~80\,GB of memory using DeepSpeed for distributed training. Attention-only benchmarks use custom linear-attention operators, while full-model experiments rely on standard PyTorch modules augmented with the proposed attention mechanism.
+
+\paragraph{Model Architecture}. We use a standard GPT-2 Small architecture (124M parameters) with 12 layers, 12 attention heads, and an embedding dimension of $d_{model}=768$. The MLP block is the standard GPT-2 MLP (LayerNorm + GELU).
+
+\paragraph{Hyperparameters}. All models use the same training hyperparameters:
+\begin{itemize}[leftmargin=*]
+    \setlength\itemsep{0em}
+    \item \textbf{Optimizer}: AdamW, LR $1 \times 10^{-4}$, Weight Decay $0.01$.
+    \item \textbf{Batch Size}: 32 per GPU (Ramp-up: 8$\to$32 over 500 steps).
+    \item \textbf{Dropout}: $0.1$ (embeddings and attention).
+\end{itemize}
 
 \paragraph{Training configuration.}
 Optimizer settings, learning rates, batch sizes, and training schedules are kept identical across softmax and \E-based attention variants unless otherwise specified. This ensures that observed differences are attributable to the attention mechanism rather than auxiliary training effects.
@@ -1310,7 +1652,7 @@ The kernel-fidelity ablation in Section~\ref{subsec:poly-ablation} is implemente
 
 Below is a summary of the categories of and specific synthetic tests ran. 
 
-\begin{table}[htbp]
+\begin{table}[t]
 \centering
 \small
 \caption{\small{
@@ -1363,8 +1705,7 @@ Multi-class counting \\
 Below (Table \ref{tab:tasks-all}) provides a fully detailed results of said synthetic tests.
 
 \setlength{\textfloatsep}{8pt}
-\vspace{-0.5em}
-\begin{table}[!htbp]
+\begin{table}[t]
 \centering
 \small
 \caption{Synthetic task performance across all categories. Accuracy (mean $\pm$ std over 3 seeds).}
@@ -1411,7 +1752,6 @@ Compression     & 0.59$\pm$0.00 & 0.59$\pm$0.00 & 0.59$\pm$0.01 & 0.59$\pm$0.01 
 \bottomrule
 \end{tabular}
 \end{table}
-\vspace{-0.5em}
 
 \paragraph{Code availability.}
 An open-source implementation of the SLAY mechanism, including training scripts and experimental configurations, is available at
@@ -1434,22 +1774,56 @@ The linearization applies to both causal and non-causal attention. In experiment
 \section{Mathematical Tools Used (High Level)}
 \label{app:tools}
 
-Our linearization relies on (i) the Laplace/Bernstein representation of $1/y$ for completely monotone functions \citep{widder1941laplace,schilling2012}, (ii) closure properties of positive-definite (PD) kernels under products and nonnegative mixtures \citep{aronszajn1950,scholkopf2002learning}, (iii) the Gaussian moment generating function to obtain unbiased positive random features for exponential dot-product kernels \citep{performers}, and (iv) Gauss--Laguerre quadrature to discretize $\int_0^\infty e^{-t}f(t)\,dt$ \citep{davis1984,gautschi2004}. Numerical stabilization follows standard practice \citep{higham2002}.
+Our linearization relies on
+(i) the Laplace/Bernstein representation of $1/y$ for completely monotone functions
+\citep{widder1941laplace,schilling2012},
+(ii) closure properties of positive-definite (PD) kernels under products and nonnegative mixtures
+\citep{aronszajn1950,scholkopf2002learning},
+(iii) the Gaussian moment generating function to obtain unbiased positive random features for exponential dot-product kernels
+\citep{performers},
+and (iv) Gauss--Laguerre quadrature to discretize
+$\int_0^\infty e^{-t}f(t)\,dt$
+\citep{davis1984,gautschi2004}.
+Numerical stabilization follows standard practice \citep{higham2002}.
 
 \paragraph{Gauss--Laguerre scaling.}
-Let $\{t_r,\alpha_r\}_{r=1}^R$ be the Gauss--Laguerre nodes and weights for $\int_0^\infty e^{-t}f(t)\,dt$. With $t=Cs$ and $C=2+\epsilon$, we use
+Let $\{t_r,\alpha_r\}_{r=1}^R$ be the Gauss--Laguerre nodes and weights for
+$\int_0^\infty e^{-t}f(t)\,dt$.
+With $t=Cs$ and $C=2+\epsilon$, we use
 \[
-s_r=\frac{t_r}{C},\qquad w_r=\frac{\alpha_r}{C},
+s_r=\frac{t_r}{C},
+\qquad
+w_r=\frac{\alpha_r}{C},
 \]
-so that $\int_0^\infty e^{-Cs}h(s)\,ds \approx \sum_{r=1}^R w_r h(s_r)$.
+so that
+$\int_0^\infty e^{-Cs}h(s)\,ds
+\approx
+\sum_{r=1}^R w_r h(s_r)$.
 
 \paragraph{Linear-attention shapes.}
-If $\Psi(Q),\Psi(K)\in\R^{L\times m}$ and $V\in\R^{L\times d_v}$, then
+If
+$\Psi(\mathbf{Q}),\Psi(\mathbf{K})\in\mathbb{R}^{L\times m}$
+and
+$\mathbf{V}\in\mathbb{R}^{L\times d_v}$,
+then
 \[
-N=\Psi(Q)\big(\Psi(K)^\top V\big)\in\R^{L\times d_v},\qquad
-d=\Psi(Q)\big(\Psi(K)^\top \mathbf{1}\big)\in\R^{L\times 1},
+\mathbf{N}
+=
+\Psi(\mathbf{Q})
+\bigl(\Psi(\mathbf{K})^\top \mathbf{V}\bigr)
+\in
+\mathbb{R}^{L\times d_v},
+\qquad
+\mathbf{d}
+=
+\Psi(\mathbf{Q})
+\bigl(\Psi(\mathbf{K})^\top \mathbf{1}\bigr)
+\in
+\mathbb{R}^{L\times 1},
 \]
-and we compute $\hat Y_i = N_i/(d_i+\delta)$ with row-wise broadcasting across $d_v$.
+and we compute
+$\widehat{\mathbf{Y}}_i = \mathbf{N}_i/(\mathbf{d}_i+\delta)$
+with row-wise broadcasting across $d_v$.
 
 \section{Additional Proofs}
 \label{app:additional-proofs}
@@ -1457,9 +1831,14 @@ and we compute $\hat Y_i = N_i/(d_i+\delta)$ with row-wise broadcasting across $
 \begin{adjustwidth}{1.5em}{1.5em}
 \begin{proposition}[Boundedness on the Unit Sphere]
 \label{prop:bounded}
-Let $\hat q, \hat k \in \Sph^{d-1}$. Then the spherical \E-product satisfies
+Let $\widehat{\mathbf{q}}, \widehat{\mathbf{k}} \in \Sph^{d-1}$.
+Then the spherical \E-product satisfies
 \[
-0 \;\le\; \E_{\mathrm{sph}}(\hat q,\hat k) \;\le\; \frac{1}{\epsilon}.
+0
+\;\le\;
+\E_{\mathrm{sph}}(\widehat{\mathbf{q}},\widehat{\mathbf{k}})
+\;\le\;
+\frac{1}{\epsilon}.
 \]
 \end{proposition}
 \end{adjustwidth}
@@ -1467,9 +1846,15 @@ Let $\hat q, \hat k \in \Sph^{d-1}$. Then the spherical \E-product satisfies
 \begin{adjustwidth}{1.5em}{1.5em}
 \begin{proposition}[Gradient Stability]
 \label{prop:lipschitz}
-There exists a constant $C_\epsilon$ such that for all $\hat q, \hat k \in \Sph^{d-1}$:
+There exists a constant $C_\epsilon$ such that for all
+$\widehat{\mathbf{q}}, \widehat{\mathbf{k}} \in \Sph^{d-1}$:
 \[
-\|\nabla_{\hat q} \E_{\mathrm{sph}}(\hat q, \hat k)\| \;\leq\; C_\epsilon.
+\bigl\|
+\nabla_{\widehat{\mathbf{q}}}
+\E_{\mathrm{sph}}(\widehat{\mathbf{q}}, \widehat{\mathbf{k}})
+\bigr\|
+\;\leq\;
+C_\epsilon.
 \]
 \end{proposition}
 \end{adjustwidth}
@@ -1477,64 +1862,145 @@ There exists a constant $C_\epsilon$ such that for all $\hat q, \hat k \in \Sph^
 \begin{adjustwidth}{1.5em}{1.5em}
 \begin{theorem}[Positive Definiteness on $\Sph^{d-1}$]
 \label{thm:pd}
-For all $d \geq 2$ and $\epsilon > 0$, the spherical $\E$-product $k(x) = x^2/(C - 2x)$ with $x \in [-1,1]$ and $C = 2 + \epsilon$ is a positive-definite kernel on $\Sph^{d-1}$.
+For all $d \geq 2$ and $\epsilon > 0$, the spherical \E-product
+$k(x) = x^2/(C - 2x)$ with $x \in [-1,1]$ and $C = 2 + \epsilon$
+is a positive-definite kernel on $\Sph^{d-1}$.
 \end{theorem}
 \end{adjustwidth}
 
 \paragraph{Proof of Lemma~\ref{lem:complete-monotone}.}
 \begin{proof}
-Since $x \leq 1$ and $C = 2 + \epsilon$, we have $C - 2x \geq C - 2 = \epsilon > 0$. The function $g(y) = 1/y$ is completely monotone on $(0,\infty)$ (all derivatives alternate in sign: $g^{(n)}(y) = (-1)^n n!/y^{n+1}$), so Bernstein's theorem applies and yields $1/(C-2x) = \int_0^\infty e^{-s(C-2x)}\,ds$.
+Since $x \leq 1$ and $C = 2 + \epsilon$, we have
+$C - 2x \geq C - 2 = \epsilon > 0$.
+The function $g(y) = 1/y$ is completely monotone on $(0,\infty)$
+(all derivatives alternate in sign:
+$g^{(n)}(y) = (-1)^n n!/y^{n+1}$),
+so Bernstein's theorem applies and yields
+$1/(C-2x) = \int_0^\infty e^{-s(C-2x)}\,ds$.
 \end{proof}
 
 \paragraph{Proof of Proposition~\ref{prop:prf-unbiased}.}
 \begin{proof}
 \begin{align*}
-\mathbb{E}\left[\left\langle \phi_{\text{PRF}}(\hat q; s), \phi_{\text{PRF}}(\hat k; s)\right\rangle\right]
-&= \frac{1}{D}\sum_{i=1}^D \mathbb{E}\left[\exp\left(\sqrt{2s}\,\omega_i^\top(\hat q + \hat k) - 2s\right)\right] \\
-&= e^{-2s} \cdot \exp\left(s \|\hat q + \hat k\|^2\right) \\
-&= e^{-2s} \cdot e^{s(2 + 2\hat q^\top \hat k)} \\
-&= e^{2s \hat q^\top \hat k}.
+\mathbb{E}\!\left[
+\left\langle
+\phi_{\text{PRF}}(\widehat{\mathbf{q}}; s),
+\phi_{\text{PRF}}(\widehat{\mathbf{k}}; s)
+\right\rangle
+\right]
+&=
+\frac{1}{D}
+\sum_{i=1}^D
+\mathbb{E}\!\left[
+\exp\!\left(
+\sqrt{2s}\,
+\boldsymbol{\omega}_i^\top
+(\widehat{\mathbf{q}} + \widehat{\mathbf{k}})
+- 2s
+\right)
+\right] \\
+&=
+e^{-2s}
+\cdot
+\exp\!\left(
+s \|\widehat{\mathbf{q}} + \widehat{\mathbf{k}}\|^2
+\right) \\
+&=
+e^{-2s}
+\cdot
+e^{s(2 + 2\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})} \\
+&=
+e^{2s\,\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}}}.
 \end{align*}
-The unit-norm constraint $\|\hat q\| = \|\hat k\| = 1$ is essential; otherwise, additional norm terms appear in $\|\hat q+\hat k\|^2$.
+The unit-norm constraint
+$\|\widehat{\mathbf{q}}\| = \|\widehat{\mathbf{k}}\| = 1$
+is essential; otherwise, additional norm terms appear in
+$\|\widehat{\mathbf{q}}+\widehat{\mathbf{k}}\|^2$.
 \end{proof}
 
 \paragraph{Proof of Proposition~\ref{prop:bounded}.}
 \begin{proof}
-Let $x = \hat q^\top \hat k \in [-1,1]$ and define $f(x)=x^2/(C-2x)$. Since $C-2x \ge \epsilon > 0$ on $[-1,1]$, we have $f(x)\ge 0$.
+Let $x = \widehat{\mathbf{q}}^\top \widehat{\mathbf{k}} \in [-1,1]$
+and define $f(x)=x^2/(C-2x)$.
+Since $C-2x \ge \epsilon > 0$ on $[-1,1]$, we have $f(x)\ge 0$.
 Moreover,
 \[
 f'(x)=\frac{2x(C-x)}{(C-2x)^2}.
 \]
-On $[-1,1]$, the maximum of $f$ is attained at $x=1$, giving $f(1)=1/\epsilon$.
+On $[-1,1]$, the maximum of $f$ is attained at $x=1$, giving
+$f(1)=1/\epsilon$.
 \end{proof}
 
 \paragraph{Proof of Proposition~\ref{prop:lipschitz}.}
 \begin{proof}
-Write $\E_{\mathrm{sph}}(\hat q,\hat k)=f(x)$ with $x=\hat q^\top\hat k$ and $f(x)=x^2/(C-2x)$. Differentiating gives
+Write
+$\E_{\mathrm{sph}}(\widehat{\mathbf{q}},\widehat{\mathbf{k}})=f(x)$
+with $x=\widehat{\mathbf{q}}^\top\widehat{\mathbf{k}}$
+and $f(x)=x^2/(C-2x)$.
+Differentiating gives
 \[
 f'(x)=\frac{2x(C-x)}{(C-2x)^2}.
 \]
-On $x\in[-1,1]$ with $C=2+\epsilon$, the denominator satisfies $(C-2x)^2\ge \epsilon^2$ and the numerator is bounded, hence $|f'(x)|\le C_\epsilon'$ for some constant depending only on $\epsilon$.
-By the chain rule, $\nabla_{\hat q}\E_{\mathrm{sph}}(\hat q,\hat k)=f'(x)\nabla_{\hat q}x$ and $\|\nabla_{\hat q}x\|=\|\hat k\|=1$ (or its tangent-space projection has norm $\le 1$), giving the stated uniform bound.
+On $x\in[-1,1]$ with $C=2+\epsilon$, the denominator satisfies
+$(C-2x)^2\ge \epsilon^2$ and the numerator is bounded, hence
+$|f'(x)|\le C_\epsilon'$ for some constant depending only on $\epsilon$.
+By the chain rule,
+$\nabla_{\widehat{\mathbf{q}}}
+\E_{\mathrm{sph}}(\widehat{\mathbf{q}},\widehat{\mathbf{k}})
+=
+f'(x)\nabla_{\widehat{\mathbf{q}}}x$
+and
+$\|\nabla_{\widehat{\mathbf{q}}}x\|
+=
+\|\widehat{\mathbf{k}}\|=1$
+(or its tangent-space projection has norm $\le 1$),
+giving the stated uniform bound.
 
-If $\hat q$ is obtained by normalizing a pre-activation vector $q$ via $\hat q = q/\|q\|$, then
+If $\widehat{\mathbf{q}}$ is obtained by normalizing a pre-activation
+vector $\mathbf{q}$ via
+$\widehat{\mathbf{q}} = \mathbf{q}/\|\mathbf{q}\|$, then
 \[
-J(q)=\frac{1}{\|q\|}\bigl(I - \hat q \hat q^\top\bigr),
+J(\mathbf{q})
+=
+\frac{1}{\|\mathbf{q}\|}
+\bigl(
+\mathbf{I} - \widehat{\mathbf{q}}\widehat{\mathbf{q}}^\top
+\bigr),
 \]
-so $\|J(q)\|_{\mathrm{op}} \le 1/\|q\|$ wherever normalization is defined. Thus the gradient w.r.t.\ $q$ is controlled by the spherical gradient and scales at most like $1/\|q\|$.
+so
+$\|J(\mathbf{q})\|_{\mathrm{op}} \le 1/\|\mathbf{q}\|$
+wherever normalization is defined.
+Thus the gradient w.r.t.\ $\mathbf{q}$ is controlled by the spherical
+gradient and scales at most like $1/\|\mathbf{q}\|$.
 \end{proof}
 
 \paragraph{Proof of Theorem~\ref{thm:pd}.}
 \begin{proof}
 By Lemma~\ref{lem:complete-monotone},
 \[
-k(x) = \frac{x^2}{C-2x} = \int_0^\infty e^{-sC}\, x^2 e^{2sx} \, ds.
+k(x)
+=
+\frac{x^2}{C-2x}
+=
+\int_0^\infty e^{-sC}\, x^2 e^{2sx} \, ds.
 \]
-For each $s \geq 0$, the integrand $k_s(x)=x^2 e^{2sx}$ is PD because: (i) $x^2=(\hat q^\top\hat k)^2$ is PD as a degree-2 polynomial kernel restriction, (ii) for $s\ge 0$,
+For each $s \geq 0$, the integrand
+$k_s(x)=x^2 e^{2sx}$ is PD because:
+(i)
+$x^2=(\widehat{\mathbf{q}}^\top\widehat{\mathbf{k}})^2$
+is PD as a degree-2 polynomial kernel restriction;
+(ii) for $s\ge 0$,
 \[
-e^{2s(\hat q^\top \hat k)}=\sum_{n=0}^\infty \frac{(2s)^n}{n!}(\hat q^\top \hat k)^n
+e^{2s(\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})}
+=
+\sum_{n=0}^\infty
+\frac{(2s)^n}{n!}
+(\widehat{\mathbf{q}}^\top \widehat{\mathbf{k}})^n
 \]
-is a nonnegative linear combination of PD polynomial kernels, hence PD, and (iii) products of PD kernels are PD. Since the weight $e^{-sC}\ge 0$, the nonnegative mixture over $s$ is PD by Lemma~\ref{lem:mixture-pd}.
+is a nonnegative linear combination of PD polynomial kernels, hence PD;
+and (iii) products of PD kernels are PD.
+Since the weight $e^{-sC}\ge 0$, the nonnegative mixture over $s$ is PD
+by Lemma~\ref{lem:mixture-pd}.
 \end{proof}
 
 
@@ -1569,7 +2035,7 @@ This difference becomes even more pronounced when we examine angular discriminat
 \begin{figure}[ht]
 \centering
 \includegraphics[width=.4\linewidth]{assets/kernel_derivatives.pdf}
-\caption{TODO: Gradient magnitudes.}
+\caption{Gradient magnitudes.}
 \label{fig:kernel-derivatives}
 \end{figure}
 A natural concern is whether this sharper response leads to gradient instability. Figure~\ref{fig:kernel-derivatives} addresses this by comparing gradient magnitudes. While spherical YAT does exhibit larger gradients near perfect alignment ($x \approx 1$), these remain bounded and concentrated in a small region. For the vast majority of token pairs, gradients are well-behaved, enabling stable training.
@@ -1714,14 +2180,14 @@ Figure~\ref{fig:spherical-heatmap} shows 3D heatmaps of attention weight. YAT an
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=.8\textwidth]{assets/spherical_heatmap.pdf}
-\caption{TODO: 3D spherical attention heatmap. YAT and SLAY concentrate weight around the query; softmax is more diffuse.}
+\caption{3D spherical attention heatmap. YAT and SLAY concentrate weight around the query; softmax is more diffuse.}
 \label{fig:spherical-heatmap}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=.8\textwidth]{assets/spherical_polar.pdf}
-\caption{TODO: Polar attention profile. Sharper drop-off indicates more geometry-aware attention.}
+\caption{Polar attention profile. Sharper drop-off indicates more geometry-aware attention.}
 \label{fig:spherical-polar}
 \end{figure}
 
@@ -1740,21 +2206,6 @@ Finally, we verify that SLAY achieves the promised linear scaling. Figure~\ref{f
 \paragraph{Summary.}
 Together, these experiments validate the core claims: the spherical $\E$-kernel provides sharper, more selective attention than softmax; SLAY's construction guarantees positive denominators; the quadrature approximation converges rapidly; and the resulting mechanism scales linearly in sequence length.
 
-
-
-\subsection*{Experimental Setup}
-
-\textbf{Hardware \& Environment}. All models were trained on a cluster of 8 NVIDIA H100 GPUs using DeepSpeed for distributed training.
-
-\textbf{Model Architecture}. We use a standard GPT-2 Small architecture (124M parameters) with 12 layers, 12 attention heads, and an embedding dimension of $d_{model}=768$. The MLP block is the standard GPT-2 MLP (LayerNorm + GELU).
-
-\textbf{Hyperparameters}. All models use the same training hyperparameters:
-\begin{itemize}[leftmargin=*]
-    \setlength\itemsep{0em}
-    \item \textbf{Optimizer}: AdamW, LR $1 \times 10^{-4}$, Weight Decay $0.01$.
-    \item \textbf{Batch Size}: 32 per GPU (Ramp-up: 8$\to$32 over 500 steps).
-    \item \textbf{Dropout}: $0.1$ (embeddings and attention).
-\end{itemize}
 
 \textbf{Attention Mechanisms}. We compare the following mechanisms (Table \ref{tab:attention_params}). Note that $\epsilon$ values ensure numerical stability and vary by mechanism.
 
