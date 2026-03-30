@@ -99,7 +99,7 @@ deepspeed --num_gpus=${NUM_GPUS} main.py \\
     --gradient-accumulation-steps ${GRAD_ACCUM} \\
     --total-steps ${TOTAL_STEPS} \\
     --run-name ${RUN_NAME} \\
-    2>&1 | tee ~/slay_${ATTN}.log
+    2>&1 | tee ~/slay_${ATTN}.log; exec bash
 EOF
 
     # Copy the run script to the remote instance

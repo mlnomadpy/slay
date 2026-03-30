@@ -56,9 +56,9 @@ cd "$REPO_DIR"
 
 # Dependencies (install globally — ephemeral instance, no venv needed)
 echo "[3/4] Installing dependencies..."
-pip3 install -q --upgrade pip
-pip3 install -q torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-pip3 install -q deepspeed wandb transformers datasets
+sudo pip3 install -q --upgrade pip
+sudo pip3 install -q torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+sudo pip3 install -q deepspeed wandb transformers datasets
 
 # Verify GPU + DeepSpeed
 echo "[4/4] Verifying setup..."
