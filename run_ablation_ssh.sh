@@ -84,7 +84,6 @@ export WANDB_PROJECT="${15}"
 SESSION="slay_${ATTN}"
 
 cd "$REPO_DIR"
-source .venv/bin/activate 2>/dev/null || true
 
 # Kill any existing session with the same name
 tmux kill-session -t "$SESSION" 2>/dev/null || true
@@ -92,8 +91,7 @@ tmux kill-session -t "$SESSION" 2>/dev/null || true
 # Launch inside tmux — job survives SSH disconnection
 tmux new-session -d -s "$SESSION" bash -c "
     cd $REPO_DIR
-    source .venv/bin/activate 2>/dev/null || true
-    export WANDB_API_KEY='${13}'
+        export WANDB_API_KEY='${13}'
     export WANDB_ENTITY='${14}'
     export WANDB_PROJECT='${15}'
     deepspeed --num_gpus=$NUM_GPUS main.py \

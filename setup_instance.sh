@@ -8,7 +8,7 @@
 #   bash setup_instance.sh user@instance-ip
 #
 # Or directly on the remote instance:
-#   bash setup_instance.sh
+#   bash setup_instance.sh --local
 # ══════════════════════════════════════════════════════════════════════
 
 set -euo pipefail
@@ -37,14 +37,12 @@ echo "Host: $(hostname)"
 echo ""
 
 # Python + pip
-echo "[1/5] Checking Python..."
+echo "[1/4] Checking Python..."
 python3 --version
 sudo apt-get install -y python3-pip 2>/dev/null || true
-pip3 install -q virtualenv
-export PATH="$HOME/.local/bin:$PATH"
 
 # Clone or update repo
-echo "[2/5] Cloning repo..."
+echo "[2/4] Cloning repo..."
 if [[ -d "$REPO_DIR" ]]; then
     echo "  Repo already exists — pulling latest..."
     git -C "$REPO_DIR" fetch origin
@@ -56,21 +54,14 @@ fi
 
 cd "$REPO_DIR"
 
-# Virtual environment
-echo "[3/5] Setting up virtualenv..."
-if [[ ! -d ".venv" ]]; then
-    python3 -m virtualenv .venv
-fi
-source .venv/bin/activate
-
-# Dependencies
-echo "[4/5] Installing dependencies..."
-pip install -q --upgrade pip
-pip install -q torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-pip install -q deepspeed wandb transformers datasets
+# Dependencies (install globally — ephemeral instance, no venv needed)
+echo "[3/4] Installing dependencies..."
+pip3 install -q --upgrade pip
+pip3 install -q torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+pip3 install -q deepspeed wandb transformers datasets
 
 # Verify GPU + DeepSpeed
-echo "[5/5] Verifying setup..."
+echo "[4/4] Verifying setup..."
 python3 -c "import torch; print(f'PyTorch {torch.__version__} | CUDA: {torch.cuda.is_available()} | GPUs: {torch.cuda.device_count()}')"
 python3 -c "import deepspeed; print(f'DeepSpeed {deepspeed.__version__}')"
 ds_report 2>/dev/null | grep -E "ops|cuda" | head -10 || true
