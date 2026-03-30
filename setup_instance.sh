@@ -39,7 +39,8 @@ echo ""
 # Python + pip
 echo "[1/5] Checking Python..."
 python3 --version
-sudo apt-get install -y python3-venv python3-pip 2>/dev/null || true
+sudo apt-get install -y python3-pip 2>/dev/null || true
+pip3 install -q virtualenv
 
 # Clone or update repo
 echo "[2/5] Cloning repo..."
@@ -57,7 +58,7 @@ cd "$REPO_DIR"
 # Virtual environment
 echo "[3/5] Setting up virtualenv..."
 if [[ ! -d ".venv" ]]; then
-    python3 -m venv .venv
+    virtualenv .venv
 fi
 source .venv/bin/activate
 
