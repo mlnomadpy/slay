@@ -169,6 +169,10 @@ def parse_args():
     parser.add_argument('--epsilon', type=float, default=DEFAULT_CONFIG['epsilon'],
                         help='Epsilon for numerical stability in Yat attention')
     
+    # Resume training
+    parser.add_argument('--resume-from', type=str, default=None,
+                        help='Path to DeepSpeed checkpoint directory to resume from')
+
     # DeepSpeed
     parser.add_argument('--local_rank', type=int, default=-1,
                         help='Local rank for distributed training (DeepSpeed)')
@@ -217,6 +221,7 @@ def args_to_config(args):
         'run_name': args.run_name,
         'use_triton': args.use_triton,
         'dropout': args.dropout,
+        'resume_from': args.resume_from,
         'batch_rampup': args.batch_rampup,
         'batch_rampup_start': args.batch_rampup_start,
         'batch_rampup_step': args.batch_rampup_step,
@@ -309,7 +314,15 @@ def main():
         model_parameters=model.parameters(),
         config="ds_zero2.json"
     )
-    
+
+    # Resume from checkpoint if specified
+    start_step = 0
+    if config.get('resume_from'):
+        _, client_state = model_engine.load_checkpoint(config['resume_from'])
+        start_step = client_state.get('step', 0)
+        if rank == 0:
+            print(f"Resumed from checkpoint: {config['resume_from']} (step {start_step})")
+
     # We only load eval data on rank 0 (or all ranks) depending on size
     # Here we load on all but only log on rank 0
     eval_loader = get_eval_loader(config['context_len'], batch_size=16)
@@ -331,8 +344,8 @@ def main():
     plateau_detector = LossPlateauDetector(patience=3)
     switched_to_sgd = False
 
-    step = 0
-    total_tokens = 0
+    step = start_step
+    total_tokens = start_step * tokens_per_batch
     tokens_per_batch = model_engine.train_micro_batch_size_per_gpu() * config['context_len'] * deepspeed.comm.get_world_size()
     effective_batch_size = config['batch_size'] * config['gradient_accumulation_steps'] * deepspeed.comm.get_world_size()
     t0 = time.time()
