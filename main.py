@@ -169,6 +169,12 @@ def parse_args():
     parser.add_argument('--epsilon', type=float, default=DEFAULT_CONFIG['epsilon'],
                         help='Epsilon for numerical stability in Yat attention')
     
+    # Resume training
+    parser.add_argument('--resume-from', type=str, default=None,
+                        help='Path to DeepSpeed checkpoint directory to resume from')
+    parser.add_argument('--wandb-resume-id', type=str, default=None,
+                        help='W&B run ID to resume (short alphanumeric from the run URL)')
+
     # DeepSpeed
     parser.add_argument('--local_rank', type=int, default=-1,
                         help='Local rank for distributed training (DeepSpeed)')
@@ -222,6 +228,8 @@ def args_to_config(args):
         'batch_rampup_step': args.batch_rampup_step,
         'num_workers': args.num_workers,
         'prefetch_factor': args.prefetch_factor,
+        'resume_from': args.resume_from,
+        'wandb_resume_id': args.wandb_resume_id,
     }
     return config
 
@@ -276,10 +284,13 @@ def main():
         # Initialize wandb with config
         if config['use_wandb']:
             run_name = config['run_name'] or f"{config['attention_type']}_{int(time.time())}"
+            wandb_resume_id = config.get('wandb_resume_id')
             wandb.init(
                 project=config['wandb_project'],
                 entity="irf-sic",
                 name=run_name,
+                id=wandb_resume_id or None,
+                resume="allow" if wandb_resume_id else None,
                 config=experiment_config
             )
             
@@ -331,8 +342,16 @@ def main():
     plateau_detector = LossPlateauDetector(patience=3)
     switched_to_sgd = False
 
-    step = 0
-    total_tokens = 0
+    # Resume from checkpoint if specified
+    start_step = 0
+    if config.get('resume_from'):
+        _, client_state = model_engine.load_checkpoint(config['resume_from'])
+        start_step = client_state.get('step', 0) if client_state else 0
+        if rank == 0:
+            print(f"Resumed from checkpoint: {config['resume_from']} (step {start_step})")
+
+    step = start_step
+    total_tokens = start_step * tokens_per_batch
     tokens_per_batch = model_engine.train_micro_batch_size_per_gpu() * config['context_len'] * deepspeed.comm.get_world_size()
     effective_batch_size = config['batch_size'] * config['gradient_accumulation_steps'] * deepspeed.comm.get_world_size()
     t0 = time.time()
