@@ -19,18 +19,15 @@ set -euo pipefail
 
 # ── Instances & attention types (one per host) ────────────────────────
 HOSTS=(
-    "ubuntu@38.128.233.231"
-    "ubuntu@38.128.233.233"
-    "ubuntu@38.128.233.249"
-    "ubuntu@38.128.233.148"
+    "ubuntu@38.128.233.14"
 )
 
 ATTENTION_TYPES=(
-    "yat-spherical"
-    "standard"
     "performer"
-    "yat-performer"
 )
+
+RESUME_FROM="checkpoints_fineweb_bert/step_8000"
+WANDB_RESUME_ID=""    # W&B run ID from the URL (e.g. 6xjl1vcg)
 
 # ── Hyperparameters ───────────────────────────────────────────────────
 CONTEXT_LEN=2048
@@ -40,7 +37,7 @@ N_HEADS=16
 LR=2e-4
 BATCH_SIZE=16
 GRAD_ACCUM=4
-TOTAL_STEPS=20000
+TOTAL_STEPS=15000
 NUM_GPUS=8
 
 # ── Load credentials ──────────────────────────────────────────────────
@@ -84,6 +81,8 @@ deepspeed --num_gpus=${NUM_GPUS} main.py \\
     --gradient-accumulation-steps ${GRAD_ACCUM} \\
     --total-steps ${TOTAL_STEPS} \\
     --run-name ${RUN_NAME} \\
+    ${RESUME_FROM:+--resume-from ${RESUME_FROM}} \\
+    ${WANDB_RESUME_ID:+--wandb-resume-id ${WANDB_RESUME_ID}} \\
     2>&1 | tee ~/slay_${ATTN}.log; exec bash
 EOF
 

@@ -172,6 +172,8 @@ def parse_args():
     # Resume training
     parser.add_argument('--resume-from', type=str, default=None,
                         help='Path to DeepSpeed checkpoint directory to resume from')
+    parser.add_argument('--wandb-resume-id', type=str, default=None,
+                        help='W&B run ID to resume (short alphanumeric from the run URL)')
 
     # DeepSpeed
     parser.add_argument('--local_rank', type=int, default=-1,
@@ -222,6 +224,7 @@ def args_to_config(args):
         'use_triton': args.use_triton,
         'dropout': args.dropout,
         'resume_from': args.resume_from,
+        'wandb_resume_id': args.wandb_resume_id,
         'batch_rampup': args.batch_rampup,
         'batch_rampup_start': args.batch_rampup_start,
         'batch_rampup_step': args.batch_rampup_step,
@@ -323,7 +326,7 @@ def main():
     if config.get('resume_from'):
         _, client_state = model_engine.load_checkpoint(config['resume_from'])
         start_step = client_state.get('step', 0)
-        config['wandb_resume_id'] = client_state.get('wandb_run_id')
+        config['wandb_resume_id'] = config.get('wandb_resume_id') or client_state.get('wandb_run_id')
         if rank == 0:
             print(f"Resumed from checkpoint: {config['resume_from']} (step {start_step})")
 
