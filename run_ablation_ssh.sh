@@ -68,6 +68,8 @@ export WANDB_API_KEY="${WANDB_API_KEY:-}"
 export WANDB_ENTITY="${WANDB_ENTITY:-}"
 export WANDB_PROJECT="${WANDB_PROJECT:-}"
 export HF_TOKEN="${HF_TOKEN:-}"
+export HF_DATASETS_OFFLINE=1
+export HF_HUB_OFFLINE=1
 cd ~/slay
 git fetch origin
 git checkout slay-ablation-ICML-rebuttal
