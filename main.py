@@ -342,18 +342,21 @@ def main():
     plateau_detector = LossPlateauDetector(patience=3)
     switched_to_sgd = False
 
+    tokens_per_batch = model_engine.train_micro_batch_size_per_gpu() * config['context_len'] * deepspeed.comm.get_world_size()
+    effective_batch_size = config['batch_size'] * config['gradient_accumulation_steps'] * deepspeed.comm.get_world_size()
+
     # Resume from checkpoint if specified
     start_step = 0
     if config.get('resume_from'):
-        _, client_state = model_engine.load_checkpoint(config['resume_from'])
+        resume_path = config['resume_from']
+        ckpt_dir, ckpt_tag = os.path.split(resume_path.rstrip('/'))
+        _, client_state = model_engine.load_checkpoint(ckpt_dir, tag=ckpt_tag)
         start_step = client_state.get('step', 0) if client_state else 0
         if rank == 0:
-            print(f"Resumed from checkpoint: {config['resume_from']} (step {start_step})")
+            print(f"Resumed from checkpoint: {resume_path} (step {start_step})")
 
     step = start_step
     total_tokens = start_step * tokens_per_batch
-    tokens_per_batch = model_engine.train_micro_batch_size_per_gpu() * config['context_len'] * deepspeed.comm.get_world_size()
-    effective_batch_size = config['batch_size'] * config['gradient_accumulation_steps'] * deepspeed.comm.get_world_size()
     t0 = time.time()
     
     for batch_idx, batch in enumerate(loader):
