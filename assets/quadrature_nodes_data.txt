@@ -1,0 +1,13 @@
+# LAY Visualization Data Log
+# Generated: 2026-02-06T15:58:05.108340
+#============================================================
+
+## Description
+Node locations
+
+## DATA
+
+### R_values
+# Length: 5
+# Values: [1, 2, 3, 5, 8]
+

@@ -2,49 +2,25 @@
 Denominator Positivity Histogram - ICML Paper Figure
 
 Visualization showing histogram of denominator values across long sequences.
-Demonstrates stability of SLAY (anchor features) vs signed polynomial baselines.
+Demonstrates stability of LAY/SLAY (anchor features) vs signed polynomial baselines.
 
 Outputs PDF with vector graphics for camera-ready quality.
 """
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 import os
 import math
-from viz_utils import log_data
+from viz_utils import COLORS, DS, setup_icml_style, log_data
 
-# ============================================================================
-# Publication Settings (ICML)
-# ============================================================================
-COLUMN_WIDTH = 3.25
-FULL_WIDTH = 6.75
+# Apply unified publication settings
+setup_icml_style()
 
-mpl.rcParams['pdf.fonttype'] = 42
-mpl.rcParams['ps.fonttype'] = 42
-mpl.rcParams['font.family'] = 'sans-serif'
-mpl.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Helvetica']
-mpl.rcParams['font.size'] = 9
-mpl.rcParams['axes.labelsize'] = 9
-mpl.rcParams['axes.titlesize'] = 10
-mpl.rcParams['legend.fontsize'] = 7
-mpl.rcParams['xtick.labelsize'] = 8
-mpl.rcParams['ytick.labelsize'] = 8
-mpl.rcParams['axes.linewidth'] = 0.8
-mpl.rcParams['lines.linewidth'] = 1.5
-
-# Colorblind-safe palette
-COLORS = {
-    'yat': '#EE7733',           # Orange
-    'spherical_yat': '#CC3311', # Red
-    'slay_anchor': '#EE3377',   # Magenta
-    'tensor_sketch': '#0077BB', # Blue
-    'random_maclaurin': '#009988', # Teal
-    'nystrom': '#33BBEE',       # Cyan
-}
+# Use design system constants
+COLUMN_WIDTH = DS.COLUMN_WIDTH
+FULL_WIDTH = DS.FULL_WIDTH
 
 np.random.seed(42)
 torch.manual_seed(42)
@@ -78,7 +54,7 @@ def compute_yat_denominator(q, k, epsilon=1e-2):
 
 def compute_spherical_yat_denominator(q, k, epsilon=1e-2):
     """
-    Compute spherical YAT denominator: C - 2x where x = q̂·k̂, C = 2 + ε
+    Compute spherical YAT denominator: C - 2x where x = q̂·k̂, C = 2 + epsilon
     """
     B, H, T, D = q.shape
     
@@ -149,6 +125,57 @@ def compute_slay_anchor_denominator(q, k, num_anchors=32, num_prf=8, num_nodes=2
         denom_r = torch.einsum('bhtpm,bhtpm->bht', q_outer, k_cumsum)
         total_denom += w_r * denom_r
     
+    return total_denom.flatten()
+
+
+def compute_lay_denominator(q, k, num_rff=64, num_anchors=32, epsilon=1e-2):
+    """
+    Compute LAY denominator using RFF for RBF and Anchor for polynomial.
+    """
+    B, H, T, D = q.shape
+    
+    # Anchor features for (q·k)² polynomial component
+    anchors = torch.randn(num_anchors, D, device=q.device, dtype=q.dtype)
+    anchors = F.normalize(anchors, p=2, dim=-1)
+    
+    q_poly = (torch.matmul(q, anchors.T) ** 2) / math.sqrt(num_anchors)
+    k_poly = (torch.matmul(k, anchors.T) ** 2) / math.sqrt(num_anchors)
+    
+    # Gauss-Laguerre for Laplace transform
+    num_nodes = 3
+    nodes, weights = np.polynomial.laguerre.laggauss(num_nodes)
+    s_vals = torch.tensor(nodes / epsilon, dtype=q.dtype, device=q.device)
+    w_vals = torch.tensor(weights / epsilon, dtype=q.dtype, device=q.device)
+    
+    total_denom = torch.zeros(B, H, T, device=q.device, dtype=q.dtype)
+    
+    for r in range(num_nodes):
+        s_r = s_vals[r]
+        w_r = w_vals[r]
+        
+        omega = torch.randn(D, num_rff, device=q.device, dtype=q.dtype) * math.sqrt(2 * s_r)
+        
+        q_proj = torch.matmul(q, omega)
+        k_proj = torch.matmul(k, omega)
+        
+        q_cos = torch.cos(q_proj) / math.sqrt(num_rff)
+        q_sin = torch.sin(q_proj) / math.sqrt(num_rff)
+        k_cos = torch.cos(k_proj) / math.sqrt(num_rff)
+        k_sin = torch.sin(k_proj) / math.sqrt(num_rff)
+        
+        # We need outer product of Poly features and RFF features
+        # Or more efficiently: (q_poly * q_rff) · sum(k_poly * k_rff)
+        # q_rff is concatenation of [q_cos, q_sin]
+        
+        # Let's do components separately to avoid massive tensors
+        for q_trig, k_trig in [(q_cos, k_cos), (q_sin, k_sin)]:
+             q_combined = torch.einsum('bhtp,bhtm->bhtpm', q_poly, q_trig)
+             k_combined = torch.einsum('bhtp,bhtm->bhtpm', k_poly, k_trig)
+             
+             k_cumsum = torch.cumsum(k_combined, dim=2)
+             denom_part = torch.einsum('bhtpm,bhtpm->bht', q_combined, k_cumsum)
+             total_denom += w_r * denom_part
+
     return total_denom.flatten()
 
 
@@ -234,7 +261,7 @@ def compute_random_maclaurin_denominator(q, k, num_features=64, epsilon=1e-2):
 def plot_denominator_histograms(output_path='denominator_histogram.pdf'):
     """
     Main figure: Histogram comparison of denominator values.
-    Shows SLAY anchor is always positive, while signed baselines can be negative.
+    Shows LAY/SLAY anchor is always positive, while signed baselines can be negative.
     """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
@@ -251,6 +278,7 @@ def plot_denominator_histograms(output_path='denominator_histogram.pdf'):
         denom_yat = compute_yat_denominator(q, k).cpu().numpy()
         denom_sph = compute_spherical_yat_denominator(q, k).cpu().numpy()
         denom_slay = compute_slay_anchor_denominator(q, k).cpu().numpy()
+        denom_lay = compute_lay_denominator(q, k).cpu().numpy()
         denom_ts = compute_tensor_sketch_denominator(q, k).cpu().numpy()
         denom_rm = compute_random_maclaurin_denominator(q, k).cpu().numpy()
     
@@ -260,11 +288,12 @@ def plot_denominator_histograms(output_path='denominator_histogram.pdf'):
     axes = axes.flatten()
     
     data = [
-        ('(a) ⵟ (YAT)', denom_yat, COLORS['yat']),
-        ('(b) ⵟ$_{sph}$ (Sph. YAT)', denom_sph, COLORS['spherical_yat']),
-        ('(c) SLAY (Anchor)', denom_slay, COLORS['slay_anchor']),
-        ('(d) TensorSketch', denom_ts, COLORS['tensor_sketch']),
-        ('(e) Random Maclaurin', denom_rm, COLORS['random_maclaurin']),
+        ('(a) ⵟ (YAT)', denom_yat, COLORS['yat_exact']),
+        ('(b) ⵟ$_{sph}$ (Sph. YAT)', denom_sph, COLORS['yat_spherical']),
+        ('(c) LAY (Anchor)', denom_lay, COLORS['lay']),
+        ('(d) SLAY (Anchor)', denom_slay, COLORS['slay']),
+        ('(e) TensorSketch', denom_ts, COLORS['tensor_sketch']),
+        ('(f) Random Maclaurin', denom_rm, COLORS['random_maclaurin']),
     ]
     
     for idx, (title, values, color) in enumerate(data):
@@ -273,7 +302,6 @@ def plot_denominator_histograms(output_path='denominator_histogram.pdf'):
         
         # Compute stats
         min_val = values.min()
-        max_val = values.max()
         mean_val = values.mean()
         neg_frac = (values < 0).mean() * 100
         
@@ -300,44 +328,46 @@ def plot_denominator_histograms(output_path='denominator_histogram.pdf'):
         
         for spine in ax.spines.values():
             spine.set_linewidth(0.8)
-    
-    # Hide last subplot
-    axes[5].set_visible(False)
+
+        # --- Save individual plot ---
+        safe_name = title.split(') ')[-1].replace(' ', '_').replace('$', '').replace('{', '').replace('}', '').lower()
+        safe_name = safe_name.replace('ⵟ', 'yat').replace('anchor', '').replace('(', '').replace(')', '')
+        safe_name = "".join([c for c in safe_name if c.isalnum() or c=='_']).strip('_')
+        
+        indiv_path = output_path.replace('.pdf', f'_{safe_name}.pdf')
+        
+        fig_indiv, ax_indiv = plt.subplots(figsize=(4, 3))
+        fig_indiv.patch.set_facecolor('white')
+        
+        ax_indiv.hist(values, bins=bins, color=color, alpha=0.7, edgecolor='white', linewidth=0.5)
+        ax_indiv.axvline(x=0, color='black', linestyle='-', linewidth=1.5, zorder=10)
+        if min_val < 0:
+            ax_indiv.axvspan(min_val, 0, alpha=0.2, color='red', zorder=0)
+            
+        ax_indiv.text(0.95, 0.95, stats_text, transform=ax_indiv.transAxes, fontsize=8,
+                va='top', ha='right', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+        
+        ax_indiv.set_xlabel('Denominator value')
+        ax_indiv.set_ylabel('Count')
+        ax_indiv.set_title(title.split(') ')[-1], fontsize=10)
+        ax_indiv.grid(True, alpha=0.3)
+        
+        fig_indiv.tight_layout()
+        fig_indiv.savefig(indiv_path, format='pdf', bbox_inches='tight')
+        plt.close(fig_indiv)
+        print(f"  [OK] Saved individual: {indiv_path}")
     
     plt.tight_layout(pad=0.5)
-    
-    plt.savefig(output_path, format='pdf', dpi=300,
-                facecolor='white', edgecolor='none', bbox_inches='tight')
+    plt.savefig(output_path, format='pdf', bbox_inches='tight')
     plt.close()
     
-    # Log data
     log_path = output_path.replace('.pdf', '_data.txt')
     log_data(log_path, {
-        'sequence_length': T,
-        'batch_size': B,
-        'num_heads': H,
-        'embed_dim': D,
-        'yat_denominator': denom_yat,
-        'spherical_yat_denominator': denom_sph,
-        'slay_anchor_denominator': denom_slay,
-        'tensor_sketch_denominator': denom_ts,
-        'random_maclaurin_denominator': denom_rm,
-        'statistics': {
-            'yat_min': float(denom_yat.min()), 'yat_negative_pct': float((denom_yat < 0).mean() * 100),
-            'sph_min': float(denom_sph.min()), 'sph_negative_pct': float((denom_sph < 0).mean() * 100),
-            'slay_min': float(denom_slay.min()), 'slay_negative_pct': float((denom_slay < 0).mean() * 100),
-            'ts_min': float(denom_ts.min()), 'ts_negative_pct': float((denom_ts < 0).mean() * 100),
-            'rm_min': float(denom_rm.min()), 'rm_negative_pct': float((denom_rm < 0).mean() * 100),
-        }
-    }, 
-    description="Denominator positivity analysis across attention mechanisms",
-    goal="Verify that SLAY maintains positive denominators (numerical stability) unlike signed polynomial baselines.",
-    what_to_look_for="1) Check if any denominator values are negative (causes NaN/instability). "
-                     "2) Compare minimum values across methods. "
-                     "3) Look at the percentage of negative samples for each method.",
-    expected_conclusion="SLAY (anchor) and spherical YAT have 0% negative denominators, ensuring stability. "
-                       "Tensor Sketch and Random Maclaurin have significant negative fractions, causing training instability.")
-    print(f"  ✓ Data log: {log_path}")
+        'yat_denom_min': float(denom_yat.min()),
+        'lay_denom_min': float(denom_lay.min()),
+        'slay_denom_min': float(denom_slay.min()),
+        'ts_denom_min': float(denom_ts.min()),
+    }, description="Denominator statistics")
     
     return output_path
 
@@ -348,12 +378,12 @@ def plot_stability_summary(output_path='denominator_stability.pdf'):
     """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    methods = ['ⵟ', 'ⵟ$_{sph}$', 'SLAY\n(Anchor)', 'Tensor\nSketch', 'Random\nMaclaurin']
-    colors = [COLORS['yat'], COLORS['spherical_yat'], COLORS['slay_anchor'], 
+    methods = ['ⵟ', 'ⵟ$_{sph}$', 'LAY', 'SLAY', 'Tensor\nSketch', 'Random\nMaclaurin']
+    colors = [COLORS['yat_exact'], COLORS['yat_spherical'], COLORS['lay'], COLORS['slay'], 
               COLORS['tensor_sketch'], COLORS['random_maclaurin']]
     
     # Test across multiple random seeds
-    neg_fracs = [[] for _ in range(5)]
+    neg_fracs = [[] for _ in range(6)]
     
     print("  Running stability test across multiple seeds...")
     
@@ -368,6 +398,7 @@ def plot_stability_summary(output_path='denominator_stability.pdf'):
             denoms = [
                 compute_yat_denominator(q, k),
                 compute_spherical_yat_denominator(q, k),
+                compute_lay_denominator(q, k),
                 compute_slay_anchor_denominator(q, k),
                 compute_tensor_sketch_denominator(q, k),
                 compute_random_maclaurin_denominator(q, k),
@@ -407,38 +438,16 @@ def plot_stability_summary(output_path='denominator_stability.pdf'):
             ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5, 
                     '0%', ha='center', va='bottom', fontsize=7, color='green')
     
-    for spine in ax.spines.values():
-        spine.set_linewidth(0.8)
-    
     plt.tight_layout()
-    
-    plt.savefig(output_path, format='pdf', dpi=300,
-                facecolor='white', edgecolor='none', bbox_inches='tight')
+    plt.savefig(output_path, format='pdf', bbox_inches='tight')
     plt.close()
     
-    # Log data
     log_path = output_path.replace('.pdf', '_data.txt')
-    log_data(log_path, {
-        'methods': methods,
-        'negative_pct_means': np.array(means),
-        'negative_pct_stds': np.array(stds),
-        'num_seeds_tested': 5,
-    }, 
-    description="Stability summary: fraction of negative denominators by method",
-    goal="Summarize denominator stability across multiple random seeds.",
-    what_to_look_for="1) Which methods have zero negative denominators (green = stable). "
-                     "2) Compare mean and std of negative percentages. "
-                     "3) Note the stark contrast between SLAY/YAT and signed polynomial methods.",
-    expected_conclusion="SLAY and exact YAT variants consistently have 0% negative denominators across all seeds, "
-                       "while Tensor Sketch and Random Maclaurin show significant instability.")
-    print(f"  ✓ Data log: {log_path}")
+    log_data(log_path, {'means': means}, description="Stability summary")
     
     return output_path
 
 
-# ============================================================================
-# Main
-# ============================================================================
 def main():
     print("=" * 60)
     print(" ICML Figure: Denominator Positivity Analysis")
@@ -448,16 +457,16 @@ def main():
     
     print("\n[1/2] Generating denominator histogram...")
     path1 = plot_denominator_histograms('assets/denominator_histogram.pdf')
-    print(f"  ✓ Saved: {path1}")
+    print(f"  [OK] Saved: {path1}")
     
     print("\n[2/2] Generating stability summary...")
     path2 = plot_stability_summary('assets/denominator_stability.pdf')
-    print(f"  ✓ Saved: {path2}")
+    print(f"  [OK] Saved: {path2}")
     
     print("\n" + "=" * 60)
     print(" Generated figures:")
-    print(f"  • {path1}  (detailed histograms)")
-    print(f"  • {path2}  (stability bar chart)")
+    print(f"  • {path1}")
+    print(f"  • {path2}")
     print("=" * 60)
 
 

@@ -122,7 +122,8 @@ def main():
     parser = argparse.ArgumentParser(description='Run SLAY visualization scripts')
     parser.add_argument('--only', type=str, default=None,
                         choices=['kernel_angle', 'spherical_heatmap', 'approximation',
-                                 'denominator', 'attention_entropy', 'quadrature'],
+                                 'denominator', 'attention_entropy', 'quadrature',
+                                 'composite', 'neurons'],
                         help='Run only a specific visualization')
     parser.add_argument('--list', action='store_true',
                         help='List generated figures and exit')
@@ -145,42 +146,98 @@ def main():
     
     start_time = time.time()
     
-    visualizations = {
-        'kernel_angle': run_kernel_angle,
-        'spherical_heatmap': run_spherical_heatmap,
-        'approximation': run_approximation,
-        'denominator': run_denominator,
-        'attention_entropy': run_attention_entropy,
-        'quadrature': run_quadrature,
-        'composite': run_composite,
-    }
+    # Run selected visualizations
+    # 1. Kernel Angle
+    if args.only is None or 'kernel_angle' in args.only:
+        try:
+            run_kernel_angle()
+        except Exception as e:
+            print(f"\n  [ERROR] Error in kernel_angle: {e}")
+            import traceback
+            traceback.print_exc()
+            
+    # 2. Spherical Heatmap
+    if args.only is None or 'spherical_heatmap' in args.only:
+        try:
+            run_spherical_heatmap()
+        except Exception as e:
+            print(f"\n  [ERROR] Error in spherical_heatmap: {e}")
+            import traceback
+            traceback.print_exc()
+
+    # 3. Approximation Quality
+    if args.only is None or 'approximation' in args.only:
+        try:
+            run_approximation()
+        except Exception as e:
+            print(f"\n  [ERROR] Error in approximation: {e}")
+            import traceback
+            traceback.print_exc()
+
+    # 4. Denominator Stability
+    if args.only is None or 'denominator' in args.only:
+        try:
+            run_denominator()
+        except Exception as e:
+            print(f"\n  [ERROR] Error in denominator: {e}")
+            import traceback
+            traceback.print_exc()
+
+    # 5. Attention Entropy
+    if args.only is None or 'attention_entropy' in args.only: # Changed 'entropy' to 'attention_entropy' to match choices
+        try:
+            run_attention_entropy()
+        except Exception as e:
+            print(f"\n  [ERROR] Error in attention_entropy: {e}") # Changed 'entropy' to 'attention_entropy'
+            import traceback
+            traceback.print_exc()
+
+    # 6. Quadrature Analysis
+    if args.only is None or 'quadrature' in args.only:
+        try:
+            run_quadrature()
+        except Exception as e:
+            print(f"\n  [ERROR] Error in quadrature: {e}")
+            import traceback
+            traceback.print_exc()
+
+    # 7. Composite Figure
+    if args.only is None or 'composite' in args.only:
+        try:
+            run_composite()
+        except Exception as e:
+            print(f"\n  [ERROR] Error in composite: {e}")
+            import traceback
+            traceback.print_exc()
     
-    if args.only:
-        # Run specific visualization
-        visualizations[args.only]()
-    else:
-        # Run all visualizations
-        for name, func in visualizations.items():
-            try:
-                func()
-            except Exception as e:
-                print(f"\n  ✗ Error in {name}: {e}")
-                import traceback
-                traceback.print_exc()
-    
+    # 8. Neurons (New!)
+    if args.only is None or 'neurons' in args.only:
+        try:
+            print("\n" + "=" * 60)
+            print(" 8. NEURON BOUNDARIES VISUALIZATION")
+            print("=" * 60)
+            from experiments.visualize_neurons import main as neurons_main
+            neurons_main()
+        except Exception as e:
+            print(f"\n  [ERROR] Error in neurons: {e}")
+            import traceback
+            traceback.print_exc()
+
     elapsed = time.time() - start_time
     
     # List generated figures
     list_generated_figures()
     
-    print(f"\n✓ All visualizations completed in {elapsed:.1f} seconds")
+    print("\n" + "=" * 60)
+    print(f"[DONE] All visualizations completed in {elapsed:.1f} seconds")
+    print("=" * 60)
     print("\n" + "=" * 60)
     print(" RECOMMENDED FIGURES FOR PAPER:")
     print("=" * 60)
     print("\n  Main Paper:")
-    print("    • assets/slay_overview.pdf     - Story figure (Fig 1)")
-    print("    • assets/kernel_comparison.pdf - Kernel comparison")
-    print("    • assets/attention_patterns.pdf - Attention behavior")
+    print("    * assets/slay_overview.pdf     - Story figure (Fig 1)")
+    print("    * assets/kernel_comparison.pdf - Kernel comparison")
+    print("    * assets/attention_patterns.pdf - Attention behavior")
     print("\n  Appendix:")
     print("    • assets/approximation_quality.pdf - Approximation faithfulness")
     print("    • assets/denominator_histogram.pdf - Stability analysis")

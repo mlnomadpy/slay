@@ -1,32 +1,13 @@
-# SLAY Visualization Data Log
-# Generated: 2026-01-28T06:18:08.730188
+# LAY Visualization Data Log
+# Generated: 2026-02-06T16:34:10.748734
 #============================================================
 
-## ANALYSIS CONTEXT
-
-### Goal
-Visualize where Gauss-Laguerre nodes are placed and their relative weights.
-
-### What to Look For
-1) Node positions (s_r = t_r/C) increase with index. 2) Weights (shown as marker size) decrease for higher nodes. 3) Larger R adds nodes at higher s values.
-
-### Expected Conclusion
-Lower-indexed nodes are both closer to zero and have larger weights, explaining why few nodes suffice for accurate quadrature.
-
-#------------------------------------------------------------
-
 ## Description
-Gauss-Laguerre node locations for different R values
+Node locations
 
 ## DATA
 
-### R_values_tested
+### R_values
 # Length: 5
 # Values: [1, 2, 3, 5, 8]
-
-### epsilon
-# Value: 0.01
-
-### C
-# Value: 2.01
 

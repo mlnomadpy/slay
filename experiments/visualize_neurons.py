@@ -4,35 +4,25 @@ Neuron Decision Boundary Visualization - ICML Paper Figure
 Publication-quality figure showing decision boundaries of various kernel-based classifiers.
 Outputs PDF with vector graphics for camera-ready quality.
 """
-
 import torch
 import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 import math
+import os
+from viz_utils import (
+    COLORS, DS, setup_icml_style, log_data,
+    attention_softmax, attention_yat, attention_spherical_yat,
+    attention_slay, attention_lay, attention_performer, DEFAULT_KERNELS, get_default_kernels
+)
 from matplotlib.colors import ListedColormap
 
-# ============================================================================
-# Publication Settings
-# ============================================================================
-# ICML column width is about 3.25 inches, full width is 6.75 inches
-COLUMN_WIDTH = 6.75  # Full width figure
-ASPECT_RATIO = 0.5   # Height = width * aspect_ratio
+# Apply unified publication settings
+setup_icml_style()
 
-# Use Type 1 fonts for PDF (required by many venues)
-mpl.rcParams['pdf.fonttype'] = 42
-mpl.rcParams['ps.fonttype'] = 42
-mpl.rcParams['font.family'] = 'sans-serif'
-mpl.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Helvetica']
-mpl.rcParams['font.size'] = 8
-mpl.rcParams['axes.labelsize'] = 8
-mpl.rcParams['axes.titlesize'] = 9
-mpl.rcParams['legend.fontsize'] = 7
-mpl.rcParams['xtick.labelsize'] = 7
-mpl.rcParams['ytick.labelsize'] = 7
-mpl.rcParams['axes.linewidth'] = 0.5
-mpl.rcParams['lines.linewidth'] = 0.8
+# Use design system constants
+COLUMN_WIDTH = DS.FULL_WIDTH  # Full width figure
+ASPECT_RATIO = 0.5   # Height = width * aspect_ratio
 
 # Set seeds for reproducibility
 torch.manual_seed(42)
@@ -53,6 +43,96 @@ def generate_data(num_neurons=5, grid_res=300, bounds=(-2.5, 2.5)):
     
     return neurons, grid_points, xx, yy
 
+
+# ============================================================================
+# Plotting
+# ============================================================================
+def plot_decision_boundaries(output_path='decision_boundaries.pdf', kernels=None):
+    """
+    Plot decision boundaries for different attention kernels.
+    
+    Args:
+        output_path: Path to save PDF
+        kernels: List of kernel configs to visualize
+    """
+    # Use default kernels if not specified
+    if kernels is None:
+        kernels = DEFAULT_KERNELS
+        
+    neurons, grid_points, xx, yy = generate_data()
+    
+    # Setup grid
+    n_kernels = len(kernels)
+    n_cols = 3
+    n_rows = (n_kernels + n_cols - 1) // n_cols
+    
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(COLUMN_WIDTH, COLUMN_WIDTH * ASPECT_RATIO * (n_rows/2)))
+    axes = axes.flatten()
+    
+    # Hide unused axes
+    for i in range(n_kernels, len(axes)):
+        axes[i].axis('off')
+    
+    # Fixed query point for decision boundary
+    query = torch.tensor([0.0, 0.0])
+    
+    for idx, kernel_cfg in enumerate(kernels):
+        ax = axes[idx]
+        
+        # Calculate scores using kernel
+        # Hack: adapt 2D input to 3D/d-dim kernel API
+        # Kernels expect [d] and [N, d]
+        # Our grid is [N, 2], query is [2]
+        
+        # But wait - viz_utils kernels expect tensors.
+        # This viz script uses specialized 2D logic.
+        # For simplicity, we'll try to use the generic kernels where possible,
+        # but map them to the 2D problem.
+        
+        # Actually simplest is just to call the function:
+        if kernel_cfg['key'] == 'softmax':
+            scores = attention_softmax(query, grid_points, temperature=0.5)
+        elif kernel_cfg['key'] == 'yat':
+            scores = attention_yat(query, grid_points)
+        elif kernel_cfg['key'] == 'spherical_yat':
+            scores = attention_spherical_yat(query, grid_points)
+        elif kernel_cfg['key'] == 'lay':
+            scores = attention_lay(query, grid_points)
+        elif kernel_cfg['key'] == 'slay':
+            scores = attention_slay(query, grid_points)
+        elif kernel_cfg['key'] == 'performer':
+            scores = attention_performer(query, grid_points)
+        else:
+            scores = kernel_cfg['fn'](query, grid_points)
+            
+        scores = scores.numpy().reshape(xx.shape)
+        
+        # Plot
+        ax.contourf(xx, yy, scores, levels=20, cmap='viridis')
+        ax.scatter(neurons[:, 0], neurons[:, 1], c='white', edgecolors='black', s=30, label='Neurons')
+        ax.scatter([0], [0], c='red', marker='*', s=100, label='Query')
+        
+        title = f"({chr(97 + idx)}) {kernel_cfg['name']}"
+        if kernel_cfg.get('is_exact', False) and not kernel_cfg.get('is_ours', False):
+            title += ' (exact)'
+        
+        ax.set_title(title, fontsize=8)
+        ax.axis('off')
+        
+    plt.tight_layout()
+    plt.savefig(output_path, format='pdf', bbox_inches='tight')
+    plt.close()
+    
+    log_path = output_path.replace('.pdf', '_data.txt')
+    log_data(log_path, {'kernels': [k['name'] for k in kernels]}, 
+             description="Decision boundary visualization")
+    
+    return output_path
+
+
+def main():
+    os.makedirs('assets', exist_ok=True)
+    plot_decision_boundaries('assets/decision_boundaries.pdf')
 
 # ============================================================================
 # Kernel Functions
@@ -237,8 +317,41 @@ def plot_decision_boundaries_publication(neurons, grid_points, xx, yy, methods, 
         
         for spine in ax.spines.values():
             spine.set_linewidth(0.5)
-    
-    # Hide unused subplots
+
+        # --- Save individual plot ---
+        safe_name = name.replace(' ', '_').replace('+', 'plus').lower()
+        safe_name = safe_name.replace('ⵟ', 'yat').replace('(', '').replace(')', '')
+        # Clean special chars
+        safe_name = "".join([c for c in safe_name if c.isalnum() or c=='_'])
+        
+        indiv_path = output_path.replace('.pdf', f'_{safe_name}.pdf')
+        
+        # Create separate figure
+        fig_indiv, ax_indiv = plt.subplots(figsize=(3, 3))
+        fig_indiv.patch.set_facecolor('white')
+        ax_indiv.set_facecolor('white')
+        
+        ax_indiv.contourf(xx, yy, predictions, levels=np.arange(-0.5, num_neurons + 0.5, 1),
+                   cmap=cmap, alpha=0.4)
+        ax_indiv.contour(xx, yy, predictions, levels=np.arange(0.5, num_neurons, 1),
+                  colors='black', linewidths=0.6, alpha=0.8)
+        
+        for i in range(num_neurons):
+            ax_indiv.scatter(neurons[i, 0], neurons[i, 1], 
+                      c=[cmap.colors[i]], s=120, marker='*', 
+                      edgecolors='black', linewidths=0.8, zorder=10)
+        
+        ax_indiv.set_title(name, fontsize=10)
+        ax_indiv.set_xlim(-2.5, 2.5)
+        ax_indiv.set_ylim(-2.5, 2.5)
+        ax_indiv.set_aspect('equal')
+        ax_indiv.axis('off')
+        
+        fig_indiv.tight_layout()
+        fig_indiv.savefig(indiv_path, format='pdf', dpi=300, 
+                    facecolor='white', edgecolor='none', bbox_inches='tight')
+        plt.close(fig_indiv)
+        print(f"  [OK] Saved individual: {indiv_path}")
     for idx in range(len(methods), len(axes)):
         axes[idx].set_visible(False)
     
@@ -275,7 +388,11 @@ def main():
         ("SLAY (Anchor)", spherical_yat_anchor_scores),
     ]
     for name, _ in methods:
-        print(f"  • {name}")
+        safe_name = name.replace('ⵟ', 'YAT')
+        try:
+            print(f"  • {name}")
+        except UnicodeEncodeError:
+            print(f"  • {safe_name}")
     
     print("\n[3/3] Generating publication PDF...")
     output_path = 'figures/decision_boundaries.pdf'

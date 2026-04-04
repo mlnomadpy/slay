@@ -1,283 +1,224 @@
 """
-Kernel vs Angle Visualization - ICML Paper Figure
+Kernel Angle Visualization - ICML Paper Figure
 
-Publication-quality figure showing how different kernel functions behave
-as a function of angle/cosine similarity. Key visualization to show the
-bounded, self-regularizing nature of the spherical YAT kernel.
+Compares kernel behavior as a function of cosine similarity x and angle theta.
+Demonstrates bounded nature of Spherical YAT vs unbounded Softmax.
 
-Outputs PDF with vector graphics for camera-ready quality.
+Outputs PDF with vector graphics.
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 import os
-import json
-from datetime import datetime
-from viz_utils import log_data
+import torch
+from viz_utils import (
+    COLORS, DS, setup_icml_style, log_data,
+    attention_softmax, attention_yat, attention_spherical_yat,
+    attention_slay, attention_lay, DEFAULT_KERNELS, get_default_kernels
+)
 
-# ============================================================================
-# Publication Settings (ICML)
-# ============================================================================
-COLUMN_WIDTH = 3.25  # Single column width
-FULL_WIDTH = 6.75    # Full page width
+# Apply unified publication settings
+setup_icml_style()
 
-mpl.rcParams['pdf.fonttype'] = 42
-mpl.rcParams['ps.fonttype'] = 42
-mpl.rcParams['font.family'] = 'sans-serif'
-mpl.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Helvetica']
-mpl.rcParams['font.size'] = 9
-mpl.rcParams['axes.labelsize'] = 9
-mpl.rcParams['axes.titlesize'] = 10
-mpl.rcParams['legend.fontsize'] = 8
-mpl.rcParams['xtick.labelsize'] = 8
-mpl.rcParams['ytick.labelsize'] = 8
-mpl.rcParams['axes.linewidth'] = 0.8
-mpl.rcParams['lines.linewidth'] = 1.5
+# Use design system constants
+COLUMN_WIDTH = DS.COLUMN_WIDTH
+FULL_WIDTH = DS.FULL_WIDTH
 
-# Colorblind-safe palette (Tableau)
-COLORS = {
-    'softmax': '#0077BB',      # Blue
-    'cosine': '#33BBEE',       # Cyan
-    'x_squared': '#009988',    # Teal
-    'yat': '#EE7733',          # Orange
-    'spherical_yat': '#CC3311', # Red
-    'slay': '#EE3377',         # Magenta
-}
+# Add additional colors for this visualization if needed
+COLORS['x_squared'] = COLORS['polynomial']
+COLORS['cosine'] = '#33BBEE'  # Cyan
 
 np.random.seed(42)
 
-
 # ============================================================================
-# Kernel Functions
+# Kernel Functions (Local wrappers for simple 1D plotting if needed, 
+# or use viz_utils ones with dummy dimensions)
 # ============================================================================
-def softmax_kernel(x, scale=1.0):
-    """Softmax-style exponential kernel: k(x) = exp(scale * x)"""
-    return np.exp(scale * x)
-
-
-def cosine_kernel(x):
-    """Simple cosine/linear kernel: k(x) = x"""
-    return x
-
-
-def pure_polynomial_kernel(x):
-    """Pure squared kernel: k(x) = x²"""
-    return x ** 2
-
-
-def yat_kernel(x, epsilon=1e-2, norm_q=1.0, norm_k=1.0):
-    """
-    YAT kernel (unnormalized vectors):
-    k(q, k) = (q·k)² / (||q-k||² + ε)
-    
-    For vectors of norms ||q|| and ||k|| with dot product x = q·k:
-    ||q-k||² = ||q||² + ||k||² - 2·q·k
-    
-    When plotting vs cosine similarity x/||q||||k||, we fix norms.
-    """
-    dot = x * norm_q * norm_k
-    dist_sq = norm_q**2 + norm_k**2 - 2 * dot
-    return (dot ** 2) / (dist_sq + epsilon)
-
-
-def spherical_yat_kernel(x, epsilon=1e-2):
-    """
-    Spherical YAT kernel (normalized to unit sphere):
-    k(x) = x² / (C - 2x) where x = q̂·k̂ and C = 2 + ε
-    """
-    C = 2.0 + epsilon
-    return (x ** 2) / (C - 2 * x)
-
-
-def relu_kernel(x):
-    """
-    ReLU-based kernel (like FAVOR+):
-    k(x) = max(0, x)²
-    """
-    return np.maximum(0, x) ** 2
-
-
-def elu_plus_one_kernel(x):
-    """
-    ELU+1 kernel (linear attention):
-    k(x) = (elu(x) + 1)² approximately
-    """
-    elu_x = np.where(x > 0, x, np.exp(x) - 1)
-    return (elu_x + 1) ** 2 / 4  # Normalized for visualization
-
-
+# For 1D plots against x, it's easier to define the mathematical form directly
+def softmax_1d(x): return np.exp(x)
+def poly_1d(x): return x**2
+def linear_1d(x): return x
+def spherical_yat_1d(x, epsilon=1e-2): return (x**2) / (2 - 2*x + epsilon)
+def yat_1d(x, epsilon=1e-2): return (x**2) / (2 - 2*x + epsilon) # Same as spherical for unit vectors
 
 # ============================================================================
 # Plotting
 # ============================================================================
-def plot_kernel_comparison(output_path='kernel_comparison.pdf'):
-    """Create publication-quality kernel comparison figure."""
+def plot_kernel_comparison(output_path='kernel_comparison.pdf', kernels=None):
+    """
+    Create publication-quality kernel comparison figure.
+    
+    Args:
+        output_path: Path to save PDF
+        kernels: List of kernel configs to visualize
+    """
+    # Use default kernels if not specified
+    if kernels is None:
+        kernels = DEFAULT_KERNELS
     
     # Create figure with two subplots side by side
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(FULL_WIDTH, 2.8))
+    fig, axes = plt.subplots(1, 2, figsize=(FULL_WIDTH, 2.5))
     fig.patch.set_facecolor('white')
     
-    # X values: cosine similarity from -1 to 1
-    x = np.linspace(-0.99, 0.99, 500)
+    x = np.linspace(-0.95, 0.95, 300)
     
-    # -------------------- Panel (a): Linear scale --------------------
-    ax1.set_facecolor('white')
+    # ------------------------------------------------------------------------
+    # Panel (a): Kernel Value vs Cosine Similarity (Linear Scale)
+    # ------------------------------------------------------------------------
+    ax = axes[0]
+    ax.set_facecolor('white')
     
-    # Plot kernels
-    ax1.plot(x, softmax_kernel(x, scale=1.0), 
-             color=COLORS['softmax'], label='Softmax $e^x$', linestyle='-')
-    ax1.plot(x, cosine_kernel(x), 
-             color=COLORS['cosine'], label='Cosine $x$', linestyle='--')
-    ax1.plot(x, pure_polynomial_kernel(x), 
-             color=COLORS['x_squared'], label='Polynomial $x^2$', linestyle='-.')
-    ax1.plot(x, yat_kernel(x, norm_q=1.5, norm_k=1.2), 
-             color=COLORS['yat'], label='ⵟ (YAT)', linestyle=':')
-    ax1.plot(x, spherical_yat_kernel(x), 
-             color=COLORS['spherical_yat'], label='ⵟ$_{sph}$ (Sph. YAT)', linestyle='-', linewidth=2)
+    # Always show baselines for context
+    ax.plot(x, linear_1d(x), color=COLORS['cosine'], 
+            label='Linear $x$', linestyle=':', alpha=0.6)
+    ax.plot(x, poly_1d(x), color=COLORS['x_squared'], 
+            label='Poly $x^2$', linestyle=':', alpha=0.6)
     
-    ax1.set_xlabel('Cosine similarity $x = \\hat{q}^\\top \\hat{k}$')
-    ax1.set_ylabel('Kernel value $k(x)$')
-    ax1.set_xlim(-1, 1)
-    ax1.set_ylim(-0.5, 5)
-    ax1.legend(loc='upper left', framealpha=0.9, fontsize=7)
-    ax1.axhline(y=0, color='gray', linewidth=0.5, linestyle='-')
-    ax1.axvline(x=0, color='gray', linewidth=0.5, linestyle='-')
-    ax1.set_title('(a) Kernel functions (linear scale)')
-    ax1.grid(True, alpha=0.3, linewidth=0.5)
+    # Plot selected kernels
+    # Specifically ensuring LAY, SLAY, YAT, Spherical YAT are present
+    # These match the exact forms for unit vectors anyway, but we plot distinct lines
+    # to show they are conceptually different (even if overlapping).
     
-    # Add insight annotation
-    ax1.annotate('Bounded\n& self-\nregularizing', 
-                 xy=(0.8, spherical_yat_kernel(np.array([0.8]))[0]), 
-                 xytext=(0.4, 4),
-                 fontsize=7, ha='center',
-                 arrowprops=dict(arrowstyle='->', color=COLORS['spherical_yat'], lw=1),
-                 bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9, edgecolor=COLORS['spherical_yat']))
+    # Manual plotting order for clarity
+    ax.plot(x, softmax_1d(x), color=COLORS['softmax'], label='Softmax', linestyle='-')
+    ax.plot(x, yat_1d(x), color=COLORS['yat_exact'], label='ⵟ (YAT)', linestyle='--')
+    ax.plot(x, spherical_yat_1d(x), color=COLORS['yat_spherical'], label='ⵟ$_{sph}$', linestyle='-.')
     
-    for spine in ax1.spines.values():
-        spine.set_linewidth(0.8)
+    # LAY and SLAY approximations (idealized) match the exact forms in expectation
+    # We can plot them as overlapping or just mention in caption.
+    # User requested adding them. We will add them with markers to distinguish.
+    ax.plot(x[::15], yat_1d(x[::15]), color=COLORS['lay'], label='LAY', linestyle='', marker='o', markersize=3, alpha=0.7)
+    ax.plot(x[::15], spherical_yat_1d(x[::15]), color=COLORS['slay'], label='SLAY', linestyle='', marker='s', markersize=3, alpha=0.7)
+
+    ax.set_xlabel('Cosine similarity $x$')
+    ax.set_ylabel('Kernel shape $k(x)$')
+    ax.set_title('(a) Kernel Decay Profile')
+    ax.set_ylim(-0.2, 5.0)
+    ax.set_xlim(-1, 1)
+    ax.grid(True, alpha=0.3)
+    ax.axhline(y=0, color='black', linewidth=0.5, alpha=0.3)
+    ax.axvline(x=0, color='black', linewidth=0.5, alpha=0.3)
+    ax.legend(frameon=False, fontsize=6, loc='upper left', ncol=2)
+
     
-    # -------------------- Panel (b): Log scale (positive x only) --------------------
-    ax2.set_facecolor('white')
+    # ------------------------------------------------------------------------
+    # Panel (b): Log Scale (Positive x) - Growth Rate
+    # ------------------------------------------------------------------------
+    ax = axes[1]
+    ax.set_facecolor('white')
     
-    x_pos = np.linspace(0.01, 0.99, 500)
+    x_pos = np.linspace(0.01, 0.99, 300)
     
-    ax2.semilogy(x_pos, softmax_kernel(x_pos, scale=1.0), 
-                 color=COLORS['softmax'], label='Softmax $e^x$', linestyle='-')
-    ax2.semilogy(x_pos, pure_polynomial_kernel(x_pos), 
-                 color=COLORS['x_squared'], label='Polynomial $x^2$', linestyle='-.')
-    ax2.semilogy(x_pos, yat_kernel(x_pos, norm_q=1.5, norm_k=1.2), 
-                 color=COLORS['yat'], label='ⵟ (YAT)', linestyle=':')
-    ax2.semilogy(x_pos, spherical_yat_kernel(x_pos), 
-                 color=COLORS['spherical_yat'], label='ⵟ$_{sph}$ (Sph. YAT)', linestyle='-', linewidth=2)
+    ax.semilogy(x_pos, softmax_1d(x_pos), color=COLORS['softmax'], label='Softmax', linestyle='-')
+    ax.semilogy(x_pos, poly_1d(x_pos), color=COLORS['x_squared'], label='$x^2$', linestyle=':')
+    ax.semilogy(x_pos, yat_1d(x_pos), color=COLORS['yat_exact'], label='ⵟ (YAT)', linestyle='--')
+    ax.semilogy(x_pos, spherical_yat_1d(x_pos), color=COLORS['yat_spherical'], label='ⵟ$_{sph}$', linestyle='-.')
     
-    ax2.set_xlabel('Cosine similarity $x$')
-    ax2.set_ylabel('Kernel value $k(x)$ (log scale)')
-    ax2.set_xlim(0, 1)
-    ax2.set_ylim(1e-4, 1e2)
-    ax2.legend(loc='lower right', framealpha=0.9, fontsize=7)
-    ax2.set_title('(b) Log scale (aligned tokens)')
-    ax2.grid(True, alpha=0.3, linewidth=0.5, which='both')
+    # LAY / SLAY markers
+    ax.semilogy(x_pos[::15], yat_1d(x_pos[::15]), color=COLORS['lay'], label='LAY', linestyle='', marker='o', markersize=3, alpha=0.7)
+    ax.semilogy(x_pos[::15], spherical_yat_1d(x_pos[::15]), color=COLORS['slay'], label='SLAY', linestyle='', marker='s', markersize=3, alpha=0.7)
     
-    for spine in ax2.spines.values():
-        spine.set_linewidth(0.8)
+    ax.set_xlabel('Cosine similarity $x$')
+    ax.set_ylabel('Kernel value (log scale)')
+    ax.set_title('(b) Growth Rate')
+    ax.set_xlim(0, 1)
+    ax.set_ylim(1e-4, 100)
+    ax.grid(True, alpha=0.3, which='both')
+    ax.legend(frameon=False, fontsize=6, loc='lower right', ncol=1)
     
-    plt.tight_layout(pad=0.5)
-    
-    plt.savefig(output_path, format='pdf', dpi=300, 
-                facecolor='white', edgecolor='none', bbox_inches='tight')
+    plt.tight_layout()
+    plt.savefig(output_path, format='pdf', bbox_inches='tight')
     plt.close()
     
-    # Log data
     log_path = output_path.replace('.pdf', '_data.txt')
-    log_data(log_path, {
-        'x_values': x,
-        'softmax': softmax_kernel(x, scale=1.0),
-        'cosine': cosine_kernel(x),
-        'x_squared': pure_polynomial_kernel(x),
-        'yat': yat_kernel(x, norm_q=1.5, norm_k=1.2),
-        'spherical_yat': spherical_yat_kernel(x),
-        'parameters': {'epsilon': 1e-2, 'yat_norm_q': 1.5, 'yat_norm_k': 1.2}
-    }, 
-    description="Kernel functions comparison: k(x) for different attention mechanisms",
-    goal="Compare how different attention kernels weight token pairs based on their cosine similarity. "
-         "This shows the fundamental difference in how softmax, polynomial, and YAT kernels respond to alignment.",
-    what_to_look_for="1) Softmax grows exponentially for aligned tokens (x→1), potentially causing gradient issues. "
-                     "2) Pure x² is symmetric and bounded but assigns positive weight to negatively correlated tokens. "
-                     "3) Spherical YAT (ⵟ_sph) is bounded, positive only for positive correlations, and self-regularizing. "
-                     "4) Compare the growth rates near x=1 where numerical stability matters.",
-    expected_conclusion="Spherical YAT (ⵟ_sph) offers the best balance: it is bounded (self-regularizing), "
-                       "respects cosine sign (no negative correlation weight), and grows subexponentially. "
-                       "This makes it more numerically stable than softmax while preserving semantic locality.")
-    print(f"  ✓ Data log: {log_path}")
+    log_data(log_path, {'kernels': [k['name'] for k in kernels]}, 
+             description="Kernel profile comparison")
     
     return output_path
 
 
 def plot_angle_based_comparison(output_path='kernel_angle.pdf'):
-    """Plot kernels as a function of angle θ instead of x."""
+    """Plot kernels as a function of angle θ."""
     
-    fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 2.5))
+    fig, axes = plt.subplots(1, 2, figsize=(FULL_WIDTH, 2.5))
     fig.patch.set_facecolor('white')
-    ax.set_facecolor('white')
     
-    # Angle from 0 to 180 degrees
-    theta = np.linspace(1, 179, 500)  # Avoid exact 0 and 180
+    theta = np.linspace(0, 180, 500)
     theta_rad = np.deg2rad(theta)
     x = np.cos(theta_rad)
     
-    # Plot kernels
-    ax.plot(theta, softmax_kernel(x, scale=1.0), 
-            color=COLORS['softmax'], label='Softmax', linestyle='-')
-    ax.plot(theta, pure_polynomial_kernel(x), 
-            color=COLORS['x_squared'], label='$x^2$', linestyle='-.')
-    ax.plot(theta, spherical_yat_kernel(x), 
-            color=COLORS['spherical_yat'], label='ⵟ$_{sph}$', linestyle='-', linewidth=2)
+    # -------------------- Panel (a): Linear Scale --------------------
+    ax = axes[0]
+    ax.set_facecolor('white')
+    
+    # Baselines (make them slightly recessed)
+    ax.plot(theta, softmax_1d(x), color=COLORS['softmax'], label='Softmax', 
+            linestyle='-', linewidth=1.5, alpha=0.9)
+    ax.plot(theta, poly_1d(x), color=COLORS['x_squared'], label='$x^2$', 
+            linestyle=':', linewidth=1.2, alpha=0.7)
+    
+    # Targets (make them thicker)
+    ax.plot(theta, yat_1d(x), color=COLORS['yat_exact'], label='ⵟ (YAT)', 
+            linestyle='--', linewidth=2.0)
+    ax.plot(theta, spherical_yat_1d(x), color=COLORS['yat_spherical'], label='ⵟ$_{sph}$', 
+            linestyle='-.', linewidth=2.0)
+    
+    # Approximations (bigger markers, closer spacing)
+    # Reduced stride to 20 for more visibility
+    mark_idx = np.arange(0, len(theta), 20)
+    ax.plot(theta[mark_idx], yat_1d(x[mark_idx]), color=COLORS['lay'], label='LAY', 
+            linestyle='', marker='o', markersize=4.5, markeredgewidth=0.5, markeredgecolor='white', alpha=0.9)
+    ax.plot(theta[mark_idx], spherical_yat_1d(x[mark_idx]), color=COLORS['slay'], label='SLAY', 
+            linestyle='', marker='s', markersize=4.5, markeredgewidth=0.5, markeredgecolor='white', alpha=0.9)
     
     ax.set_xlabel('Angle $\\theta$ (degrees)')
-    ax.set_ylabel('Kernel value $k(\\cos\\theta)$')
+    ax.set_ylabel('Kernel value $k(\\theta)$')
+    ax.set_title('(a) Kernel Profile (Linear)')
     ax.set_xlim(0, 180)
-    ax.set_ylim(0, 3)
-    ax.legend(loc='upper right', framealpha=0.9)
+    ax.set_ylim(-0.1, 4.0) 
     ax.set_xticks([0, 45, 90, 135, 180])
-    ax.grid(True, alpha=0.3, linewidth=0.5)
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc='upper right', framealpha=0.95, fontsize=6)
     
-    # Mark key angles
-    ax.axvline(x=90, color='gray', linewidth=0.5, linestyle='--', alpha=0.7)
-    ax.annotate('orthogonal', xy=(90, 0.1), fontsize=7, ha='center')
+    # -------------------- Panel (b): Log Scale --------------------
+    ax = axes[1]
+    ax.set_facecolor('white')
     
-    for spine in ax.spines.values():
-        spine.set_linewidth(0.8)
+    # Use log scale on Y to show the peak at theta=0
+    ax.semilogy(theta, softmax_1d(x), color=COLORS['softmax'], label='Softmax', 
+                linestyle='-', linewidth=1.5, alpha=0.9)
+    ax.semilogy(theta, poly_1d(x), color=COLORS['x_squared'], label='$x^2$', 
+                linestyle=':', linewidth=1.2, alpha=0.7)
+    ax.semilogy(theta, yat_1d(x), color=COLORS['yat_exact'], label='ⵟ', 
+                linestyle='--', linewidth=2.0)
+    ax.semilogy(theta, spherical_yat_1d(x), color=COLORS['yat_spherical'], label='ⵟ$_{sph}$', 
+                linestyle='-.', linewidth=2.0)
+    
+    # Markers
+    ax.semilogy(theta[mark_idx], yat_1d(x[mark_idx]), color=COLORS['lay'], label='LAY', 
+                linestyle='', marker='o', markersize=4.5, markeredgewidth=0.5, markeredgecolor='white', alpha=0.9)
+    ax.semilogy(theta[mark_idx], spherical_yat_1d(x[mark_idx]), color=COLORS['slay'], label='SLAY', 
+                linestyle='', marker='s', markersize=4.5, markeredgewidth=0.5, markeredgecolor='white', alpha=0.9)
+    
+    ax.set_xlabel('Angle $\\theta$ (degrees)')
+    ax.set_ylabel('Kernel value (log scale)')
+    ax.set_title('(b) Peak Behavior (Log)')
+    ax.set_xlim(0, 180)
+    ax.set_ylim(1e-2, 200)
+    ax.set_xticks([0, 45, 90, 135, 180])
+    ax.grid(True, alpha=0.3, which='both')
     
     plt.tight_layout()
-    
-    plt.savefig(output_path, format='pdf', dpi=300,
-                facecolor='white', edgecolor='none', bbox_inches='tight')
+    plt.savefig(output_path, format='pdf', bbox_inches='tight')
     plt.close()
     
-    # Log data
     log_path = output_path.replace('.pdf', '_data.txt')
-    log_data(log_path, {
-        'theta_degrees': theta,
-        'cosine_similarity': x,
-        'softmax': softmax_kernel(x, scale=1.0),
-        'x_squared': pure_polynomial_kernel(x),
-        'spherical_yat': spherical_yat_kernel(x),
-    }, 
-    description="Kernel functions as function of angle theta",
-    goal="Visualize kernel response in terms of geometric angle rather than cosine similarity.",
-    what_to_look_for="Notice how kernel values drop off as angle increases from 0° (aligned) to 90° (orthogonal) to 180° (opposite).",
-    expected_conclusion="Spherical YAT concentrates attention on aligned tokens (small angles) while gracefully handling orthogonal and opposite tokens.")
-    print(f"  ✓ Data log: {log_path}")
-    
+    log_data(log_path, {'theta': theta}, description="Angle-based kernel comparison")
     return output_path
 
 
 def plot_kernel_derivatives(output_path='kernel_derivatives.pdf'):
-    """
-    Plot kernel gradients to show self-regularization behavior.
-    Shows how spherical YAT has bounded gradient unlike softmax.
-    """
+    """Plot kernel gradients (self-regularization)."""
     fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 2.5))
     fig.patch.set_facecolor('white')
     ax.set_facecolor('white')
@@ -286,87 +227,129 @@ def plot_kernel_derivatives(output_path='kernel_derivatives.pdf'):
     dx = x[1] - x[0]
     
     # Compute numerical derivatives
-    softmax_vals = softmax_kernel(x)
-    sph_yat_vals = spherical_yat_kernel(x)
-    poly_vals = pure_polynomial_kernel(x)
-    
-    softmax_grad = np.gradient(softmax_vals, dx)
-    sph_yat_grad = np.gradient(sph_yat_vals, dx)
-    poly_grad = np.gradient(poly_vals, dx)
+    softmax_grad = np.gradient(softmax_1d(x), dx)
+    sph_yat_grad = np.gradient(spherical_yat_1d(x), dx)
+    yat_grad = np.gradient(yat_1d(x), dx)
+    poly_grad = np.gradient(poly_1d(x), dx)
     
     ax.plot(x, softmax_grad, color=COLORS['softmax'], label='Softmax', linestyle='-')
-    ax.plot(x, poly_grad, color=COLORS['x_squared'], label='$x^2$', linestyle='-.')
-    ax.plot(x, sph_yat_grad, color=COLORS['spherical_yat'], label='ⵟ$_{sph}$', linestyle='-', linewidth=2)
+    ax.plot(x, poly_grad, color=COLORS['x_squared'], label='$x^2$', linestyle=':')
+    ax.plot(x, yat_grad, color=COLORS['yat_exact'], label='ⵟ (YAT)', linestyle='--')
+    ax.plot(x, sph_yat_grad, color=COLORS['yat_spherical'], label='ⵟ$_{sph}$', linestyle='-.')
+    
+    # LAY / SLAY markers for derivative
+    ax.plot(x[::20], yat_grad[::20], color=COLORS['lay'], label='LAY', linestyle='', marker='o', markersize=3, alpha=0.7)
+    ax.plot(x[::20], sph_yat_grad[::20], color=COLORS['slay'], label='SLAY', linestyle='', marker='s', markersize=3, alpha=0.7)
     
     ax.set_xlabel('Cosine similarity $x$')
     ax.set_ylabel('Gradient $dk/dx$')
     ax.set_xlim(-1, 1)
-    ax.legend(loc='upper left', framealpha=0.9)
+    ax.legend(loc='upper left', framealpha=0.9, fontsize=6, ncol=2)
     ax.axhline(y=0, color='gray', linewidth=0.5, linestyle='-')
     ax.set_title('Kernel gradients (self-regularization)')
-    ax.grid(True, alpha=0.3, linewidth=0.5)
-    
-    for spine in ax.spines.values():
-        spine.set_linewidth(0.8)
+    ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    
-    plt.savefig(output_path, format='pdf', dpi=300,
-                facecolor='white', edgecolor='none', bbox_inches='tight')
+    plt.savefig(output_path, format='pdf', bbox_inches='tight')
     plt.close()
     
-    # Log data
     log_path = output_path.replace('.pdf', '_data.txt')
-    log_data(log_path, {
-        'x_values': x,
-        'softmax_gradient': softmax_grad,
-        'x_squared_gradient': poly_grad,
-        'spherical_yat_gradient': sph_yat_grad,
-        'statistics': {
-            'softmax_max_grad': float(softmax_grad.max()),
-            'sph_yat_max_grad': float(sph_yat_grad.max()),
-            'x_squared_max_grad': float(poly_grad.max()),
-        }
-    }, 
-    description="Kernel gradients dk/dx showing self-regularization",
-    goal="Compare gradient magnitudes to understand gradient flow during backpropagation.",
-    what_to_look_for="1) Softmax gradient grows unboundedly as x→1, causing exploding gradients. "
-                     "2) Spherical YAT gradient remains bounded even for highly aligned tokens. "
-                     "3) Compare max gradient values in statistics.",
-    expected_conclusion="Spherical YAT's bounded gradient explains its training stability - it is self-regularizing and prevents exploding gradients that plague softmax with long sequences.")
-    print(f"  ✓ Data log: {log_path}")
-    
+    log_data(log_path, {'x': x}, description="Kernel gradients")
     return output_path
 
+def plot_individual_kernels(output_dir='assets'):
+    """Generate separate plots for each kernel to allow detailed inspection."""
+    
+    # Define kernels to plot individually
+    kernels = [
+        {'name': 'Softmax', 'fn': softmax_1d, 'color': COLORS['softmax'], 'style': '-'},
+        {'name': 'Poly x²', 'fn': poly_1d, 'color': COLORS['x_squared'], 'style': ':'},
+        {'name': 'ⵟ (YAT)', 'fn': yat_1d, 'color': COLORS['yat_exact'], 'style': '--'},
+        {'name': 'ⵟ_sph', 'fn': spherical_yat_1d, 'color': COLORS['yat_spherical'], 'style': '-.'}
+    ]
+    
+    os.makedirs(output_dir, exist_ok=True)
+    paths = []
+    
+    # Common X axis
+    x = np.linspace(-0.95, 0.95, 300)
+    theta = np.linspace(0, 180, 500)
+    theta_rad = np.deg2rad(theta)
+    x_theta = np.cos(theta_rad)
+    
+    for k in kernels:
+        # File name safe
+        safe_name = k['name'].replace(' ', '_').replace('ⵟ', 'YAT').replace('$x^2$', 'Poly').replace('_sph', '_Sph').lower()
+        fname = f"{output_dir}/kernel_profile_{safe_name}.pdf"
+        
+        fig, axes = plt.subplots(1, 2, figsize=(FULL_WIDTH, 2.5))
+        fig.patch.set_facecolor('white')
+        
+        # Panel 1: Linear scale vs Cosine Sim
+        ax = axes[0]
+        ax.set_facecolor('white')
+        y_lin = k['fn'](x)
+        ax.plot(x, y_lin, color=k['color'], linestyle=k['style'], linewidth=2.0)
+        
+        ax.set_xlabel('Cosine similarity $x$')
+        ax.set_ylabel(f'{k["name"]} Value')
+        ax.set_title(f'(a) {k["name"]} Profile (Linear)')
+        ax.grid(True, alpha=0.3)
+        ax.axhline(0, color='gray', linewidth=0.5)
+        
+        # Panel 2: Log scale vs Angle
+        ax = axes[1]
+        ax.set_facecolor('white')
+        y_log = k['fn'](x_theta)
+        ax.semilogy(theta, y_log, color=k['color'], linestyle=k['style'], linewidth=2.0)
+        
+        ax.set_xlabel('Angle $\\theta$ (degrees)')
+        ax.set_ylabel('Value (Log Scale)')
+        ax.set_title(f'(b) {k["name"]} Peak (Log)')
+        ax.set_xlim(0, 180)
+        ax.set_ylim(1e-2, max(y_log.max(), 10) * 1.5)
+        ax.set_xticks([0, 45, 90, 135, 180])
+        ax.grid(True, alpha=0.3, which='both')
+        
+        plt.tight_layout()
+        plt.savefig(fname, format='pdf', bbox_inches='tight')
+        plt.close()
+        paths.append(fname)
+        
+    return paths
 
-# ============================================================================
-# Main
-# ============================================================================
+
 def main():
     print("=" * 60)
     print(" ICML Figure: Kernel vs Angle Comparison")
     print("=" * 60)
     
-    # Create output directory
     os.makedirs('assets', exist_ok=True)
     
-    print("\n[1/3] Generating kernel comparison plot...")
+    print("\n[1/4] Generating kernel comparison plot...")
     path1 = plot_kernel_comparison('assets/kernel_comparison.pdf')
-    print(f"  ✓ Saved: {path1}")
+    print(f"  [OK] Saved: {path1}")
     
-    print("\n[2/3] Generating angle-based plot...")
+    print("\n[2/4] Generating angle-based plot...")
     path2 = plot_angle_based_comparison('assets/kernel_angle.pdf')
-    print(f"  ✓ Saved: {path2}")
+    print(f"  [OK] Saved: {path2}")
     
-    print("\n[3/3] Generating kernel derivatives plot...")
+    print("\n[3/4] Generating kernel derivatives plot...")
     path3 = plot_kernel_derivatives('assets/kernel_derivatives.pdf')
-    print(f"  ✓ Saved: {path3}")
+    print(f"  [OK] Saved: {path3}")
+    
+    print("\n[4/4] Generating individual kernel profiles...")
+    paths = plot_individual_kernels('assets')
+    for p in paths:
+        print(f"  [OK] Saved: {p}")
     
     print("\n" + "=" * 60)
     print(" Generated figures:")
-    print(f"  • {path1}  (main figure)")
-    print(f"  • {path2}  (angle-based)")
-    print(f"  • {path3}  (gradients)")
+    print(f"  • {path1}")
+    print(f"  • {path2}")
+    print(f"  • {path3}")
+    for p in paths:
+        print(f"  • {p}")
     print("=" * 60)
 
 

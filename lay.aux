@@ -1,0 +1,223 @@
+\relax 
+\providecommand \babel@aux [2]{\global \let \babel@toc \@gobbletwo }
+\@nameuse{bbl@beforestart}
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand*\HyPL@Entry[1]{}
+\citation{Author2026Concurrent}
+\citation{rahimi2007random}
+\citation{transformers-base,vit,bert,brown,longt5,bigbird}
+\citation{yaofu}
+\citation{reformer,routing,lsh-transformer,clustr}
+\citation{performers,performer2,chefs,dense-exponential,luo,fft-t,arora}
+\citation{random-features,sinks}
+\citation{Author2026Concurrent}
+\citation{Author2026Concurrent}
+\HyPL@Entry{0<</S/D>>}
+\babel@aux{english}{}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction \& Related Work}{1}{section.1}\protected@file@percent }
+\newlabel{sec:intro}{{1}{1}{}{section.1}{}}
+\newlabel{eq:eproduct}{{1}{1}{}{equation.1}{}}
+\citation{Author2026Concurrent}
+\citation{performers,hedgehog,insuhan}
+\citation{performers}
+\@writefile{toc}{\contentsline {section}{\numberline {2}LAY Mechanism}{2}{section.2}\protected@file@percent }
+\newlabel{sec:method}{{2}{2}{}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Preliminaries}{2}{subsection.2.1}\protected@file@percent }
+\newlabel{sec:preliminaries}{{2.1}{2}{}{subsection.2.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Integral Linearization via RBF Kernels}{2}{subsection.2.2}\protected@file@percent }
+\newlabel{eq:laplace-rbf}{{2}{2}{}{equation.2}{}}
+\newlabel{eq:rbf-kernel}{{3}{2}{}{equation.3}{}}
+\citation{rahimi2007random}
+\citation{pham2013}
+\citation{karkarnick2012}
+\citation{williams2001nystrom}
+\citation{scholkopf2002learning}
+\citation{pham2013}
+\citation{karkarnick2012}
+\citation{williams2001nystrom}
+\citation{scholkopf2002learning}
+\citation{performers}
+\citation{performers}
+\newlabel{eq:eproduct-rbf}{{4}{3}{}{equation.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{Connection to Random Fourier Features.}{3}{equation.4}\protected@file@percent }
+\newlabel{eq:bochner}{{5}{3}{}{equation.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Quadrature Discretization}{3}{subsection.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.1}Polynomial and Exponential RFs}{3}{subsubsection.2.3.1}\protected@file@percent }
+\newlabel{sec:poly-exp-rfs}{{2.3.1}{3}{}{subsubsection.2.3.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Tensor sketches \& beyond for polynomial kernels:}{3}{subsubsection.2.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Anchor features \citep  {scholkopf2002learning}.}{3}{subsubsection.2.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Positive Random Features (PRFs).}{3}{table.caption.1}\protected@file@percent }
+\citation{higham2002}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Polynomial kernel approximation options for the kernel $(\mathbf  {x}^\top \mathbf  {y})^2$. Here $D_p$ denotes the polynomial-feature dimension, and $P$ denotes the number of anchors (when applicable). \emph  {Feature cost} is the asymptotic cost of computing the polynomial features for one vector and excludes quadrature/PRF computation, tensor-product fusion/sketching, and the linear-attention contractions; these additional costs drive end-to-end latency in Section~\ref {sec:experiments}.}}{4}{table.caption.1}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:poly-approximations}{{1}{4}{Polynomial kernel approximation options for the kernel $(\mathbf {x}^\top \mathbf {y})^2$. Here $D_p$ denotes the polynomial-feature dimension, and $P$ denotes the number of anchors (when applicable). \emph {Feature cost} is the asymptotic cost of computing the polynomial features for one vector and excludes quadrature/PRF computation, tensor-product fusion/sketching, and the linear-attention contractions; these additional costs drive end-to-end latency in Section~\ref {sec:experiments}}{table.caption.1}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.2}Fusing RFs for Polynomial \& Exponential Kernels}{4}{subsubsection.2.3.2}\protected@file@percent }
+\newlabel{rem:feature-target}{{1}{4}{Feature Map Target}{remark.1}{}}
+\newlabel{rem:bias}{{2}{4}{Bias Decomposition}{remark.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Linear-Time Attention Computation}{4}{subsection.2.4}\protected@file@percent }
+\newlabel{eq:lin-att}{{8}{4}{}{equation.8}{}}
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces \E  -Attention Forward Pass}}{4}{algorithm.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Complexity Analysis.}{4}{ALC@unique.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Experiments}{4}{section.3}\protected@file@percent }
+\newlabel{sec:experiments}{{3}{4}{}{section.3}{}}
+\citation{cosformer}
+\citation{performers}
+\citation{cosformer}
+\citation{performers}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Polynomial Factor Approximation}{5}{subsection.3.1}\protected@file@percent }
+\newlabel{subsec:poly-ablation}{{3.1}{5}{}{subsection.3.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces \relax \fontsize  {9}{10pt}\selectfont  {Kernel approximation quality and latency comparison. Rel.~$\ell _2$ is relative L2 error, Cos is cosine similarity, MSE is mean squared error, and Latency is forward-pass time in milliseconds. For large-scale snapshot, see the ``Large'' block in Table~\ref {tab:poly-sweep}).}}}{5}{table.caption.2}\protected@file@percent }
+\newlabel{tab:kernel-combined}{{2}{5}{\small {Kernel approximation quality and latency comparison. Rel.~$\ell _2$ is relative L2 error, Cos is cosine similarity, MSE is mean squared error, and Latency is forward-pass time in milliseconds. For large-scale snapshot, see the ``Large'' block in Table~\ref {tab:poly-sweep}).}}{table.caption.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Each panel shows how a kernel partitions the 2D feature space among 5 randomly placed neurons (stars). \textbf  {(a)} Linear dot product softmax. \textbf  {(b)} FAVOR+ (ReLU random features). \textbf  {(c)} Linear with ELU+1. \textbf  {(d)} Exact \E  -kernel. \textbf  {(e)} Spherical \E  -kernel. \textbf  {(f)} LAY (Anchor)}}{5}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:decision-boundaries}{{1}{5}{Each panel shows how a kernel partitions the 2D feature space among 5 randomly placed neurons (stars). \textbf {(a)} Linear dot product softmax. \textbf {(b)} FAVOR+ (ReLU random features). \textbf {(c)} Linear with ELU+1. \textbf {(d)} Exact \E -kernel. \textbf {(e)} Spherical \E -kernel. \textbf {(f)} LAY (Anchor)}{figure.caption.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Computational Costs}{5}{subsection.3.2}\protected@file@percent }
+\newlabel{subsec:computational-costs}{{3.2}{5}{}{subsection.3.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Benchmark setup.}{5}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Results overview.}{5}{figure.caption.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Attention mechanisms scaling behaviors. Several variants are compared: brute-force regular attention (\textrm  {Standard}), YAT-attention (YAT), {linear attention} (\textrm  {ELU+1}), Cosformer attention from \citep  {cosformer} , Performer's attention from \citep  {performers} (FAVOR+), and LAY's attention.}}{6}{figure.caption.4}\protected@file@percent }
+\newlabel{fig:scaling}{{2}{6}{Attention mechanisms scaling behaviors. Several variants are compared: brute-force regular attention (\textrm {Standard}), YAT-attention (YAT), {linear attention} (\textrm {ELU+1}), Cosformer attention from \citep {cosformer} , Performer's attention from \citep {performers} (FAVOR+), and LAY's attention}{figure.caption.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}LAY on Synthetic Tasks}{6}{subsection.3.3}\protected@file@percent }
+\newlabel{subsec:synthetic-experiments}{{3.3}{6}{}{subsection.3.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Average accuracy by task category. The name of different methods is the same as in Fig. \ref {fig:scaling}.}}{6}{table.caption.5}\protected@file@percent }
+\newlabel{tab:summary}{{3}{6}{Average accuracy by task category. The name of different methods is the same as in Fig. \ref {fig:scaling}}{table.caption.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Extreme Classification Evaluation}{6}{subsection.3.4}\protected@file@percent }
+\newlabel{subsec:extreme-classification}{{3.4}{6}{}{subsection.3.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Extreme Classification Benchmark Results on Eurlex-4K}}{7}{table.caption.6}\protected@file@percent }
+\newlabel{tab:extreme_results}{{4}{7}{Extreme Classification Benchmark Results on Eurlex-4K}{table.caption.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}LAYformer: LAY in Transformers}{7}{subsection.3.5}\protected@file@percent }
+\newlabel{subsec:LAYformer}{{3.5}{7}{}{subsection.3.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces \relax \fontsize  {9}{10pt}\selectfont  { Validation performance comparison of attention mechanisms after satisfying the Chinchilla scaling law. Full model details available in Appendix \ref {app:experiments}. }}}{7}{table.caption.7}\protected@file@percent }
+\newlabel{tab:attention-val-comparison}{{5}{7}{\small { Validation performance comparison of attention mechanisms after satisfying the Chinchilla scaling law. Full model details available in Appendix \ref {app:experiments}. }}{table.caption.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces \relax \fontsize  {9}{10pt}\selectfont  { Validation loss (top) and validation perplexity (bottom) as a function of training steps after satisfying the Chinchilla scaling law with 125M parameters and 2.5B tokens. }}}{7}{figure.caption.8}\protected@file@percent }
+\newlabel{fig:val-curves-group}{{3}{7}{\small { Validation loss (top) and validation perplexity (bottom) as a function of training steps after satisfying the Chinchilla scaling law with 125M parameters and 2.5B tokens. }}{figure.caption.8}{}}
+\bibdata{references}
+\bibstyle{icml2026}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Conclusion}{8}{section.4}\protected@file@percent }
+\newlabel{sec:conclusion}{{4}{8}{}{section.4}{}}
+\citation{schoenberg1942}
+\citation{aronszajn1950,scholkopf2002learning}
+\citation{aronszajn1950,berlinet2004}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Background Results}{9}{appendix.A}\protected@file@percent }
+\newlabel{app:background}{{A}{9}{Appendix}{appendix.A}{}}
+\newlabel{lem:complete-monotone}{{1}{9}{Bernstein Representation Applicability}{lemma.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {B}Geometric Interpretation and Invariances}{9}{appendix.B}\protected@file@percent }
+\newlabel{app:geom}{{B}{9}{Appendix}{appendix.B}{}}
+\newlabel{prop:geometric}{{1}{9}{Geometric Origin}{proposition.1}{}}
+\newlabel{rem:invariances}{{3}{9}{Geometric Invariances}{remark.3}{}}
+\newlabel{prop:prf-unbiased}{{2}{9}{PRF Unbiasedness}{proposition.2}{}}
+\newlabel{lem:mixture-pd}{{2}{9}{Positive Mixture Closure}{lemma.2}{}}
+\newlabel{thm:tensor-rkhs}{{1}{9}{Tensor Kernel Decomposition}{theorem.1}{}}
+\citation{karkarnick2012}
+\citation{williams2001nystrom}
+\@writefile{toc}{\contentsline {section}{\numberline {C}Preliminaries: Polynomial Kernel Approximations}{10}{appendix.C}\protected@file@percent }
+\newlabel{app:prelim-poly}{{C}{10}{Appendix}{appendix.C}{}}
+\@writefile{toc}{\contentsline {paragraph}{Random Maclaurin (RM).}{10}{appendix.C}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Nystrom features.}{10}{appendix.C}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Anchor (low-rank) features.}{10}{appendix.C}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Comparison.}{10}{appendix.C}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {D}Ablation: Polynomial Approximation Sweep}{10}{appendix.D}\protected@file@percent }
+\newlabel{app:poly-ablation}{{D}{10}{Appendix}{appendix.D}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {E}Integral Representation of the Spherical \E  -Product}{10}{appendix.E}\protected@file@percent }
+\newlabel{app:integral}{{E}{10}{Appendix}{appendix.E}{}}
+\newlabel{eq:app-spherical}{{9}{10}{Appendix}{equation.9}{}}
+\newlabel{eq:app-bernstein}{{10}{10}{Appendix}{equation.10}{}}
+\newlabel{eq:app-integral}{{12}{10}{Appendix}{equation.12}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Multi-scale ablation over feature budgets for polynomial-kernel approximations. We compare attention outputs against \emph  {exact kernel-normalized} YAT with tied QKV/out projections. Lower Rel.~$\ell _2$ is better; latency is forward-pass time.}}{11}{table.caption.11}\protected@file@percent }
+\newlabel{tab:poly-sweep}{{6}{11}{Multi-scale ablation over feature budgets for polynomial-kernel approximations. We compare attention outputs against \emph {exact kernel-normalized} YAT with tied QKV/out projections. Lower Rel.~$\ell _2$ is better; latency is forward-pass time}{table.caption.11}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {F}Random Feature Construction and Unbiasedness}{11}{appendix.F}\protected@file@percent }
+\newlabel{app:features}{{F}{11}{Appendix}{appendix.F}{}}
+\@writefile{toc}{\contentsline {paragraph}{Polynomial component.}{11}{appendix.F}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Exponential component.}{11}{appendix.F}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Tensor product approximation.}{11}{appendix.F}\protected@file@percent }
+\citation{performers}
+\@writefile{toc}{\contentsline {paragraph}{On ``pure Laplace'' forms.}{12}{appendix.F}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Hadamard (elementwise) fusion variant.}{12}{appendix.F}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {G}Positivity and Stability Guarantees}{12}{appendix.G}\protected@file@percent }
+\newlabel{app:stability}{{G}{12}{Appendix}{appendix.G}{}}
+\@writefile{toc}{\contentsline {paragraph}{Positivity.}{12}{appendix.G}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Numerical stability.}{12}{appendix.G}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces \relax \fontsize  {9}{10pt}\selectfont  { Overview of benchmark task categories used in our evaluation. Each category groups tasks designed to probe specific capabilities of sequence models. See \texttt  {docs/BENCHMARK\_TASKS.md} in the project code repository for detailed task descriptions. }}}{13}{table.caption.12}\protected@file@percent }
+\newlabel{tab:task-categories}{{7}{13}{\small { Overview of benchmark task categories used in our evaluation. Each category groups tasks designed to probe specific capabilities of sequence models. See \texttt {docs/BENCHMARK\_TASKS.md} in the project code repository for detailed task descriptions. }}{table.caption.12}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {H}Experimental and Implementation Details}{13}{appendix.H}\protected@file@percent }
+\newlabel{app:experiments}{{H}{13}{Appendix}{appendix.H}{}}
+\@writefile{toc}{\contentsline {paragraph}{Random feature configuration.}{13}{appendix.H}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Normalization.}{13}{appendix.H}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Hardware and software.}{13}{appendix.H}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Model Architecture}{13}{appendix.H}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Hyperparameters}{13}{appendix.H}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Training configuration.}{13}{appendix.H}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Ablation protocol (polynomial approximations).}{13}{appendix.H}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Detailed Synthetic Test Results.}{13}{appendix.H}\protected@file@percent }
+\citation{widder1941laplace,schilling2012}
+\citation{aronszajn1950,scholkopf2002learning}
+\citation{performers}
+\citation{davis1984,gautschi2004}
+\citation{higham2002}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Synthetic task performance across all categories. Accuracy (mean $\pm $ std over 3 seeds).}}{14}{table.caption.13}\protected@file@percent }
+\newlabel{tab:tasks-all}{{8}{14}{Synthetic task performance across all categories. Accuracy (mean $\pm $ std over 3 seeds)}{table.caption.13}{}}
+\@writefile{toc}{\contentsline {paragraph}{Code availability.}{14}{table.caption.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {I}Implementation Notes: Quadrature Scaling and Shapes}{14}{appendix.I}\protected@file@percent }
+\newlabel{app:impl}{{I}{14}{Appendix}{appendix.I}{}}
+\@writefile{toc}{\contentsline {paragraph}{Practical knobs and defaults.}{14}{appendix.I}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Remark (explicit tensor product).}{14}{appendix.I}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Causal vs. non-causal.}{14}{appendix.I}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {J}Mathematical Tools Used (High Level)}{15}{appendix.J}\protected@file@percent }
+\newlabel{app:tools}{{J}{15}{Appendix}{appendix.J}{}}
+\@writefile{toc}{\contentsline {paragraph}{Gauss--Laguerre scaling.}{15}{appendix.J}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Linear-attention shapes.}{15}{appendix.J}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {K}Additional Proofs}{15}{appendix.K}\protected@file@percent }
+\newlabel{app:additional-proofs}{{K}{15}{Appendix}{appendix.K}{}}
+\newlabel{prop:bounded}{{3}{15}{Boundedness on the Unit Sphere}{proposition.3}{}}
+\newlabel{prop:lipschitz}{{4}{15}{Gradient Stability}{proposition.4}{}}
+\newlabel{thm:pd}{{2}{15}{Positive Definiteness on $\Sph ^{d-1}$}{theorem.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Proof of Lemma~\ref {lem:complete-monotone}.}{15}{theorem.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Proof of Proposition~\ref {prop:prf-unbiased}.}{15}{theorem.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Proof of Proposition~\ref {prop:bounded}.}{16}{theorem.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Proof of Proposition~\ref {prop:lipschitz}.}{16}{theorem.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Proof of Theorem~\ref {thm:pd}.}{16}{theorem.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {L}Empirical Analysis of LAY Properties}{16}{appendix.L}\protected@file@percent }
+\newlabel{app:empirical-analysis}{{L}{16}{Appendix}{appendix.L}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {L.1}Understanding the Spherical $\E  $-Kernel}{16}{subsection.L.1}\protected@file@percent }
+\newlabel{app:kernel-properties}{{L.1}{16}{Appendix}{subsection.L.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Kernel response as a function of alignment $x=\hat  {q}^\top \hat  {k}$. The spherical $\E  $-kernel is bounded and self-regularizing, unlike softmax which grows without bound.}}{17}{figure.caption.14}\protected@file@percent }
+\newlabel{fig:kernel-comparison}{{4}{17}{Kernel response as a function of alignment $x=\hat {q}^\top \hat {k}$. The spherical $\E $-kernel is bounded and self-regularizing, unlike softmax which grows without bound}{figure.caption.14}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Kernel response vs.\ angular distance.}}{17}{figure.caption.15}\protected@file@percent }
+\newlabel{fig:kernel-angle}{{5}{17}{Kernel response vs.\ angular distance}{figure.caption.15}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Gradient magnitudes.}}{17}{figure.caption.16}\protected@file@percent }
+\newlabel{fig:kernel-derivatives}{{6}{17}{Gradient magnitudes}{figure.caption.16}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {L.2}Numerical Stability: The Denominator Problem}{17}{subsection.L.2}\protected@file@percent }
+\newlabel{app:stability-experiments}{{L.2}{17}{Appendix}{subsection.L.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Denominator value distributions. LAY and YAT variants maintain strict positivity; signed polynomial methods (TensorSketch, Random Maclaurin) produce negative denominators that cause numerical instability.}}{18}{figure.caption.17}\protected@file@percent }
+\newlabel{fig:denominator-histogram}{{7}{18}{Denominator value distributions. LAY and YAT variants maintain strict positivity; signed polynomial methods (TensorSketch, Random Maclaurin) produce negative denominators that cause numerical instability}{figure.caption.17}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces TODO: Stability across seeds.}}{18}{figure.caption.18}\protected@file@percent }
+\newlabel{fig:denominator-stability}{{8}{18}{TODO: Stability across seeds}{figure.caption.18}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {L.3}Quadrature Approximation Quality}{18}{subsection.L.3}\protected@file@percent }
+\newlabel{app:quadrature-details}{{L.3}{18}{Appendix}{subsection.L.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Quadrature error vs.\ number of nodes $R$. Exponential convergence enables small $R$ in practice.}}{19}{figure.caption.19}\protected@file@percent }
+\newlabel{fig:quadrature-convergence}{{9}{19}{Quadrature error vs.\ number of nodes $R$. Exponential convergence enables small $R$ in practice}{figure.caption.19}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Gauss-Laguerre nodes.}}{19}{figure.caption.20}\protected@file@percent }
+\newlabel{fig:quadrature-nodes}{{10}{19}{Gauss-Laguerre nodes}{figure.caption.20}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {L.4}Attention Selectivity and Patterns}{19}{subsection.L.4}\protected@file@percent }
+\newlabel{app:attention-analysis}{{L.4}{19}{Appendix}{subsection.L.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Node contributions at different $x$ values. TODO: First nodes dominate across all alignments.}}{20}{figure.caption.21}\protected@file@percent }
+\newlabel{fig:quadrature-contributions}{{11}{20}{Node contributions at different $x$ values. TODO: First nodes dominate across all alignments}{figure.caption.21}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces TODO: Kernel reconstruction quality. LAY closely matches pure quadrature.}}{20}{figure.caption.22}\protected@file@percent }
+\newlabel{fig:approximation-quality}{{12}{20}{TODO: Kernel reconstruction quality. LAY closely matches pure quadrature}{figure.caption.22}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces TODO: Attention pattern visualization. YAT and LAY show more concentrated patterns; softmax is more diffuse.}}{21}{figure.caption.23}\protected@file@percent }
+\newlabel{fig:attention-patterns}{{13}{21}{TODO: Attention pattern visualization. YAT and LAY show more concentrated patterns; softmax is more diffuse}{figure.caption.23}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Attention output comparison between exact and LAY-approximated methods.}}{21}{figure.caption.24}\protected@file@percent }
+\newlabel{fig:attention-comparison}{{14}{21}{Attention output comparison between exact and LAY-approximated methods}{figure.caption.24}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {L.5}Spherical Geometry Visualization}{21}{subsection.L.5}\protected@file@percent }
+\newlabel{app:spherical-viz}{{L.5}{21}{Appendix}{subsection.L.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces 3D spherical attention heatmap. YAT and LAY concentrate weight around the query; softmax is more diffuse.}}{21}{figure.caption.25}\protected@file@percent }
+\newlabel{fig:spherical-heatmap}{{15}{21}{3D spherical attention heatmap. YAT and LAY concentrate weight around the query; softmax is more diffuse}{figure.caption.25}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {L.6}Computational Scaling}{21}{subsection.L.6}\protected@file@percent }
+\newlabel{app:scaling-analysis}{{L.6}{21}{Appendix}{subsection.L.6}{}}
+\@writefile{toc}{\contentsline {paragraph}{Summary.}{21}{figure.caption.27}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Attention mechanisms and their configurations.}}{21}{table.caption.28}\protected@file@percent }
+\newlabel{tab:attention_params}{{9}{21}{Attention mechanisms and their configurations}{table.caption.28}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Polar attention profile. Sharper drop-off indicates more geometry-aware attention.}}{22}{figure.caption.26}\protected@file@percent }
+\newlabel{fig:spherical-polar}{{16}{22}{Polar attention profile. Sharper drop-off indicates more geometry-aware attention}{figure.caption.26}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces Computational scaling comparison. LAY maintains linear complexity up to 131K tokens where quadratic methods fail.}}{22}{figure.caption.27}\protected@file@percent }
+\newlabel{fig:scaling-exact}{{17}{22}{Computational scaling comparison. LAY maintains linear complexity up to 131K tokens where quadratic methods fail}{figure.caption.27}{}}
+\gdef \@abspage@last{22}
